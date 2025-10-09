@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2020", 
+    "module": "CommonJS",
+    
+    "rootDir": "./src", 
+    "outDir": "./dist", 
+    
+    "strict": true,
+    "esModuleInterop": true, 
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true, 
+    "moduleResolution": "node",
+    "noImplicitAny": false,
+    
+    // Configuração para ler sua pasta de declarações de tipo (@types/express.d.ts)
+    "typeRoots": [
+      "./node_modules/@types", 
+      "./src/@types"
+    ]
+  },
+  // Inclui apenas a pasta onde você desenvolve
+  "include": [
+    "src/**/*.ts"
+, "src/@types/custom.d.ts"  ]
+}
