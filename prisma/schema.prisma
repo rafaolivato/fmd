@@ -16,3 +16,62 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Medicamento {
+  id                String          @id @default(uuid())
+  principioAtivo    String          @unique
+  concentracao      String
+  formaFarmaceutica String
+  psicotropico      Boolean         @default(false)
+  quantidadeEstoque Int             @default(0) // Estoque total, independente do lote
+  itensMovimentados ItemMovimento[] // Indica que um Medicamento pode ter muitos ItemMovimento
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Movimento {
+  id String @id @default(uuid())
+
+  // DADOS DA TRANSAÇÃO GERAL
+  tipoMovimentacao   String // Ex: Entrada Ordinária, Ajuste de Estoque
+  fonteFinanciamento String // Ex: Municipal, Estadual + Federal
+  fornecedor         String // Nome da Distribuidora/Entidade
+  documentoTipo      String // Ex: Nota Fiscal, Nota de Simples Remessa
+  numeroDocumento    String   @unique // Chave única para o documento
+  dataDocumento      DateTime
+  dataRecebimento    DateTime
+  valorTotal         Float
+  observacao         String?
+
+  // Relação com os Itens desta movimentação
+  itensMovimentados ItemMovimento[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ItemMovimento {
+  id String @id @default(uuid())
+
+  // DADOS ESPECÍFICOS DO ITEM/LOTE
+  valorUnitario     Float
+  fabricante        String // Fabricante (pode ser diferente do Fornecedor/Distribuidor)
+  numeroLote        String
+  dataValidade      DateTime
+  quantidade        Int
+  localizacaoFisica String // Ex: Prateleira A, Armário 1
+
+  // RELACIONAMENTO COM MEDICAMENTO (O ITEM que está sendo movimentado)
+  medicamentoId String
+  medicamento   Medicamento @relation(fields: [medicamentoId], references: [id])
+
+  // RELACIONAMENTO COM O MOVIMENTO (O DOCUMENTO ao qual pertence)
+  movimentoId String
+  movimento   Movimento @relation(fields: [movimentoId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Garante que não se insira o mesmo lote no mesmo documento
+  @@unique([numeroLote, movimentoId])
+}

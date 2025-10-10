@@ -1,0 +1,11 @@
+# Rodar o servidor
+
+npx ts-node src/server.ts
+
+###Para usar o Postman
+
+{
+    "name": "Rafael",
+    "email": "rafael@fmd.com",
+    "password": "123456"
+}
