@@ -25,6 +25,7 @@ model Medicamento {
   psicotropico      Boolean         @default(false)
   quantidadeEstoque Int             @default(0) // Estoque total, independente do lote
   itensMovimentados ItemMovimento[] // Indica que um Medicamento pode ter muitos ItemMovimento
+  itensDispensados   ItemDispensacao[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 }
@@ -74,4 +75,46 @@ model ItemMovimento {
 
   // Garante que não se insira o mesmo lote no mesmo documento
   @@unique([numeroLote, movimentoId])
+}
+
+model Dispensacao {
+  id                 String   @id @default(uuid())
+  
+  // DADOS DA SAÍDA GERAL (Receituário)
+  pacienteNome       String
+  pacienteCpf        String? // Opcional, dependendo da regra
+  profissionalSaude  String? // Médico, dentista, etc.
+  documentoReferencia String // Ex: Número do Receituário, Prontuário
+  dataDispensacao    DateTime @default(now())
+  observacao         String?
+
+  // Relação com os itens que foram dispensados
+  itensDispensados   ItemDispensacao[] 
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model ItemDispensacao {
+  id                 String   @id @default(uuid())
+  
+  // DADOS ESPECÍFICOS DO ITEM DISPENSADO
+  quantidadeSaida    Int      // Quantidade que está saindo (sempre positiva)
+  
+  // O lote que foi consumido
+  loteNumero         String   // Guardamos o LOTE que foi dispensado (para registro)
+  
+  // RELACIONAMENTO COM MEDICAMENTO
+  medicamentoId      String
+  medicamento        Medicamento @relation(fields: [medicamentoId], references: [id])
+  
+  // RELACIONAMENTO COM A DISPENSAÇÃO
+  dispensacaoId      String
+  dispensacao        Dispensacao @relation(fields: [dispensacaoId], references: [id])
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  // Relação inversa no Medicamento:
+  // @relation(name: "DispensacaoDeItens")
 }

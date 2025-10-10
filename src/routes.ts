@@ -3,14 +3,16 @@ import { authRoutes } from './modules/auth/routes';
 import { userRoutes } from './modules/users/routes';
 import { medicamentosRoutes } from './modules/medicamentos/routes'; 
 import { movimentosRoutes } from './modules/movimentos/routes';
+import { dispensacaoRoutes } from './modules/dispensacao/routes';
+import { relatoriosRoutes } from './modules/relatorios/routes'; 
 
 const routes = Router();
 
-// Rota de Autenticação (Login)
 routes.use('/auth', authRoutes);
-// Rota de Cadastro de Usuário
 routes.use('/users', userRoutes); 
-routes.use('/medicamentos', medicamentosRoutes); // <-- NOVA ROTA
+routes.use('/medicamentos', medicamentosRoutes);
 routes.use('/movimentos', movimentosRoutes);
+routes.use('/dispensacao', dispensacaoRoutes);
+routes.use('/relatorios', relatoriosRoutes);
 
 export { routes };
