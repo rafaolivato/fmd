@@ -8,7 +8,7 @@ import { Prisma } from '@prisma/client';
 type PrismaTransaction = Prisma.TransactionClient; 
 
 class CreateDispensacaoService {
-  async execute(data: ICreateDispensacaoDTO) {
+  async execute({ estabelecimentoOrigemId, ...data }: ICreateDispensacaoDTO) {
     // 1. Inicia a transação para garantir que o estoque só será baixado se tudo for salvo
     const resultado = await prisma.$transaction(async (tx: PrismaTransaction) => {
       
@@ -20,6 +20,7 @@ class CreateDispensacaoService {
           profissionalSaude: data.profissionalSaude,
           documentoReferencia: data.documentoReferencia,
           observacao: data.observacao,
+          estabelecimentoOrigemId: estabelecimentoOrigemId,
         },
       });
 

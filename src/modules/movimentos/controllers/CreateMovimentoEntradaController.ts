@@ -1,17 +1,41 @@
-// src/modules/movimentos/controllers/CreateMovimentoEntradaController.ts
+// src/modules/movimentos/controllers/CreateMovimentoEntradaController.ts - ATUALIZADO
 
 import { Request, Response, NextFunction } from 'express';
 import { CreateMovimentoEntradaService } from '../services/CreateMovimentoEntradaService';
 
 class CreateMovimentoEntradaController {
   async handle(request: Request, response: Response, next: NextFunction) {
-    // O corpo da requisição é passado diretamente para o Service
-    const data = request.body; 
+    // Adicione estabelecimentoId à desestruturação
+   const { 
+      tipoMovimentacao,
+      fonteFinanciamento,
+      fornecedor,
+      documentoTipo,
+      numeroDocumento,
+      dataDocumento,
+      dataRecebimento,
+      valorTotal,
+      observacao, 
+      itens, 
+      estabelecimentoId 
+    } = request.body; 
 
     try {
-      const createMovimentoService = new CreateMovimentoEntradaService();
+      const createMovimentoEntradaService = new CreateMovimentoEntradaService();
 
-      const movimento = await createMovimentoService.execute(data);
+      const movimento = await createMovimentoEntradaService.execute({
+        tipoMovimentacao,
+        fonteFinanciamento,
+        fornecedor,
+        documentoTipo,
+        numeroDocumento,
+        dataDocumento,
+        dataRecebimento,
+        valorTotal,
+        observacao,
+        itens,
+        estabelecimentoId, 
+      });
 
       return response.status(201).json(movimento);
     } catch (error) {

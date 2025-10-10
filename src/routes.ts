@@ -5,6 +5,7 @@ import { medicamentosRoutes } from './modules/medicamentos/routes';
 import { movimentosRoutes } from './modules/movimentos/routes';
 import { dispensacaoRoutes } from './modules/dispensacao/routes';
 import { relatoriosRoutes } from './modules/relatorios/routes'; 
+import { estabelecimentosRoutes } from './modules/estabelecimentos/routes'
 
 const routes = Router();
 
@@ -14,5 +15,6 @@ routes.use('/medicamentos', medicamentosRoutes);
 routes.use('/movimentos', movimentosRoutes);
 routes.use('/dispensacao', dispensacaoRoutes);
 routes.use('/relatorios', relatoriosRoutes);
+routes.use('/estabelecimentos', estabelecimentosRoutes);
 
 export { routes };

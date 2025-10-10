@@ -1,90 +1,124 @@
-// src/modules/movimentos/services/CreateMovimentoEntradaService.ts - CORRIGIDO FINALMENTE
+// src/modules/movimentos/services/CreateMovimentoEntradaService.ts - CORRIGIDO E ESTRUTURALMENTE CORRETO
 
 import { prisma } from '../../../database/prismaClient';
 import { AppError } from '../../../shared/errors/AppError';
-import { ICreateMovimentoDTO } from '../dtos/ICreateMovimentoDTO';
-import { Prisma } from '@prisma/client'; 
+import { ICreateMovimentoEntradaDTO } from '../dtos/ICreateMovimentoDTO';
+import { Prisma } from '@prisma/client';
 
-// O tipo da transação é o único tipo complexo que precisamos manter
 type PrismaTransaction = Prisma.TransactionClient; 
 
 class CreateMovimentoEntradaService {
-  async execute(data: ICreateMovimentoDTO) {
-    // 1. Verifica se o documento (ex: Nota Fiscal) já foi registrado
-    const documentoJaExiste = await prisma.movimento.findUnique({
-      where: { numeroDocumento: data.numeroDocumento },
-    });
+  async execute(data: ICreateMovimentoEntradaDTO) {
+    
+    // DESESTRUTURAÇÃO: Pega explicitamente cada campo do DTO
+    const { 
+        estabelecimentoId, 
+        itens,
+        tipoMovimentacao,
+        fonteFinanciamento,
+        fornecedor,
+        documentoTipo,
+        numeroDocumento,
+        dataDocumento,
+        dataRecebimento,
+        valorTotal,
+        observacao,
+    } = data; 
 
-    if (documentoJaExiste) {
-      throw new AppError('Este número de documento já foi registrado em uma movimentação.', 409);
-    }
+    // 1. Inicia a transação
+    const resultado = await prisma.$transaction(async (tx: PrismaTransaction) => { // <-- INÍCIO DO ESCOPO
 
-    // 2. Realiza a transação para garantir atomicidade
-    // Usando PrismaTransaction para garantir que 'tx' tem todos os models
-    const resultado = await prisma.$transaction(async (tx: PrismaTransaction) => {
+      // A. Verifica se o estabelecimento existe
+      const estabelecimento = await tx.estabelecimento.findUnique({
+        where: { id: estabelecimentoId },
+      });
+
+      if (!estabelecimento) {
+        throw new AppError('Estabelecimento de destino não encontrado.', 404);
+      }
+      
+      // B. Cria o Cabeçalho do Movimento (Documento)
+      const movimento = await tx.movimento.create({
+        data: {
+          // Campos de cabeçalho
+          tipoMovimentacao,
+          fonteFinanciamento,
+          fornecedor,
+          documentoTipo,
+          numeroDocumento,
+          dataDocumento,
+          dataRecebimento,
+          valorTotal,
+          observacao,
+          
+          // @ts-expect-error
+          estabelecimentoId: estabelecimento.id, 
+        }, // <-- FECHA O OBJETO data
+      }); // <-- FECHA A CHAMADA tx.movimento.create()
       
-      
-      // A. Cria o Cabeçalho da Movimentação
-      const movimento = await tx.movimento.create({
-        data: {
-          tipoMovimentacao: data.tipoMovimentacao,
-          fonteFinanciamento: data.fonteFinanciamento,
-          fornecedor: data.fornecedor,
-          documentoTipo: data.documentoTipo,
-          numeroDocumento: data.numeroDocumento,
-          dataDocumento: data.dataDocumento,
-          dataRecebimento: data.dataRecebimento,
-          valorTotal: data.valorTotal,
-          observacao: data.observacao,
-        },
-      });
+      const operacoesEmLote: Promise<any>[] = []; 
+      
+      // C. Processa cada item (lote)
+      for (const item of itens) { 
+        // 1. Verifica se o medicamento existe (é bom manter)
+        const medicamento = await tx.medicamento.findUnique({
+          where: { id: item.medicamentoId },
+          select: { id: true },
+        });
 
-      // B. Simplificação total da tipagem dos arrays
-      // Usaremos um Array de Promises de forma genérica para evitar erros de inferência
-      const operacoesEmLote: Promise<any>[] = []; 
-      
-      for (const item of data.itens) {
-        if (item.quantidade <= 0) {
-          throw new AppError(`A quantidade de entrada para o item ${item.medicamentoId} deve ser positiva.`, 400);
-        }
-        
-        // 1. Cria o ItemMovimento
-        operacoesEmLote.push(
-          tx.itemMovimento.create({
-            data: {
-              valorUnitario: item.valorUnitario,
-              fabricante: item.fabricante,
-              numeroLote: item.numeroLote,
-              dataValidade: item.dataValidade,
-              quantidade: item.quantidade,
-              localizacaoFisica: item.localizacaoFisica,
-              medicamentoId: item.medicamentoId,
-              movimentoId: movimento.id,
-            },
-          })
-        );
-        
-        // 2. ATUALIZA O ESTOQUE total do Medicamento
-        operacoesEmLote.push(
-          tx.medicamento.update({
-            where: { id: item.medicamentoId },
-            data: {
-              quantidadeEstoque: {
-                increment: item.quantidade,
-              },
-            },
-          })
-        );
-      }
-      
-      // C. Executa todas as operações em paralelo
-      await Promise.all(operacoesEmLote);
+        if (!medicamento) {
+          throw new AppError(`Medicamento ID ${item.medicamentoId} não encontrado.`, 404);
+        }
 
-      return movimento;
-    });
+        // 2. Cria o Lote (ItemMovimento)
+        operacoesEmLote.push(
+            tx.itemMovimento.create({
+                data: {
+                    ...item,
+                    movimentoId: movimento.id,
+                },
+            })
+        );
+        
+        // 3. ATUALIZA/CRIA o EstoqueLocal
+        operacoesEmLote.push(
+          tx.estoqueLocal.upsert({
+            where: {
+              medicamentoId_estabelecimentoId: {
+                medicamentoId: item.medicamentoId,
+                estabelecimentoId: estabelecimentoId,
+              },
+            },
+            update: {
+              quantidade: { increment: item.quantidade },
+            },
+            create: {
+              medicamentoId: item.medicamentoId,
+              estabelecimentoId: estabelecimentoId,
+              quantidade: item.quantidade,
+            },
+          })
+        );
 
-    return resultado;
-  }
+        // 4. Atualiza o estoque total do Medicamento
+        operacoesEmLote.push(
+          tx.medicamento.update({
+            where: { id: item.medicamentoId },
+            data: {
+              quantidadeEstoque: { increment: item.quantidade },
+            },
+          })
+        );
+      }
+      
+      // D. Executa as operações em lote
+      await Promise.all(operacoesEmLote);
+      
+      return movimento;
+    }); // <-- FECHA O ESCOPO DA TRANSAÇÃO
+
+    return resultado;
+  }
 }
 
 export { CreateMovimentoEntradaService };

@@ -18,16 +18,18 @@ model User {
 }
 
 model Medicamento {
-  id                String          @id @default(uuid())
-  principioAtivo    String          @unique
+  id                String            @id @default(uuid())
+  principioAtivo    String            @unique
   concentracao      String
   formaFarmaceutica String
-  psicotropico      Boolean         @default(false)
-  quantidadeEstoque Int             @default(0) // Estoque total, independente do lote
+  psicotropico      Boolean           @default(false)
+  quantidadeEstoque Int               @default(0) // Estoque total, independente do lote
   itensMovimentados ItemMovimento[] // Indica que um Medicamento pode ter muitos ItemMovimento
-  itensDispensados   ItemDispensacao[]
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  itensDispensados  ItemDispensacao[]
+  estoqueLocal      EstoqueLocal[] // Referência inversa de EstoqueLocal
+  itensRequisicao   ItemRequisicao[] // Referência inversa de ItemRequisicao
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model Movimento {
@@ -78,43 +80,119 @@ model ItemMovimento {
 }
 
 model Dispensacao {
-  id                 String   @id @default(uuid())
-  
+  id String @id @default(uuid())
+
   // DADOS DA SAÍDA GERAL (Receituário)
-  pacienteNome       String
-  pacienteCpf        String? // Opcional, dependendo da regra
-  profissionalSaude  String? // Médico, dentista, etc.
+  pacienteNome        String
+  pacienteCpf         String? // Opcional, dependendo da regra
+  profissionalSaude   String? // Médico, dentista, etc.
   documentoReferencia String // Ex: Número do Receituário, Prontuário
-  dataDispensacao    DateTime @default(now())
-  observacao         String?
+  dataDispensacao     DateTime @default(now())
+  observacao          String?
 
   // Relação com os itens que foram dispensados
-  itensDispensados   ItemDispensacao[] 
-  
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  itensDispensados ItemDispensacao[]
+
+  estabelecimentoOrigemId String
+  estabelecimentoOrigem   Estabelecimento @relation("DispensacaoOrigem", fields: [estabelecimentoOrigemId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ItemDispensacao {
-  id                 String   @id @default(uuid())
-  
-  // DADOS ESPECÍFICOS DO ITEM DISPENSADO
-  quantidadeSaida    Int      // Quantidade que está saindo (sempre positiva)
-  
-  // O lote que foi consumido
-  loteNumero         String   // Guardamos o LOTE que foi dispensado (para registro)
-  
-  // RELACIONAMENTO COM MEDICAMENTO
-  medicamentoId      String
-  medicamento        Medicamento @relation(fields: [medicamentoId], references: [id])
-  
-  // RELACIONAMENTO COM A DISPENSAÇÃO
-  dispensacaoId      String
-  dispensacao        Dispensacao @relation(fields: [dispensacaoId], references: [id])
+  id String @id @default(uuid())
 
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  
+  // DADOS ESPECÍFICOS DO ITEM DISPENSADO
+  quantidadeSaida Int // Quantidade que está saindo (sempre positiva)
+
+  // O lote que foi consumido
+  loteNumero String // Guardamos o LOTE que foi dispensado (para registro)
+
+  // RELACIONAMENTO COM MEDICAMENTO
+  medicamentoId String
+  medicamento   Medicamento @relation(fields: [medicamentoId], references: [id])
+
+  // RELACIONAMENTO COM A DISPENSAÇÃO
+  dispensacaoId String
+  dispensacao   Dispensacao @relation(fields: [dispensacaoId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relação inversa no Medicamento:
   // @relation(name: "DispensacaoDeItens")
+}
+
+model Estabelecimento {
+  id   String  @id @default(uuid())
+  nome String  @unique
+  cnpj String? // Ex: 00.000.000/0001-00
+  tipo String // Ex: 'ALMOXARIFADO', 'FARMACIA_UNIDADE'
+
+  // RELACIONAMENTOS INVERSOS:
+  solicitacoes Requisicao[] @relation("Solicitante")
+  atendimentos Requisicao[] @relation("Atendente")
+
+  // Nova tabela para Estoque por Local (ver item B)
+  estoqueLocal EstoqueLocal[]
+
+  saidasDispensacao Dispensacao[] @relation("DispensacaoOrigem")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EstoqueLocal {
+  id         String @id @default(uuid())
+  quantidade Int
+
+  // Quem é o medicamento
+  medicamentoId String
+  medicamento   Medicamento @relation(fields: [medicamentoId], references: [id])
+
+  // Onde ele está
+  estabelecimentoId String
+  estabelecimento   Estabelecimento @relation(fields: [estabelecimentoId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Chave Única para garantir apenas um saldo por medicamento/estabelecimento
+  @@unique([medicamentoId, estabelecimentoId])
+}
+
+model Requisicao {
+  id String @id @default(uuid())
+
+  // Solicitante (Farmácia de destino)
+  solicitanteId String
+  solicitante   Estabelecimento @relation("Solicitante", fields: [solicitanteId], references: [id])
+
+  // Atendente (Almoxarifado/Estabelecimento de origem)
+  atendenteId String
+  atendente   Estabelecimento @relation("Atendente", fields: [atendenteId], references: [id])
+
+  status          String // Ex: 'PENDENTE', 'EM_SEPARACAO', 'ATENDIDA', 'CANCELADA'
+  dataSolicitacao DateTime @default(now())
+
+  itens ItemRequisicao[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ItemRequisicao {
+  id                   String @id @default(uuid())
+  quantidadeSolicitada Int
+  quantidadeAtendida   Int    @default(0) // Quanto do solicitado foi enviado
+
+  medicamentoId String
+  medicamento   Medicamento @relation(fields: [medicamentoId], references: [id])
+
+  requisicaoId String
+  requisicao   Requisicao @relation(fields: [requisicaoId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

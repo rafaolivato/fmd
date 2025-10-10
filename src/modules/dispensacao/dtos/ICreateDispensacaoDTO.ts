@@ -11,6 +11,8 @@ export interface ICreateDispensacaoDTO {
   documentoReferencia: string;
   observacao?: string;
 
+  estabelecimentoOrigemId: string;
+
   // Itens que serão baixados
   itens: IItemDispensacaoDTO[]; 
 }
