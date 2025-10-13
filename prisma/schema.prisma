@@ -46,6 +46,9 @@ model Movimento {
   valorTotal         Float
   observacao         String?
 
+  estabelecimentoId String
+  estabelecimento   Estabelecimento @relation(fields: [estabelecimentoId], references: [id])
+
   // Relação com os Itens desta movimentação
   itensMovimentados ItemMovimento[]
 
@@ -138,6 +141,8 @@ model Estabelecimento {
   estoqueLocal EstoqueLocal[]
 
   saidasDispensacao Dispensacao[] @relation("DispensacaoOrigem")
+
+  movimentos Movimento[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

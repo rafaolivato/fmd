@@ -1,124 +1,101 @@
-// src/modules/movimentos/services/CreateMovimentoEntradaService.ts - CORRIGIDO E ESTRUTURALMENTE CORRETO
-
-import { prisma } from '../../../database/prismaClient';
+import { PrismaClient } from '@prisma/client';
 import { AppError } from '../../../shared/errors/AppError';
 import { ICreateMovimentoEntradaDTO } from '../dtos/ICreateMovimentoDTO';
-import { Prisma } from '@prisma/client';
 
-type PrismaTransaction = Prisma.TransactionClient; 
+const prisma = new PrismaClient();
 
 class CreateMovimentoEntradaService {
-  async execute(data: ICreateMovimentoEntradaDTO) {
-    
-    // DESESTRUTURAÇÃO: Pega explicitamente cada campo do DTO
-    const { 
-        estabelecimentoId, 
-        itens,
-        tipoMovimentacao,
-        fonteFinanciamento,
-        fornecedor,
-        documentoTipo,
-        numeroDocumento,
-        dataDocumento,
-        dataRecebimento,
-        valorTotal,
-        observacao,
-    } = data; 
+  async execute(data: ICreateMovimentoEntradaDTO) {
+    
+    const { 
+        estabelecimentoId, 
+        itens,
+        tipoMovimentacao,
+        fonteFinanciamento,
+        fornecedor,
+        documentoTipo,
+        numeroDocumento,
+        dataDocumento,
+        dataRecebimento,
+        valorTotal,
+        observacao,
+    } = data; 
 
-    // 1. Inicia a transação
-    const resultado = await prisma.$transaction(async (tx: PrismaTransaction) => { // <-- INÍCIO DO ESCOPO
+    // REMOVA a tipagem da transação e deixe o TypeScript inferir
+    return await prisma.$transaction(async (tx) => {
+      const estabelecimento = await tx.estabelecimento.findUnique({
+        where: { id: estabelecimentoId },
+      });
 
-      // A. Verifica se o estabelecimento existe
-      const estabelecimento = await tx.estabelecimento.findUnique({
-        where: { id: estabelecimentoId },
-      });
-
-      if (!estabelecimento) {
-        throw new AppError('Estabelecimento de destino não encontrado.', 404);
-      }
-      
-      // B. Cria o Cabeçalho do Movimento (Documento)
-      const movimento = await tx.movimento.create({
-        data: {
-          // Campos de cabeçalho
-          tipoMovimentacao,
-          fonteFinanciamento,
-          fornecedor,
-          documentoTipo,
-          numeroDocumento,
-          dataDocumento,
-          dataRecebimento,
-          valorTotal,
-          observacao,
-          
-          // @ts-expect-error
-          estabelecimentoId: estabelecimento.id, 
-        }, // <-- FECHA O OBJETO data
-      }); // <-- FECHA A CHAMADA tx.movimento.create()
+      if (!estabelecimento) {
+        throw new AppError('Estabelecimento não encontrado.', 404);
+      }
       
-      const operacoesEmLote: Promise<any>[] = []; 
-      
-      // C. Processa cada item (lote)
-      for (const item of itens) { 
-        // 1. Verifica se o medicamento existe (é bom manter)
-        const medicamento = await tx.medicamento.findUnique({
-          where: { id: item.medicamentoId },
-          select: { id: true },
-        });
+      const movimento = await tx.movimento.create({
+        data: {
+          tipoMovimentacao,
+          fonteFinanciamento,
+          fornecedor,
+          documentoTipo,
+          numeroDocumento,
+          dataDocumento,
+          dataRecebimento,
+          valorTotal,
+          observacao,
+          estabelecimentoId,
+        },
+      });
 
-        if (!medicamento) {
-          throw new AppError(`Medicamento ID ${item.medicamentoId} não encontrado.`, 404);
-        }
+      for (const item of itens) {
+        const medicamento = await tx.medicamento.findUnique({
+          where: { id: item.medicamentoId },
+        });
 
-        // 2. Cria o Lote (ItemMovimento)
-        operacoesEmLote.push(
-            tx.itemMovimento.create({
-                data: {
-                    ...item,
-                    movimentoId: movimento.id,
-                },
-            })
-        );
-        
-        // 3. ATUALIZA/CRIA o EstoqueLocal
-        operacoesEmLote.push(
-          tx.estoqueLocal.upsert({
-            where: {
-              medicamentoId_estabelecimentoId: {
-                medicamentoId: item.medicamentoId,
-                estabelecimentoId: estabelecimentoId,
-              },
-            },
-            update: {
-              quantidade: { increment: item.quantidade },
-            },
-            create: {
-              medicamentoId: item.medicamentoId,
-              estabelecimentoId: estabelecimentoId,
-              quantidade: item.quantidade,
-            },
-          })
-        );
+        if (!medicamento) {
+          throw new AppError(`Medicamento não encontrado: ${item.medicamentoId}`, 404);
+        }
 
-        // 4. Atualiza o estoque total do Medicamento
-        operacoesEmLote.push(
-          tx.medicamento.update({
-            where: { id: item.medicamentoId },
-            data: {
-              quantidadeEstoque: { increment: item.quantidade },
-            },
-          })
-        );
-      }
-      
-      // D. Executa as operações em lote
-      await Promise.all(operacoesEmLote);
-      
-      return movimento;
-    }); // <-- FECHA O ESCOPO DA TRANSAÇÃO
+        await tx.itemMovimento.create({
+          data: {
+            valorUnitario: item.valorUnitario,
+            fabricante: item.fabricante,
+            numeroLote: item.numeroLote,
+            dataValidade: item.dataValidade,
+            quantidade: item.quantidade,
+            localizacaoFisica: item.localizacaoFisica,
+            medicamentoId: item.medicamentoId,
+            movimentoId: movimento.id,
+          },
+        });
+        
+        await tx.estoqueLocal.upsert({
+          where: {
+            medicamentoId_estabelecimentoId: {
+              medicamentoId: item.medicamentoId,
+              estabelecimentoId: estabelecimentoId,
+            },
+          },
+          update: {
+            quantidade: { increment: item.quantidade },
+          },
+          create: {
+            medicamentoId: item.medicamentoId,
+            estabelecimentoId: estabelecimentoId,
+            quantidade: item.quantidade,
+          },
+        });
 
-    return resultado;
-  }
+        await tx.medicamento.update({
+          where: { id: item.medicamentoId },
+          data: {
+            quantidadeEstoque: { increment: item.quantidade },
+          },
+        });
+      }
+      
+      return movimento;
+    });
+  }
 }
 
 export { CreateMovimentoEntradaService };
