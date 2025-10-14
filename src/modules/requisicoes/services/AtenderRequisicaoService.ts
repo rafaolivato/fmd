@@ -3,11 +3,16 @@
 import { prisma } from '../../../database/prismaClient';
 import { AppError } from '../../../shared/errors/AppError';
 import { Prisma } from '@prisma/client';
+import { IItemAtendidoDTO } from '../dtos/IAtendimentoRequisicaoDTO';
 
 type PrismaTransaction = Prisma.TransactionClient;
 
 class AtenderRequisicaoService {
-  async execute(requisicaoId: string) {
+  async execute(requisicaoId: string, itensAtendidos: IItemAtendidoDTO[]) {
+
+     if (!itensAtendidos || itensAtendidos.length === 0) {
+      throw new AppError('Nenhum item de atendimento fornecido.', 400);
+    }
     
     return await prisma.$transaction(async (tx: PrismaTransaction) => {
       
@@ -16,6 +21,7 @@ class AtenderRequisicaoService {
         where: { id: requisicaoId },
         include: {
           itens: true, // Inclui todos os itens solicitados
+          atendente: { select: { id: true } }, 
         },
       });
 
@@ -26,89 +32,126 @@ class AtenderRequisicaoService {
       if (requisicao.status !== 'PENDENTE') {
         throw new AppError(`A requisição já foi ${requisicao.status.toLowerCase()}.`, 400);
       }
+
+      const atendenteId = requisicao.atendente!.id; // ID do Almoxarifado Central (Origem)
+      const solicitanteId = requisicao.solicitanteId; // ID da Farmácia (Destino)
       
-      // Armazena todas as operações de banco de dados
+      // Mapeia os itens originais do BD para fácil acesso (itemId -> ItemRequisicao)
+      const itensOriginaisMap = new Map(
+        requisicao.itens.map(item => [item.id, item])
+      );
+      
+      let totalItensSolicitados = requisicao.itens.length;
+      let totalItensAtendidos = 0;
+      
       const operacoesEmLote: Promise<any>[] = []; 
       
-      const { solicitanteId, atendenteId, itens } = requisicao;
-
-      // 2. Processa cada Item
-      for (const item of itens) {
-        const { medicamentoId, quantidadeSolicitada } = item;
+      // 2. Processa cada Item de ATENDIMENTO enviado no BODY
+      for (const itemAtendido of itensAtendidos) {
+        const itemOriginal = itensOriginaisMap.get(itemAtendido.itemId);
         
-        // 2.1 Verifica o Saldo no Estabelecimento de Origem (Atendente)
+        // Validação 1: O Item ID existe na requisição?
+        if (!itemOriginal) {
+          throw new AppError(`Item de requisição ID ${itemAtendido.itemId} não faz parte desta requisição.`, 400);
+        }
+        
+        const quantidadeAtender = itemAtendido.quantidadeAtendida;
+        const { quantidadeSolicitada, medicamentoId } = itemOriginal;
+
+        // Validação 2: Quantidade atendida é válida?
+        if (quantidadeAtender < 0 || quantidadeAtender > quantidadeSolicitada) {
+            throw new AppError(`Quantidade a atender (${quantidadeAtender}) é inválida. Deve ser entre 0 e ${quantidadeSolicitada}.`, 400);
+        }
+        
+        if (quantidadeAtender === 0) {
+            // Se for 0, simplesmente pula o movimento, mas conta como 'processado'
+            continue; 
+        }
+
+        // Validação 3: VERIFICA SE O ESTOQUE NÃO FICARÁ NEGATIVO! (A parte mais importante)
         const estoqueOrigem = await tx.estoqueLocal.findUnique({
           where: {
             medicamentoId_estabelecimentoId: {
               medicamentoId: medicamentoId,
-              estabelecimentoId: atendenteId, // Almoxarifado
+              estabelecimentoId: atendenteId,
             },
           },
         });
-
-        if (!estoqueOrigem || estoqueOrigem.quantidade < quantidadeSolicitada) {
-          throw new AppError(`Estoque insuficiente no local de origem (ID: ${medicamentoId}).`, 400);
+        
+        if (!estoqueOrigem || estoqueOrigem.quantidade < quantidadeAtender) {
+          throw new AppError(`Estoque insuficiente! O Almoxarifado tem ${estoqueOrigem?.quantidade ?? 0} unidades e tentou atender ${quantidadeAtender} do item ID ${medicamentoId}.`, 400);
         }
+        
+        // 3. MOVIMENTAÇÃO DE ESTOQUE E ATUALIZAÇÕES
 
-        // 2.2 REDUZ ESTOQUE (Almoxarifado Central)
+        // 3.1 REDUZ ESTOQUE (Almoxarifado Central - Origem)
         operacoesEmLote.push(
           tx.estoqueLocal.update({
             where: { id: estoqueOrigem.id },
             data: {
-              quantidade: { decrement: quantidadeSolicitada },
+              quantidade: { decrement: quantidadeAtender },
             },
           })
         );
         
-        // 2.3 AUMENTA ESTOQUE (Farmácia Solicitante) usando upsert
+        // 3.2 AUMENTA ESTOQUE (Farmácia Solicitante - Destino)
         operacoesEmLote.push(
           tx.estoqueLocal.upsert({
             where: {
               medicamentoId_estabelecimentoId: {
                 medicamentoId: medicamentoId,
-                estabelecimentoId: solicitanteId, // Farmácia
+                estabelecimentoId: solicitanteId,
               },
             },
             update: {
-              quantidade: { increment: quantidadeSolicitada },
+              quantidade: { increment: quantidadeAtender },
             },
             create: {
               medicamentoId: medicamentoId,
               estabelecimentoId: solicitanteId,
-              quantidade: quantidadeSolicitada,
+              quantidade: quantidadeAtender,
             },
           })
         );
         
-        // 2.4 ATUALIZA ItemRequisicao (registrando que foi atendido)
+        // 3.3 ATUALIZA ItemRequisicao
         operacoesEmLote.push(
           tx.itemRequisicao.update({
-            where: { id: item.id },
+            where: { id: itemOriginal.id },
             data: {
-              quantidadeAtendida: quantidadeSolicitada,
+              quantidadeAtendida: quantidadeAtender,
             },
           })
         );
-        
-        // **OPCIONAL:** Crie um registro na tabela 'Movimento' para rastreabilidade
-        // Isso é complexo e podemos deixar para o final, mas é a prática ideal.
+
+        totalItensAtendidos++;
       }
       
-      // 3. Atualiza o Status da Requisição
+      // 4. Determina o Status Final da Requisição
+      let novoStatus: string;
+      if (totalItensAtendidos === totalItensSolicitados) {
+        novoStatus = 'ATENDIDA'; // Todos os itens foram atendidos
+      } else if (totalItensAtendidos > 0) {
+        novoStatus = 'ATENDIDA_PARCIALMENTE'; // Atendeu alguns
+      } else {
+        novoStatus = 'CANCELADA'; // Poderia ser 'REJEITADA' ou 'CANCELADA' se todos forem zero
+      }
+
+      // 5. Atualiza o Status da Requisição
       operacoesEmLote.push(
         tx.requisicao.update({
           where: { id: requisicaoId },
           data: {
-            status: 'ATENDIDA',
+            status: novoStatus,
             updatedAt: new Date(),
           },
         })
       );
       
-      // 4. Executa todas as operações
+      // 6. Executa todas as operações
       await Promise.all(operacoesEmLote);
       
-      // Retorna a requisição atualizada para confirmação
+      // Retorna a requisição atualizada (com os itens)
       return tx.requisicao.findUnique({ where: { id: requisicaoId }, include: { itens: true } });
     });
   }
