@@ -1,5 +1,3 @@
-// src/modules/movimentos/controllers/CreateMovimentoEntradaController.ts - ATUALIZADO
-
 import { Request, Response, NextFunction } from 'express';
 import { CreateMovimentoEntradaService } from '../services/CreateMovimentoEntradaService';
 

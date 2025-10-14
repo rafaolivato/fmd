@@ -1,4 +1,3 @@
-// src/modules/estabelecimentos/controllers/CreateEstabelecimentoController.ts
 
 import { Request, Response, NextFunction } from 'express';
 import { CreateEstabelecimentoService } from '../services/CreateEstabelecimentoService';
