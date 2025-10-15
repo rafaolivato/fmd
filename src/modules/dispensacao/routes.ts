@@ -3,8 +3,6 @@ import { CreateDispensacaoController } from './controllers/CreateDispensacaoCont
 import { ListDispensacoesController } from './controllers/ListDispensacoesController'; 
 import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
 
-
-
 const dispensacaoRoutes = Router();
 const createDispensacaoController = new CreateDispensacaoController();
 const listDispensacoesController = new ListDispensacoesController();

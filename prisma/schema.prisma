@@ -27,6 +27,7 @@ model Medicamento {
   itensMovimentados ItemMovimento[] // Indica que um Medicamento pode ter muitos ItemMovimento
   itensDispensados  ItemDispensacao[]
   estoqueLocal      EstoqueLocal[] // Referência inversa de EstoqueLocal
+  estoqueLotes EstoqueLote[]  // Campo inverso da relação
   itensRequisicao   ItemRequisicao[] // Referência inversa de ItemRequisicao
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
@@ -136,6 +137,7 @@ model Estabelecimento {
   // RELACIONAMENTOS INVERSOS:
   solicitacoes Requisicao[] @relation("Solicitante")
   atendimentos Requisicao[] @relation("Atendente")
+  estoqueLotes EstoqueLote[]  // Campo inverso da relação
 
   // Nova tabela para Estoque por Local (ver item B)
   estoqueLocal EstoqueLocal[]
@@ -201,3 +203,32 @@ model ItemRequisicao {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+
+model EstoqueLote {
+  id String @id @default(uuid())
+
+  // RELAÇÕES
+  medicamentoId String
+  medicamento Medicamento @relation(fields: [medicamentoId], references: [id])
+
+  estabelecimentoId String
+  estabelecimento Estabelecimento @relation(fields: [estabelecimentoId], references: [id])
+
+  // DADOS DO LOTE (para busca FIFO)
+  quantidade Int @default(0) // SALDO ATUAL DO LOTE (o que será baixado)
+  numeroLote String
+  dataValidade DateTime
+  fabricante String
+
+  // CAMPOS DE RASTREABILIDADE
+  itemMovimentoEntradaId String? // Opcional: Para saber qual ItemMovimento deu origem a este saldo
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Garante que só haja um registro de um lote específico em um estabelecimento
+  @@unique([medicamentoId, estabelecimentoId, numeroLote])
+}
+
+

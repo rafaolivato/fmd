@@ -21,7 +21,7 @@ class CreateMovimentoEntradaService {
         observacao,
     } = data; 
 
-    // REMOVA a tipagem da transação e deixe o TypeScript inferir
+  
     return await prisma.$transaction(async (tx) => {
       const estabelecimento = await tx.estabelecimento.findUnique({
         where: { id: estabelecimentoId },
@@ -39,7 +39,7 @@ class CreateMovimentoEntradaService {
           documentoTipo,
           numeroDocumento,
           dataDocumento: new Date(dataDocumento),
-          dataRecebimento: new Date(dataRecebimento),
+          dataRecebimento: new Date(dataRecebimento),
           valorTotal,
           observacao,
           estabelecimentoId,
@@ -55,7 +55,7 @@ class CreateMovimentoEntradaService {
           throw new AppError(`Medicamento não encontrado: ${item.medicamentoId}`, 404);
         }
 
-        await tx.itemMovimento.create({
+        const itemMovimento = await tx.itemMovimento.create({
           data: {
             valorUnitario: item.valorUnitario,
             fabricante: item.fabricante,
@@ -67,23 +67,36 @@ class CreateMovimentoEntradaService {
             movimentoId: movimento.id,
           },
         });
-        
-        await tx.estoqueLocal.upsert({
-          where: {
-            medicamentoId_estabelecimentoId: {
-              medicamentoId: item.medicamentoId,
-              estabelecimentoId: estabelecimentoId,
+
+        await tx.estoqueLote.upsert({
+            where: {
+                medicamentoId_estabelecimentoId_numeroLote: {
+                    medicamentoId: item.medicamentoId,
+                    estabelecimentoId: estabelecimentoId,
+                    numeroLote: item.numeroLote,
+                },
             },
-          },
+               
           update: {
-            quantidade: { increment: item.quantidade },
-          },
-          create: {
-            medicamentoId: item.medicamentoId,
-            estabelecimentoId: estabelecimentoId,
-            quantidade: item.quantidade,
-          },
+                quantidade: { increment: item.quantidade },
+                dataValidade: new Date(item.dataValidade),
+                fabricante: item.fabricante,
+                // Opcional: Localização física pode ser atualizada
+            },
+
+           create: {
+                medicamentoId: item.medicamentoId,
+                estabelecimentoId: estabelecimentoId,
+                quantidade: item.quantidade,
+                numeroLote: item.numeroLote,
+                dataValidade: new Date(item.dataValidade),
+                fabricante: item.fabricante,
+                // Opcional: Rastreabilidade
+                itemMovimentoEntradaId: itemMovimento.id, 
+            },
         });
+
+
 
         await tx.medicamento.update({
           where: { id: item.medicamentoId },

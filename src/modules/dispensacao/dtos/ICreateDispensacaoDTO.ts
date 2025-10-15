@@ -1,6 +1,7 @@
 export interface IItemDispensacaoDTO {
   medicamentoId: string; // O ID do medicamento
   quantidadeSaida: number; // Quantidade total a ser dispensada
+  loteId?: string; 
 }
 
 // Interface para o cabeçalho da Dispensação (Receituário)

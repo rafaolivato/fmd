@@ -5,115 +5,118 @@ import { AppError } from '../../../shared/errors/AppError';
 import { ICreateDispensacaoDTO } from '../dtos/ICreateDispensacaoDTO';
 import { Prisma } from '@prisma/client';
 
-type PrismaTransaction = Prisma.TransactionClient; 
+// NOTE: Este código assume a existência de um modelo 'EstoqueLote' ou 'Lote' 
+// para rastrear o saldo por lote/vencimento.
 
 class CreateDispensacaoService {
-  async execute({ estabelecimentoOrigemId, ...data }: ICreateDispensacaoDTO) {
-    // 1. Inicia a transação para garantir que o estoque só será baixado se tudo for salvo
-    const resultado = await prisma.$transaction(async (tx: PrismaTransaction) => {
+  async execute(data: ICreateDispensacaoDTO) {
+    const { estabelecimentoOrigemId, itens, ...dispensacaoData } = data;
+
+    // 1. Validação do Estabelecimento (A Farmácia)
+    const estabelecimento = await prisma.estabelecimento.findUnique({ 
+        where: { id: estabelecimentoOrigemId } 
+    });
+
+    if (!estabelecimento || estabelecimento.tipo !== 'FARMACIA_UNIDADE') {
+        throw new AppError('Estabelecimento de origem inválido ou não é uma Farmácia.', 400);
+    }
+
+    return await prisma.$transaction(async (tx) => {
       
-      // A. Cria o Cabeçalho da Dispensação
-      const dispensacao = await tx.dispensacao.create({
+      // 2. Cria o cabeçalho da Dispensação
+      const novaDispensacao = await tx.dispensacao.create({
         data: {
-          pacienteNome: data.pacienteNome,
-          pacienteCpf: data.pacienteCpf,
-          profissionalSaude: data.profissionalSaude,
-          documentoReferencia: data.documentoReferencia,
-          observacao: data.observacao,
-          estabelecimentoOrigemId: estabelecimentoOrigemId,
+          ...dispensacaoData, // pacienteNome, pacienteCpf, etc.
+          estabelecimentoOrigemId,
+          dataDispensacao: new Date(),
         },
       });
 
-      // Array para as operações que podem ser executadas em paralelo (como a criação do ItemDispensacao)
-      const operacoesEmLote: Promise<any>[] = []; 
+      const operacoesEmLote: Promise<any>[] = [];
+      
+      // 3. Processa cada Item
+      for (const item of itens) {
+        const { medicamentoId, quantidadeSaida, loteId: loteForcado } = item;
 
-      // B. Processa cada item a ser dispensado
-      for (const item of data.itens) {
-        if (item.quantidadeSaida <= 0) {
-          throw new AppError('A quantidade de saída deve ser positiva.', 400);
-        }
-
-        // 1. Verifica a disponibilidade total de estoque para o medicamento
-        const medicamento = await tx.medicamento.findUnique({
-          where: { id: item.medicamentoId },
-          select: { id: true, principioAtivo: true, quantidadeEstoque: true },
-        });
-
-        if (!medicamento) {
-          throw new AppError(`Medicamento ID ${item.medicamentoId} não encontrado.`, 404);
-        }
-
-        if (medicamento.quantidadeEstoque < item.quantidadeSaida) {
-          throw new AppError(`Estoque insuficiente de ${medicamento.principioAtivo}. Disponível: ${medicamento.quantidadeEstoque}. Solicitado: ${item.quantidadeSaida}.`, 400);
-        }
-
-        // 2. Lógica FEFO: Encontrar os lotes disponíveis e ativos (não dispensados)
-        const lotesDisponiveis = await tx.itemMovimento.findMany({
-          where: { 
-            medicamentoId: item.medicamentoId,
-            quantidade: { gt: 0 }
+        // 3.1. CHECAGEM DE ESTOQUE LOCAL (Geral)
+        const estoqueGeral = await tx.estoqueLocal.findUnique({
+          where: {
+            medicamentoId_estabelecimentoId: { medicamentoId, estabelecimentoId: estabelecimentoOrigemId },
           },
-          orderBy: { dataValidade: 'asc' }, // FEFO: Mais perto de expirar primeiro!
         });
 
-        let quantidadeRestanteParaDispensar = item.quantidadeSaida;
+        if (!estoqueGeral || estoqueGeral.quantidade < quantidadeSaida) {
+          throw new AppError(`Estoque insuficiente de ID ${medicamentoId}. Saldo na farmácia: ${estoqueGeral?.quantidade ?? 0}.`, 400);
+        }
+
+        // 3.2. BUSCA DE LOTES (FIFO: Vencimento mais próximo primeiro)
         
-        // 3. Consumir dos lotes até atingir a quantidade solicitada
+        let quantidadeRestante = quantidadeSaida;
+
+        const lotesDisponiveis = await tx.estoqueLote.findMany({ // <--- Tabela Crítica
+            where: {
+                medicamentoId,
+                estabelecimentoId: estabelecimentoOrigemId,
+                quantidade: { gt: 0 },
+                // Adiciona filtro se o usuário forçou um lote
+                ...(loteForcado && { id: loteForcado }) 
+            },
+            orderBy: {
+                dataValidade: 'asc', // Regra FIFO: mais perto do vencimento primeiro
+            }
+        });
+
+        // 3.3. BAIXA DE ESTOQUE POR LOTE
+        const itensDispensadosCriados: Prisma.ItemDispensacaoCreateManyInput[] = [];
+
         for (const lote of lotesDisponiveis) {
-          if (quantidadeRestanteParaDispensar <= 0) break; 
+            if (quantidadeRestante === 0) break;
 
-          const quantidadeDisponivelNoLote = lote.quantidade;
-          const quantidadeConsumir = Math.min(quantidadeRestanteParaDispensar, quantidadeDisponivelNoLote);
+            const quantidadeBaixar = Math.min(quantidadeRestante, lote.quantidade);
 
-          // >>> CORREÇÃO CRUCIAL: USANDO 'await' DIRETO PARA FORÇAR A ATUALIZAÇÃO DO LOTE <<<
-          await tx.itemMovimento.update({
-            where: { id: lote.id },
-            data: {
-              quantidade: { decrement: quantidadeConsumir },
-            },
-          });
-          // O await garante que esta promise seja resolvida antes de continuar o loop.
+            // A. Atualiza o saldo do Lote (DECREMENTA)
+            operacoesEmLote.push(
+                tx.estoqueLote.update({
+                    where: { id: lote.id },
+                    data: { quantidade: { decrement: quantidadeBaixar } }
+                })
+            );
 
-          // Registra o detalhe da saída (ItemDispensacao) - Usando push para Promise.all
-          operacoesEmLote.push(
-            tx.itemDispensacao.create({
-              data: {
-                quantidadeSaida: quantidadeConsumir,
-                loteNumero: lote.numeroLote,
-                medicamentoId: item.medicamentoId,
-                dispensacaoId: dispensacao.id,
-              },
-            })
-          );
-
-          quantidadeRestanteParaDispensar -= quantidadeConsumir;
-        }
-
-        // Se, por alguma falha na lógica, a quantidadeRestante não zerar, é um erro de sistema
-        if (quantidadeRestanteParaDispensar > 0) {
-            throw new AppError(`Erro interno: Não foi possível baixar a quantidade solicitada (${quantidadeRestanteParaDispensar} restantes) mesmo após checagem inicial.`, 500);
-        }
-
-        // 4. Atualiza o ESTOQUE TOTAL (Medicamento) - Usando push para Promise.all
-        operacoesEmLote.push(
-          tx.medicamento.update({
-            where: { id: item.medicamentoId },
-            data: {
-              quantidadeEstoque: {
-                decrement: item.quantidadeSaida, // Subtrai a quantidade total solicitada
-              },
-            },
-          })
-        );
-      }
-      
-      // C. Executa as criações de ItemDispensacao e a atualização de Estoque Total
-      await Promise.all(operacoesEmLote);
-      
-      return dispensacao;
+            // B. Prepara a criação do ItemDispensacao (para registro)
+            itensDispensadosCriados.push({
+                quantidadeSaida: quantidadeBaixar,
+                loteNumero: lote.numeroLote, // Assumindo que o lote tem numeroLote
+                medicamentoId: medicamentoId, // <--- ADICIONE O ID EXPLÍCITO AQUI!
+                dispensacaoId: novaDispensacao.id, // Adicione aqui também para simplificar
     });
 
-    return resultado;
+            quantidadeRestante -= quantidadeBaixar;
+        }
+
+        // 3.4. Atualiza EstoqueLocal (Geral) - DECREMENTA
+        operacoesEmLote.push(
+            tx.estoqueLocal.update({
+                where: { id: estoqueGeral.id },
+                data: { quantidade: { decrement: quantidadeSaida } },
+            })
+        );
+        
+        // 3.5. Cria os registros de ItemDispensacao
+        // Adiciona a criação dos itens após o loop de lotes
+        operacoesEmLote.push(tx.itemDispensacao.createMany({
+            data: itensDispensadosCriados.map(item => ({
+                ...item,
+                dispensacaoId: novaDispensacao.id // Garante o relacionamento
+            }))
+        }));
+      }
+      
+      // 4. Executa todas as operações
+      await Promise.all(operacoesEmLote);
+      
+      // 5. Retorna o registro completo
+      return tx.dispensacao.findUnique({ where: { id: novaDispensacao.id }, include: { itensDispensados: true } });
+    });
   }
 }
 
