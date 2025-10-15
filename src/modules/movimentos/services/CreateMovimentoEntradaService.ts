@@ -6,22 +6,22 @@ const prisma = new PrismaClient();
 
 class CreateMovimentoEntradaService {
   async execute(data: ICreateMovimentoEntradaDTO) {
-    
-    const { 
-        estabelecimentoId, 
-        itens,
-        tipoMovimentacao,
-        fonteFinanciamento,
-        fornecedor,
-        documentoTipo,
-        numeroDocumento,
-        dataDocumento,
-        dataRecebimento,
-        valorTotal,
-        observacao,
-    } = data; 
 
-  
+    const {
+      estabelecimentoId,
+      itens,
+      tipoMovimentacao,
+      fonteFinanciamento,
+      fornecedor,
+      documentoTipo,
+      numeroDocumento,
+      dataDocumento,
+      dataRecebimento,
+      valorTotal,
+      observacao,
+    } = data;
+
+
     return await prisma.$transaction(async (tx) => {
       const estabelecimento = await tx.estabelecimento.findUnique({
         where: { id: estabelecimentoId },
@@ -30,7 +30,7 @@ class CreateMovimentoEntradaService {
       if (!estabelecimento) {
         throw new AppError('Estabelecimento não encontrado.', 404);
       }
-      
+
       const movimento = await tx.movimento.create({
         data: {
           tipoMovimentacao,
@@ -69,34 +69,49 @@ class CreateMovimentoEntradaService {
         });
 
         await tx.estoqueLote.upsert({
-            where: {
-                medicamentoId_estabelecimentoId_numeroLote: {
-                    medicamentoId: item.medicamentoId,
-                    estabelecimentoId: estabelecimentoId,
-                    numeroLote: item.numeroLote,
-                },
+          where: {
+            medicamentoId_estabelecimentoId_numeroLote: {
+              medicamentoId: item.medicamentoId,
+              estabelecimentoId: estabelecimentoId,
+              numeroLote: item.numeroLote,
             },
-               
-          update: {
-                quantidade: { increment: item.quantidade },
-                dataValidade: new Date(item.dataValidade),
-                fabricante: item.fabricante,
-                // Opcional: Localização física pode ser atualizada
-            },
+          },
 
-           create: {
-                medicamentoId: item.medicamentoId,
-                estabelecimentoId: estabelecimentoId,
-                quantidade: item.quantidade,
-                numeroLote: item.numeroLote,
-                dataValidade: new Date(item.dataValidade),
-                fabricante: item.fabricante,
-                // Opcional: Rastreabilidade
-                itemMovimentoEntradaId: itemMovimento.id, 
-            },
+          update: {
+            quantidade: { increment: item.quantidade },
+            dataValidade: new Date(item.dataValidade),
+            fabricante: item.fabricante,
+            // Opcional: Localização física pode ser atualizada
+          },
+
+          create: {
+            medicamentoId: item.medicamentoId,
+            estabelecimentoId: estabelecimentoId,
+            quantidade: item.quantidade,
+            numeroLote: item.numeroLote,
+            dataValidade: new Date(item.dataValidade),
+            fabricante: item.fabricante,
+            // Opcional: Rastreabilidade
+            itemMovimentoEntradaId: itemMovimento.id,
+          },
         });
 
-
+        await tx.estoqueLocal.upsert({
+          where: {
+            medicamentoId_estabelecimentoId: {
+              medicamentoId: item.medicamentoId,
+              estabelecimentoId: estabelecimentoId,
+            },
+          },
+          update: {
+            quantidade: { increment: item.quantidade },
+          },
+          create: {
+            medicamentoId: item.medicamentoId,
+            estabelecimentoId: estabelecimentoId,
+            quantidade: item.quantidade,
+          },
+        });
 
         await tx.medicamento.update({
           where: { id: item.medicamentoId },
@@ -105,7 +120,7 @@ class CreateMovimentoEntradaService {
           },
         });
       }
-      
+
       return movimento;
     });
   }
