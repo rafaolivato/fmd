@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { CreateMovimentoEntradaController } from './controllers/CreateMovimentoEntradaController';
-import { ListMovimentosController } from './controllers/ListMovimentosController'; // <-- NOVO IMPORT
+import { ListMovimentosController } from './controllers/ListMovimentosController';
+import { CreateMovimentoSaidaController} from './controllers/CreateMovimentoSaidaController';
 import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
 
 const movimentosRoutes = Router();
 const createMovimentoEntradaController = new CreateMovimentoEntradaController();
+const createMovimentoSaidaController = new CreateMovimentoSaidaController();
 const listMovimentosController = new ListMovimentosController(); // <-- NOVA INSTÂNCIA
 
 // Todas as rotas de movimentos precisam de autenticação
@@ -19,5 +21,10 @@ movimentosRoutes.post('/entrada', (request, response, next) => {
 movimentosRoutes.get('/', (request, response, next) => {
     listMovimentosController.handle(request, response, next);
 });
+
+movimentosRoutes.post('/saida', (request, response, next) => {
+  createMovimentoSaidaController.handle(request, response, next);
+});
+
 
 export { movimentosRoutes };

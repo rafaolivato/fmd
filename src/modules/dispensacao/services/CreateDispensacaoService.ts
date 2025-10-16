@@ -36,7 +36,16 @@ class CreateDispensacaoService {
 
       // 3. Processa cada Item
       for (const item of itens) {
-        const { medicamentoId, quantidadeSaida, loteId: loteForcado } = item;
+        // 1. Remova 'quantidadeSaida' da desestruturação.
+        const { medicamentoId, loteId: loteForcado } = item;
+
+        // 2. Crie uma variável numérica garantida:
+        const quantidadeSaidaNumerica = Number(item.quantidadeSaida);
+
+        // Validação extra (se for NaN, a requisição é inválida)
+        if (isNaN(quantidadeSaidaNumerica) || quantidadeSaidaNumerica <= 0) {
+          throw new AppError('Quantidade de saída inválida.', 400);
+        }
 
         // 3.1. CHECAGEM DE ESTOQUE LOCAL (Geral)
         const estoqueGeral = await tx.estoqueLocal.findUnique({
@@ -45,13 +54,13 @@ class CreateDispensacaoService {
           },
         });
 
-        if (!estoqueGeral || estoqueGeral.quantidade < quantidadeSaida) {
-          throw new AppError(`Estoque insuficiente de ID ${medicamentoId}. Saldo na farmácia: ${estoqueGeral?.quantidade ?? 0}.`, 400);
-        }
+        if (!estoqueGeral || estoqueGeral.quantidade < quantidadeSaidaNumerica) { 
+        throw new AppError(`Estoque insuficiente de ID ${medicamentoId}. Saldo na farmácia: ${estoqueGeral?.quantidade ?? 0}.`, 400);
+    }
 
         // 3.2. BUSCA DE LOTES (FIFO: Vencimento mais próximo primeiro)
 
-        let quantidadeRestante = quantidadeSaida;
+        let quantidadeRestante = quantidadeSaidaNumerica;
 
         const lotesDisponiveis = await tx.estoqueLote.findMany({ // <--- Tabela Crítica
           where: {
@@ -76,10 +85,10 @@ class CreateDispensacaoService {
 
           // A. Atualiza o saldo do Lote (DECREMENTA)
           operacoesEmLote.push(
-            tx.estoqueLote.update({
-              where: { id: lote.id },
-              data: { quantidade: { decrement: quantidadeBaixar } }
-            })
+            ((loteId, baixa) => tx.estoqueLote.update({
+              where: { id: loteId },
+              data: { quantidade: { decrement: baixa } }
+            }))(lote.id, quantidadeBaixar)
           );
 
           // B. Prepara a criação do ItemDispensacao (para registro)
@@ -93,14 +102,13 @@ class CreateDispensacaoService {
           quantidadeRestante -= quantidadeBaixar;
         }
 
-
-
-        // 3.5. Cria os registros de ItemDispensacao
         // Adiciona a criação dos itens após o loop de lotes
-        await tx.estoqueLocal.update({
-          where: { id: estoqueGeral.id },
-          data: { quantidade: { decrement: parseInt(quantidadeSaida as any) } },
-        });
+        operacoesEmLote.push(
+          tx.estoqueLocal.update({
+            where: { id: estoqueGeral.id },
+            data: { quantidade: { decrement: quantidadeSaidaNumerica } },
+          })
+        )
 
         await tx.itemDispensacao.createMany({
           data: itensDispensadosCriados,

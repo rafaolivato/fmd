@@ -8,6 +8,7 @@ import { relatoriosRoutes } from './modules/relatorios/routes';
 import { estabelecimentosRoutes } from './modules/estabelecimentos/routes'
 import { requisicoesRoutes } from './modules/requisicoes/routes';
 
+
 const routes = Router();
 
 routes.use('/auth', authRoutes);

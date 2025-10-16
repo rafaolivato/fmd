@@ -2,7 +2,7 @@
 
 import { Router } from 'express';
 import { CreateMedicamentoController } from './controllers/CreateMedicamentoController';
-import { ListMedicamentosController } from './controllers/ListMedicamentosController'; // <-- NOVO IMPORT
+import { ListMedicamentosController } from './controllers/ListMedicamentosController'; 
 import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
 
 const medicamentosRoutes = Router();

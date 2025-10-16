@@ -1,4 +1,3 @@
-// src/modules/medicamentos/services/ListMedicamentosService.ts
 import { prisma } from '../../../database/prismaClient';
 
 class ListMedicamentosService {

@@ -14,9 +14,7 @@ class CreateDispensacaoController {
         profissionalSaude,
         documentoReferencia,
         observacao,
-        itens,
-        
-        // NOVO CAMPO PASSADO PARA O SERVICE
+        itens,       
         estabelecimentoOrigemId,
       });
 

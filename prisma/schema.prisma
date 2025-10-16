@@ -83,6 +83,17 @@ model ItemMovimento {
   @@unique([numeroLote, movimentoId])
 }
 
+model Paciente {
+  id          String @id @default(uuid())
+  nome        String
+  cpf         String @unique
+  dataNascimento DateTime
+  endereco     String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model Dispensacao {
   id String @id @default(uuid())
 
