@@ -1,4 +1,3 @@
-// modules/auth/controllers/AuthController.ts
 import { Request, Response, NextFunction } from 'express'; // Importe NextFunction
 import { AuthService } from '../services/AuthService';
 import { AppError } from '../../../shared/errors/AppError'; // Importe AppError

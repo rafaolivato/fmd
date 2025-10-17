@@ -1,16 +1,22 @@
 import { compare } from 'bcryptjs';
 import { sign } from 'jsonwebtoken';
 import { AppError } from '../../../shared/errors/AppError';
-import { prisma } from '../../../database/prismaClient'; // Importe seu client Prisma
-import { IAuthRequestDTO } from '../dtos/IAuthRequestDTO'; 
+import { prisma } from '../../../database/prismaClient'; 
+import { IAuthRequestDTO } from '../dtos/IAuthRequestDTO';
 
 
 class AuthService {
-   async execute({ email, password }: IAuthRequestDTO) {
+  async execute({ email, password }: IAuthRequestDTO) {
     // 1. Busca o usuário pelo email
     const user = await prisma.user.findUnique({
       where: { email },
     });
+
+    // ADICIONE ESTES LOGS:
+    console.log('--- TESTE DE LOGIN ---');
+    console.log('Email encontrado:', user ? true : false);
+    console.log('Senha Enviada:', password);
+    console.log('Hash do Banco:', user?.password);
 
     if (!user) {
       throw new AppError('Email ou senha incorretos.', 401);
@@ -18,6 +24,7 @@ class AuthService {
 
     // 2. Compara a senha (Criptografada)
     const passwordMatch = await compare(password, user.password);
+    console.log('Resultado da Comparação:', passwordMatch);
 
     if (!passwordMatch) {
       throw new AppError('Email ou senha incorretos.', 401);

@@ -4,6 +4,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { loginUser } from '../store/slices/authSlice';
 import type { AppDispatch, RootState } from '../store/store';
 import { useNavigate } from 'react-router-dom';
+import Container from 'react-bootstrap/Container';
+import Card from 'react-bootstrap/Card';
+import Form from 'react-bootstrap/Form';
+import Button from 'react-bootstrap/Button';
+import Alert from 'react-bootstrap/Alert';
 
 const Login: React.FC = () => {
   const [usuario, setUsuario] = useState(''); // Pode ser email ou CPF, dependendo do seu backend
@@ -25,7 +30,7 @@ const Login: React.FC = () => {
     e.preventDefault();
     
     // Dispara o thunk de login com as credenciais
-    dispatch(loginUser({ usuario: usuario, senha: senha }))
+    dispatch(loginUser({ email: usuario, password: senha }))
       .unwrap() // Desempacota o resultado para verificar sucesso/falha
       .then(() => {
         // Redireciona em caso de sucesso (o slice também lida com isso)
@@ -38,59 +43,66 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="p-8 bg-white shadow-md rounded-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-6">Acesso ao FMD</h2>
+    <Container 
+    fluid 
+    className="d-flex align-items-center justify-content-center" 
+    style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <div 
+        className="p-3 my-auto mx-auto" // mx-auto para horizontal, my-auto para vertical" 
+        style={{ width: '100%', maxWidth: '400px' }} // Garante que o card ocupe 100% da largura, mas não mais de 400px
+      >
+        <Card className="shadow-lg p-4">
+          <Card.Body>
+            <h2 className="text-center mb-4">Acesso ao FMD</h2>
 
-        {/* Exibir mensagem de erro */}
-        {error && (
-          <p className="p-2 mb-4 text-sm text-red-700 bg-red-100 rounded-lg">
-            {error}
-          </p>
-        )}
+            {/* Exibir mensagem de erro com Alert do Bootstrap */}
+            {error && (
+              <Alert variant="danger" className="text-center">
+                {error}
+              </Alert>
+            )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="usuario">
-              Usuário (Email ou CPF)
-            </label>
-            <input
-              type="text"
-              id="usuario"
-              value={usuario}
-              onChange={(e) => setUsuario(e.target.value)}
-              required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
+            <Form onSubmit={handleSubmit}>
+              <Form.Group className="mb-3" controlId="formUsuario">
+                <Form.Label>Usuário (Email ou CPF)</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={usuario}
+                  onChange={(e) => setUsuario(e.target.value)}
+                  required
+                  placeholder="Seu usuário"
+                  autoFocus
+                />
+              </Form.Group>
 
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="senha">
-              Senha
-            </label>
-            <input
-              type="password"
-              id="senha"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
+              <Form.Group className="mb-4" controlId="formSenha">
+                <Form.Label>Senha</Form.Label>
+                <Form.Control
+                  type="password"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  required
+                  placeholder="Sua senha"
+                />
+              </Form.Group>
 
-          <div className="flex items-center justify-between">
-            <button
-              type="submit"
-              disabled={loading === 'pending'}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full disabled:opacity-50"
-            >
-              {loading === 'pending' ? 'Entrando...' : 'Entrar'}
-            </button>
-          </div>
-        </form>
+              <Button
+                variant="primary" // Cor azul padrão
+                type="submit"
+                disabled={loading === 'pending'}
+                className="w-100" // Ocupa 100% da largura
+              >
+                {loading === 'pending' ? 'Entrando...' : 'Entrar'}
+              </Button>
+            </Form>
+          </Card.Body>
+        </Card>
       </div>
-    </div>
+      
+    </Container>
   );
 };
+
+
 
 export default Login;

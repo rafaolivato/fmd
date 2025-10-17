@@ -1,19 +1,18 @@
-
-import express, { Express } from 'express'; 
+import express from 'express';
+import { Express } from 'express';
 
 import cors from 'cors';
 import { routes } from './routes';
 import { errorHandler } from './middlewares/errorHandler';
 
-// NO ENTANTO, a linha mais importante é a inicialização:
-// Se o erro persistir, mude a inicialização para:
-const app = (express as any)(); // <--- SOLUÇÃO FORÇADA: Chama o Express como função, ignorando a tipagem temporariamente.
+// A forma PADRÃO e correta de inicializar o Express
+const app: Express = express(); 
 
-// ... Seu código que usa express.json()
-app.use(express.json()); // Esta linha é herdada da importação correta
+app.use(cors());         // CORS
 
-app.use(cors());
-app.use(routes);
+app.use(express.json()); // Body parser
+
+app.use(routes);         // Rotas
 
 app.use(errorHandler);
 

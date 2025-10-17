@@ -1,4 +1,17 @@
 {
+  "name": "fmd-backend", 
+  "version": "1.0.0",
+  
+  "scripts": {
+    "start": "ts-node src/server.ts",
+    "dev": "npx nodemon --exec ts-node src/server.ts",
+    "seed": "npx prisma db seed"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts" 
+  },
+  
+
   "dependencies": {
     "@prisma/client": "^6.16.3",
     "@types/node": "^24.6.2",
@@ -12,9 +25,11 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
-    "@types/jsonwebtoken": "^9.0.10"
+    "@types/jsonwebtoken": "^9.0.10",
+    "nodemon": "^3.1.4" 
   }
 }

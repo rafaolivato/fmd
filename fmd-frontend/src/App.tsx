@@ -1,43 +1,45 @@
-// src/App.tsx
+// src/App.tsx (VERSÃO ATUALIZADA)
+
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import type { RootState } from './store/store';
+// import { useSelector } from 'react-redux'; // Não precisa mais aqui
 
-// Páginas
+// Componentes
 import Login from './pages/Login';
-// Crie um componente temporário para a dashboard
-const Dashboard = () => <h1>Bem-vindo à Dashboard do FMD!</h1>; 
+import ProtectedLayout from './pages/ProtectedLayout'; // Importe o novo Layout com Proteção
+
+// Páginas (Mude para o nome correto depois)
+const DashboardHome = () => <h1>Bem-vindo à Dashboard do FMD!</h1>; 
+const Cadastros = () => <h1>Página de Cadastros</h1>;
+const Entradas = () => <h1>Página de Entradas</h1>;
+
 const NotFound = () => <h1>404 | Página não encontrada</h1>;
 
-// Componente para proteger rotas (PrivateRoutes)
-const ProtectedRoute: React.FC<{ element: React.ReactNode }> = ({ element }) => {
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-
-  if (!isAuthenticated) {
-    // Redireciona para o login se não estiver autenticado
-    return <Navigate to="/login" replace />;
-  }
-  // Renderiza o elemento se estiver autenticado
-  return <>{element}</>;
-};
 
 const App: React.FC = () => {
   return (
     <Routes>
-      {/* Rota para o Login */}
+      {/* Rota pública de Login */}
       <Route path="/login" element={<Login />} />
       
-      {/* Rota Protegida (Exige login) */}
-      <Route 
-        path="/dashboard" 
-        element={<ProtectedRoute element={<Dashboard />} />} 
-      />
-      
-      {/* Rota Padrão: Redireciona o root (/) para o login */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* ---------------------------------------------------- */}
+      {/* ROTA PROTEGIDA COM LAYOUT ANINHADO */}
+      {/* O elemento ProtectedLayout (que contém o DashboardLayout) será renderizado */}
+      <Route path="/" element={<ProtectedLayout />}>
+        
+        {/* Rota padrão: / */}
+        <Route index element={<Navigate to="dashboard" replace />} />
 
-      {/* Rota de Erro */}
+        {/* Rotas operacionais que aparecerão dentro do <Outlet /> do DashboardLayout */}
+        <Route path="dashboard" element={<DashboardHome />} />
+        <Route path="cadastros" element={<Cadastros />} />
+        <Route path="entradas" element={<Entradas />} />
+        
+        {/* Você continuará adicionando aqui: /movimentacoes, /dispensacao, etc. */}
+      </Route>
+      {/* ---------------------------------------------------- */}
+
+      {/* Rota de Erro (Geral) */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

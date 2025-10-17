@@ -32,7 +32,7 @@ export const loginUser = createAsyncThunk(
   async (credentials: any, { rejectWithValue }) => {
     try {
       // Endpoint que você deve ter criado no seu backend Express
-      const response = await api.post('/login', credentials); 
+      const response = await api.post('/auth/login', credentials); 
       
       const authData: IAuthResponse = response.data;
 
@@ -53,7 +53,7 @@ export const loginUser = createAsyncThunk(
 // Thunk para carregar token do localStorage e restaurar sessão (útil no início da aplicação)
 export const initializeAuth = createAsyncThunk(
   'auth/initialize',
-  async (_, { dispatch }) => {
+  async (_, { }) => {
     const token = localStorage.getItem('fmd_token');
     if (token) {
       // Tenta usar o token. Idealmente, você teria um endpoint como '/auth/me' para validar.
