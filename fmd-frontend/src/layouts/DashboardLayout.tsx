@@ -13,7 +13,7 @@ const DashboardLayout: React.FC = () => {
       <div 
         style={{ 
           marginLeft: '250px', // Espaço reservado para a Sidebar fixa
-          paddingTop: '60px', // Espaço reservado para o Header fixo
+          
           padding: '20px', // Espaçamento interno para o conteúdo
           minHeight: '100vh',
           backgroundColor: '#f4f7f6', // Um fundo claro para o conteúdo

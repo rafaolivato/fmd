@@ -6,11 +6,12 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Componentes
 import Login from './pages/Login';
-import ProtectedLayout from './pages/ProtectedLayout'; // Importe o novo Layout com Proteção
+import ProtectedLayout from './pages/ProtectedLayout'; 
+import EstabelecimentoPage from './pages/EstabelecimentoPage';
 
 // Páginas (Mude para o nome correto depois)
 const DashboardHome = () => <h1>Bem-vindo à Dashboard do FMD!</h1>; 
-const Cadastros = () => <h1>Página de Cadastros</h1>;
+//const Cadastros = () => <h1>Página de Cadastros</h1>;
 const Entradas = () => <h1>Página de Entradas</h1>;
 
 const NotFound = () => <h1>404 | Página não encontrada</h1>;
@@ -32,7 +33,7 @@ const App: React.FC = () => {
 
         {/* Rotas operacionais que aparecerão dentro do <Outlet /> do DashboardLayout */}
         <Route path="dashboard" element={<DashboardHome />} />
-        <Route path="cadastros" element={<Cadastros />} />
+        <Route path="cadastros" element={<EstabelecimentoPage />} />
         <Route path="entradas" element={<Entradas />} />
         
         {/* Você continuará adicionando aqui: /movimentacoes, /dispensacao, etc. */}

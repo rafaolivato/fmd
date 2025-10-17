@@ -2,14 +2,10 @@
 
 npx ts-node src/server.ts
 
-###Para usar o Postman
-
-{
-    "name": "Rafael",
-    "email": "rafael@fmd.com",
-    "password": "123456"
-}
-
 # Rodar o front-endereco
 
 npm run dev
+
+# Na pasta de Backend 
+
+npx prisma db seed

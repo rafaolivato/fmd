@@ -1,11 +1,13 @@
 // src/store/store.ts
 import { configureStore } from '@reduxjs/toolkit';
-import authReducer from './slices/authSlice'; // Este slice será criado no Passo 3
+import authReducer from './slices/authSlice'; 
+import estabelecimentoReducer from './slices/estabelecimentoSlice';
 
 export const store = configureStore({
   reducer: {
-    // 1. Adicione o reducer de autenticação
+    
     auth: authReducer,
+    estabelecimentos: estabelecimentoReducer,
     // Futuramente, outros reducers serão adicionados aqui (ex: medicamentos, relatorios)
   },
   // O Redux Toolkit já configura middlewares essenciais

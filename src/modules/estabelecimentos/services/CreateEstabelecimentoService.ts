@@ -1,5 +1,3 @@
-// src/modules/estabelecimentos/services/CreateEstabelecimentoService.ts
-
 import { prisma } from '../../../database/prismaClient';
 import { ICreateEstabelecimentoDTO } from '../dtos/ICreateEstabelecimentoDTO';
 import { AppError } from '../../../shared/errors/AppError';
