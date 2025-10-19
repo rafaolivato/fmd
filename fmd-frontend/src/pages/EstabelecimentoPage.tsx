@@ -1,5 +1,3 @@
-// fmd-frontend/src/pages/EstabelecimentoPage.tsx (Implementação com Redux)
-
 import React, { useEffect, useState } from 'react';
 import { Container, Button, Table, Spinner, Alert } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
@@ -31,8 +29,6 @@ const EstabelecimentoPage: React.FC = () => {
         return <Container className="mt-5"><Alert variant="danger">{error}</Alert></Container>;
     }
     
-    // ... restante do código (botões de modal, etc.)
-
     return (
         <Container fluid className='mt-5'>
             {/* ... Título e botão ... */}

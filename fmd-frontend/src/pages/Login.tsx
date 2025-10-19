@@ -1,10 +1,9 @@
-import React, { useState} from 'react';
-import type {FormEvent} from 'react';
+import React, { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser } from '../store/slices/authSlice';
 import type { AppDispatch, RootState } from '../store/store';
 import { useNavigate } from 'react-router-dom';
-import Container from 'react-bootstrap/Container';
 import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
@@ -13,7 +12,7 @@ import Alert from 'react-bootstrap/Alert';
 const Login: React.FC = () => {
   const [usuario, setUsuario] = useState(''); // Pode ser email ou CPF, dependendo do seu backend
   const [senha, setSenha] = useState('');
-  
+
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
@@ -23,18 +22,18 @@ const Login: React.FC = () => {
 
   // Redireciona imediatamente se já estiver autenticado
   if (isAuthenticated) {
-    navigate('/dashboard'); 
+    navigate('/dashboard');
   }
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    
+
     // Dispara o thunk de login com as credenciais
     dispatch(loginUser({ email: usuario, password: senha }))
       .unwrap() // Desempacota o resultado para verificar sucesso/falha
       .then(() => {
         // Redireciona em caso de sucesso (o slice também lida com isso)
-        navigate('/dashboard'); 
+        navigate('/dashboard');
       })
       .catch(() => {
         // O erro já está no estado do Redux e será exibido
@@ -43,13 +42,22 @@ const Login: React.FC = () => {
   };
 
   return (
-    <Container 
-    fluid 
-    className="d-flex align-items-center justify-content-center" 
-    style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
-      <div 
-        className="p-3 my-auto mx-auto" // mx-auto para horizontal, my-auto para vertical" 
-        style={{ width: '100%', maxWidth: '400px' }} // Garante que o card ocupe 100% da largura, mas não mais de 400px
+    <div
+      className="d-flex align-items-center justify-content-center"
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#f8f9fa',
+        width: '100vw',
+        margin: 0,
+        padding: 0
+      }}
+    >
+      <div
+        className="p-3"
+        style={{
+          width: '100%',
+          maxWidth: '400px'
+        }}
       >
         <Card className="shadow-lg p-4">
           <Card.Body>
@@ -87,10 +95,10 @@ const Login: React.FC = () => {
               </Form.Group>
 
               <Button
-                variant="primary" // Cor azul padrão
+                variant="primary"
                 type="submit"
                 disabled={loading === 'pending'}
-                className="w-100" // Ocupa 100% da largura
+                className="w-100"
               >
                 {loading === 'pending' ? 'Entrando...' : 'Entrar'}
               </Button>
@@ -98,11 +106,8 @@ const Login: React.FC = () => {
           </Card.Body>
         </Card>
       </div>
-      
-    </Container>
+    </div>
   );
-};
-
-
+}
 
 export default Login;
