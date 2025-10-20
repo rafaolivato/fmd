@@ -3,11 +3,17 @@
 import { Router } from 'express';
 import { CreateMedicamentoController } from './controllers/CreateMedicamentoController';
 import { ListMedicamentosController } from './controllers/ListMedicamentosController'; 
+import { UpdateMedicamentoController } from './controllers/UpdateMedicamentoController';
+import { DeleteMedicamentoController } from './controllers/DeleteMedicamentoController';
+import { GetAllMedicamentosController } from './controllers/GetAllMedicamentosController';
 import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
 
 const medicamentosRoutes = Router();
 const createMedicamentoController = new CreateMedicamentoController();
-const listMedicamentosController = new ListMedicamentosController(); // <-- NOVA INSTÂNCIA
+const listMedicamentosController = new ListMedicamentosController(); 
+const updateMedicamentoController = new UpdateMedicamentoController();
+const deleteMedicamentoController = new DeleteMedicamentoController();
+const getAllMedicamentosController = new GetAllMedicamentosController();
 
 // Todas as rotas de medicamentos precisam de autenticação
 medicamentosRoutes.use(ensureAuthenticated);
@@ -21,5 +27,10 @@ medicamentosRoutes.post('/', (request, response, next) => {
 medicamentosRoutes.get('/', (request, response, next) => {
     listMedicamentosController.handle(request, response, next);
 });
+
+medicamentosRoutes.get('/', getAllMedicamentosController.handle);
+medicamentosRoutes.put('/:id', updateMedicamentoController.handle);
+medicamentosRoutes.delete('/:id', deleteMedicamentoController.handle);
+
 
 export { medicamentosRoutes };

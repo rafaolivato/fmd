@@ -9,3 +9,17 @@ npm run dev
 # Na pasta de Backend 
 
 npx prisma db seed
+
+# 1. Valide o schema
+npx prisma validate
+
+# 2. Gere o cliente
+npx prisma generate
+
+# 3. Sincronize com o banco
+npx prisma db push
+# OU se usar migrações:
+npx prisma migrate dev --name sync_schema
+
+# 4. Tente rodar novamente
+npx ts-node src/server.ts
