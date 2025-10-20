@@ -5,7 +5,9 @@ import { Modal, Button, Form, Alert } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../../store/store';
 import type { AppDispatch } from '../../store/store';   
-import { createEstabelecimento } from '../../store/slices/estabelecimentoSlice'; 
+import { createEstabelecimento, updateEstabelecimento } from '../../store/slices/estabelecimentoSlice'; 
+import type { Estabelecimento, CreateEstabelecimentoData } from '../../store/slices/estabelecimentoSlice';
+
 
 interface EstabelecimentoFormProps {
     show: boolean;

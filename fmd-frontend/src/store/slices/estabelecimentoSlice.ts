@@ -39,38 +39,32 @@ interface AxiosError {
 }
 
 export const fetchEstabelecimentos = createAsyncThunk<
-    Estabelecimento[], // Tipo do retorno de sucesso
-    void, // Tipo do argumento de entrada (vazio)
-    { rejectValue: string } // Tipo do retorno de erro do rejectWithValue
+    Estabelecimento[], 
+    void, 
+    { rejectValue: string } 
 >(
     'estabelecimentos/fetchAll',
     async (_, { rejectWithValue }) => {
         try {
-            // 1. RECOLOQUE A CHAMADA REAL À API! (Resolve o aviso 'api is never read')
             const response = await api.get<Estabelecimento[]>('/estabelecimentos');
             return response.data;
-
         } catch (error) {
-
-            // Use o Type Guard (como você já fez)
             const axiosError = error as AxiosError;
-
             const message = axiosError.response?.data?.message || 'Falha ao buscar estabelecimentos.';
-
             return rejectWithValue(message);
         }
     }
 );
 
+// 2. CREATE
 export const createEstabelecimento = createAsyncThunk<
-    Estabelecimento, // Tipo do retorno de sucesso (o objeto criado)
-    CreateEstabelecimentoData, // Tipo do payload (dados do formulário)
-    { rejectValue: string } // Tipo do retorno de erro
+    Estabelecimento, 
+    CreateEstabelecimentoData, 
+    { rejectValue: string } 
 >(
     'estabelecimentos/create',
     async (data, { rejectWithValue }) => {
         try {
-            // Faz a chamada POST para o seu backend
             const response = await api.post<Estabelecimento>('/estabelecimentos', data);
             return response.data;
         } catch (error) {
@@ -81,53 +75,84 @@ export const createEstabelecimento = createAsyncThunk<
     }
 );
 
-// --- SLICE (Onde o estado é gerenciado) ---
+// 3. DELETE (AGORA ESTÁ NO LUGAR CORRETO)
+export const deleteEstabelecimento = createAsyncThunk<
+    string, // Retorna o ID
+    string, // Recebe o ID
+    { rejectValue: string } 
+>(
+    'estabelecimentos/delete',
+    async (id, { rejectWithValue }) => {
+        try {
+            await api.delete(`/estabelecimentos/${id}`);
+            return id;
+        } catch (error) {
+            const axiosError = error as AxiosError;
+            const message = axiosError.response?.data?.message || `Falha ao excluir o estabelecimento ID: ${id}.`;
+            return rejectWithValue(message);
+        }
+    }
+);
+
+
+// === SLICE ===
 const estabelecimentoSlice = createSlice({
     name: 'estabelecimentos',
     initialState,
     reducers: {
-        // Reducer para limpar erros, se necessário
         clearError: (state) => {
             state.error = null;
         }
-        // Aqui você adicionaria reducers para manipulação síncrona, se necessário
     },
     extraReducers: (builder) => {
         builder
-            // LISTAGEM PENDENTE
+            // --- FETCH ---
             .addCase(fetchEstabelecimentos.pending, (state) => {
                 state.loading = 'pending';
                 state.error = null;
             })
-            // LISTAGEM SUCESSO
             .addCase(fetchEstabelecimentos.fulfilled, (state, action: PayloadAction<Estabelecimento[]>) => {
                 state.loading = 'succeeded';
-                state.estabelecimentos = action.payload; // Armazena a lista
+                state.estabelecimentos = action.payload;
             })
-            // LISTAGEM FALHA
             .addCase(fetchEstabelecimentos.rejected, (state, action) => {
                 state.loading = 'failed';
-                state.error = (action.payload as string) || 'Erro desconhecido ao carregar estabelecimentos.';
-                state.estabelecimentos = []; // Limpa a lista em caso de falha
+                const errorMessage = typeof action.payload === 'string' ? action.payload : 'Erro desconhecido ao carregar estabelecimentos.';
+                state.error = errorMessage;
+                state.estabelecimentos = [];
             })
 
-            
+            // --- CREATE ---
             .addCase(createEstabelecimento.pending, (state) => {
-                    state.loading = 'pending';
-                    state.error = null;
-                })
-            // CRIAÇÃO SUCESSO (Adiciona o novo item à lista)
+                state.loading = 'pending';
+                state.error = null;
+            })
             .addCase(createEstabelecimento.fulfilled, (state, action: PayloadAction<Estabelecimento>) => {
                 state.loading = 'succeeded';
-                // Adiciona o novo item à lista de estabelecimentos existente:
                 state.estabelecimentos.push(action.payload);
             })
-            // CRIAÇÃO FALHA
             .addCase(createEstabelecimento.rejected, (state, action) => {
                 state.loading = 'failed';
                 const errorMessage = typeof action.payload === 'string' ? action.payload : 'Erro desconhecido ao criar.';
                 state.error = errorMessage;
-            });
+            })
+            
+            // --- DELETE ---
+            .addCase(deleteEstabelecimento.pending, (state) => { // CORRIGIDO: Removido o ponto extra aqui
+                state.loading = 'pending';
+                state.error = null;
+            })
+            .addCase(deleteEstabelecimento.fulfilled, (state, action: PayloadAction<string>) => {
+                state.loading = 'succeeded';
+                state.estabelecimentos = state.estabelecimentos.filter(
+                    (est) => est.id !== action.payload
+                );
+            })
+            .addCase(deleteEstabelecimento.rejected, (state, action) => {
+                state.loading = 'failed';
+                const errorMessage = typeof action.payload === 'string' ? action.payload : 'Erro desconhecido ao excluir.';
+                state.error = errorMessage;
+            }); // CORRIGIDO: Agora tudo está encadeado corretamente
     },
 });
 

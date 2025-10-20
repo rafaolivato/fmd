@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Container, Button, Table, Spinner, Alert } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../store/store';
-import { fetchEstabelecimentos } from '../store/slices/estabelecimentoSlice'; 
+import { fetchEstabelecimentos, deleteEstabelecimento} from '../store/slices/estabelecimentoSlice'; 
 import EstabelecimentoForm from '../components/estabelecimentos/EstabelecimentoForm';
 
 const EstabelecimentoPage: React.FC = () => {
@@ -28,7 +28,28 @@ const EstabelecimentoPage: React.FC = () => {
     if (error) {
         return <Container className="mt-5"><Alert variant="danger">{error}</Alert></Container>;
     }
-    
+
+    const handleDelete = (id: string, nome: string) => {
+        // Confirmação via modal nativo
+        if (window.confirm(`Tem certeza que deseja excluir o estabelecimento "${nome}"?`)) {
+            dispatch(deleteEstabelecimento(id));
+        }
+    };
+
+    const [editingEstabelecimento, setEditingEstabelecimento] = useState<Estabelecimento | null>(null);
+
+    // Nova função para abrir o modal em modo de edição
+    const handleEdit = (estabelecimento: Estabelecimento) => {
+        setEditingEstabelecimento(estabelecimento); // Define o item para edição
+        setShowModal(true); // Abre o modal
+    };
+
+    // Função para fechar o modal
+    const handleCloseModal = () => {
+        setEditingEstabelecimento(null); // Limpa o estado de edição ao fechar
+        setShowModal(false);
+    };
+
     return (
         <Container fluid className='mt-5'>
             {/* ... Título e botão ... */}
@@ -57,8 +78,10 @@ const EstabelecimentoPage: React.FC = () => {
                             <td>{est.cnpj}</td>
                             <td>{est.tipo}</td>
                             <td>
-                                <Button variant="warning" size="sm" className="me-2">Editar</Button>
-                                <Button variant="danger" size="sm">Excluir</Button>
+                                <Button variant="warning" size="sm" className="me-2" onClick={() => handleEdit(est)} >Editar</Button>
+                                <Button variant="danger" size="sm" 
+                                onClick={() => handleDelete(est.id, est.nome)} 
+                                >Excluir</Button>
                             </td>
                         </tr>
                     ))}
@@ -68,7 +91,16 @@ const EstabelecimentoPage: React.FC = () => {
             <EstabelecimentoForm 
                 show={showModal} 
                 handleClose={() => setShowModal(false)} 
+                
             />
+
+            <EstabelecimentoForm 
+                show={showModal} 
+                handleClose={handleCloseModal} // Use a nova função de fechar
+                estabelecimentoToEdit={editingEstabelecimento} // PASSA OS DADOS PARA O FORM
+            />
+
+
         </Container>
     );
 };
