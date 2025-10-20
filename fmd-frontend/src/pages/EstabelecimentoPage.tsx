@@ -4,11 +4,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../store/store';
 import { fetchEstabelecimentos, deleteEstabelecimento} from '../store/slices/estabelecimentoSlice'; 
 import EstabelecimentoForm from '../components/estabelecimentos/EstabelecimentoForm';
+import type { Estabelecimento } from '../store/slices/estabelecimentoSlice';
 
 const EstabelecimentoPage: React.FC = () => {
     const dispatch = useDispatch<AppDispatch>();
 
     const [showModal, setShowModal] = useState(false);
+    const [editingEstabelecimento, setEditingEstabelecimento] = useState<Estabelecimento | null>(null);
     
     // Pega o estado do Redux
     const { estabelecimentos, loading, error } = useSelector(
@@ -36,7 +38,7 @@ const EstabelecimentoPage: React.FC = () => {
         }
     };
 
-    const [editingEstabelecimento, setEditingEstabelecimento] = useState<Estabelecimento | null>(null);
+    
 
     // Nova função para abrir o modal em modo de edição
     const handleEdit = (estabelecimento: Estabelecimento) => {
@@ -78,7 +80,8 @@ const EstabelecimentoPage: React.FC = () => {
                             <td>{est.cnpj}</td>
                             <td>{est.tipo}</td>
                             <td>
-                                <Button variant="warning" size="sm" className="me-2" onClick={() => handleEdit(est)} >Editar</Button>
+                                <Button variant="warning" size="sm" className="me-2" 
+                                onClick={() => handleEdit(est)} >Editar</Button>
                                 <Button variant="danger" size="sm" 
                                 onClick={() => handleDelete(est.id, est.nome)} 
                                 >Excluir</Button>
@@ -88,11 +91,6 @@ const EstabelecimentoPage: React.FC = () => {
                 </tbody>
             </Table>
             
-            <EstabelecimentoForm 
-                show={showModal} 
-                handleClose={() => setShowModal(false)} 
-                
-            />
 
             <EstabelecimentoForm 
                 show={showModal} 

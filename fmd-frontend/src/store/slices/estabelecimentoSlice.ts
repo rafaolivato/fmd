@@ -3,33 +3,34 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { api } from '../services/api';
 
-// Tipagem básica do Estabelecimento (Ajuste conforme seu modelo)
-interface Estabelecimento {
+// 1. INTERFACE PRINCIPAL (PRECISA SER EXPORTADA)
+export interface Estabelecimento {
     id: string;
     nome: string;
     cnpj: string | null;
     tipo: string;
 }
 
-// Tipagem do Estado
+// 2. INTERFACE DE CRIAÇÃO (PRECISA SER EXPORTADA)
+export interface CreateEstabelecimentoData {
+    nome: string;
+    cnpj: string;
+    tipo: string;
+}
+
+// 3. INTERFACE DE ATUALIZAÇÃO (PRECISA SER EXPORTADA)
+export interface UpdateEstabelecimentoData extends CreateEstabelecimentoData {
+    id: string; // ID é obrigatório para atualização
+}
+
+// TIPAGEM INTERNA DO ESTADO (Não precisa de export)
 interface EstabelecimentoState {
     estabelecimentos: Estabelecimento[];
     loading: 'idle' | 'pending' | 'succeeded' | 'failed';
     error: string | null;
 }
 
-const initialState: EstabelecimentoState = {
-    estabelecimentos: [],
-    loading: 'idle',
-    error: null,
-};
-
-interface CreateEstabelecimentoData {
-    nome: string;
-    cnpj: string;
-    tipo: string;
-}
-
+// TIPAGEM DE ERRO (Não precisa de export)
 interface AxiosError {
     response?: {
         data?: {
@@ -38,10 +39,19 @@ interface AxiosError {
     };
 }
 
+const initialState: EstabelecimentoState = {
+    estabelecimentos: [],
+    loading: 'idle',
+    error: null,
+};
+
+
+// === THUNKS (TODOS OS EXPORTS ESTÃO CORRETOS AQUI) ===
+
 export const fetchEstabelecimentos = createAsyncThunk<
-    Estabelecimento[], 
-    void, 
-    { rejectValue: string } 
+    Estabelecimento[],
+    void,
+    { rejectValue: string }
 >(
     'estabelecimentos/fetchAll',
     async (_, { rejectWithValue }) => {
@@ -56,11 +66,10 @@ export const fetchEstabelecimentos = createAsyncThunk<
     }
 );
 
-// 2. CREATE
 export const createEstabelecimento = createAsyncThunk<
-    Estabelecimento, 
-    CreateEstabelecimentoData, 
-    { rejectValue: string } 
+    Estabelecimento,
+    CreateEstabelecimentoData,
+    { rejectValue: string }
 >(
     'estabelecimentos/create',
     async (data, { rejectWithValue }) => {
@@ -75,11 +84,10 @@ export const createEstabelecimento = createAsyncThunk<
     }
 );
 
-// 3. DELETE (AGORA ESTÁ NO LUGAR CORRETO)
 export const deleteEstabelecimento = createAsyncThunk<
     string, // Retorna o ID
     string, // Recebe o ID
-    { rejectValue: string } 
+    { rejectValue: string }
 >(
     'estabelecimentos/delete',
     async (id, { rejectWithValue }) => {
@@ -94,8 +102,25 @@ export const deleteEstabelecimento = createAsyncThunk<
     }
 );
 
+export const updateEstabelecimento = createAsyncThunk<
+    Estabelecimento,
+    UpdateEstabelecimentoData,
+    { rejectValue: string }
+>(
+    'estabelecimentos/update',
+    async ({ id, ...data }, { rejectWithValue }) => {
+        try {
+            const response = await api.patch<Estabelecimento>(`/estabelecimentos/${id}`, data);
+            return response.data;
+        } catch (error) {
+            const axiosError = error as AxiosError;
+            const message = axiosError.response?.data?.message || `Falha ao atualizar estabelecimento ID: ${id}.`;
+            return rejectWithValue(message);
+        }
+    }
+);
 
-// === SLICE ===
+// === SLICE (O restante permanece igual, pois já estava correto) ===
 const estabelecimentoSlice = createSlice({
     name: 'estabelecimentos',
     initialState,
@@ -136,9 +161,9 @@ const estabelecimentoSlice = createSlice({
                 const errorMessage = typeof action.payload === 'string' ? action.payload : 'Erro desconhecido ao criar.';
                 state.error = errorMessage;
             })
-            
+
             // --- DELETE ---
-            .addCase(deleteEstabelecimento.pending, (state) => { // CORRIGIDO: Removido o ponto extra aqui
+            .addCase(deleteEstabelecimento.pending, (state) => {
                 state.loading = 'pending';
                 state.error = null;
             })
@@ -152,7 +177,26 @@ const estabelecimentoSlice = createSlice({
                 state.loading = 'failed';
                 const errorMessage = typeof action.payload === 'string' ? action.payload : 'Erro desconhecido ao excluir.';
                 state.error = errorMessage;
-            }); // CORRIGIDO: Agora tudo está encadeado corretamente
+            })
+            
+            // --- UPDATE ---
+            .addCase(updateEstabelecimento.pending, (state) => {
+                state.loading = 'pending';
+                state.error = null;
+            })
+            .addCase(updateEstabelecimento.fulfilled, (state, action: PayloadAction<Estabelecimento>) => {
+                state.loading = 'succeeded';
+                const index = state.estabelecimentos.findIndex(est => est.id === action.payload.id);
+
+                if (index !== -1) {
+                    state.estabelecimentos[index] = action.payload;
+                }
+            })
+            .addCase(updateEstabelecimento.rejected, (state, action) => {
+                state.loading = 'failed';
+                const errorMessage = typeof action.payload === 'string' ? action.payload : 'Erro desconhecido ao atualizar.';
+                state.error = errorMessage;
+            });
     },
 });
 
