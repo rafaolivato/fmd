@@ -7,6 +7,7 @@ import MedicamentosPage from './pages/MedicamentosPage';
 import EntradaMedicamentosPage from './pages/EntradaMedicamentosPage';
 import SaidaMedicamentosPage from './pages/SaidaMedicamentosPage';
 
+
 // Páginas
 const DashboardHome = () => <h1>Bem-vindo à Dashboard do FMD!</h1>;
 

@@ -33,7 +33,7 @@ class CreateMovimentoSaidaService {
                 data: {
                     tipoMovimentacao,
                     documentoTipo: 'SAIDA_DIVERSA', // Define o tipo de documento
-                    numeroDocumento: documentoReferencia,
+                    numeroDocumento: `SAIDA-${Date.now()}`,
                     dataDocumento: new Date(dataMovimento),
                     dataRecebimento: new Date(dataMovimento), // Reutiliza o campo para a data de saída
                     observacao: justificativa + (observacao ? ` | ${observacao}` : ''), // Combina as observações

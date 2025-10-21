@@ -4,6 +4,7 @@ import { Button, Card, Form, Row, Col, Table, Alert } from 'react-bootstrap';
 import type { MovimentoSaidaFormData, ItemMovimentoSaida } from '../../types/MovimentoSaida';
 import type { Medicamento } from '../../types/Medicamento';
 import type { Estabelecimento } from '../../types/Estabelecimento';
+import { estoqueService } from '../../store/services/estoqueService';
 
 interface SaidaMedicamentosFormProps {
   estabelecimentos: Estabelecimento[];
@@ -37,6 +38,43 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
 
   const [estoqueDisponivel, setEstoqueDisponivel] = useState<number>(0);
 
+  // Função para quando mudar o estabelecimento
+  const handleEstabelecimentoChange = (estabelecimentoId: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      estabelecimentoId,
+      itens: [] // Limpa itens ao trocar estabelecimento
+    }));
+    
+    // Reset estoque quando trocar estabelecimento
+    setEstoqueDisponivel(0);
+    setNovoItem(prev => ({ ...prev, medicamentoId: '', quantidadeSaida: 0 }));
+  };
+
+  // Função para quando mudar o medicamento
+  const handleMedicamentoChange = async (medicamentoId: string) => {
+    setNovoItem(prev => ({ 
+      ...prev, 
+      medicamentoId,
+      quantidadeSaida: 0
+    }));
+    
+    if (medicamentoId && formData.estabelecimentoId) {
+      try {
+        const estoque = await estoqueService.getEstoqueMedicamento(
+          medicamentoId, 
+          formData.estabelecimentoId
+        );
+        setEstoqueDisponivel(estoque);
+      } catch (error) {
+        console.error('Erro ao buscar estoque:', error);
+        setEstoqueDisponivel(0);
+      }
+    } else {
+      setEstoqueDisponivel(0);
+    }
+  };
+
   const adicionarItem = () => {
     if (!novoItem.medicamentoId || novoItem.quantidadeSaida <= 0) {
       alert('Selecione um medicamento e informe a quantidade');
@@ -68,13 +106,6 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
     }));
   };
 
-  const handleMedicamentoChange = (medicamentoId: string) => {
-    setNovoItem(prev => ({ ...prev, medicamentoId, quantidadeSaida: 0  }));
-    
-    const medicamento = medicamentos.find(m => m.id === medicamentoId);
-    setEstoqueDisponivel(medicamento?.quantidadeEstoque || 0);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -90,8 +121,6 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
 
     onSubmit(formData);
   };
-
-  
   return (
     <Card>
       <Card.Header>
@@ -104,9 +133,10 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
             <Col md={6}>
               <Form.Group>
                 <Form.Label>Estabelecimento *</Form.Label>
+                
                 <Form.Select
                   value={formData.estabelecimentoId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estabelecimentoId: e.target.value }))}
+                  onChange={(e) => handleEstabelecimentoChange(e.target.value)} 
                   required
                 >
                   <option value="">Selecione...</option>
@@ -199,8 +229,8 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
                     <Form.Control
                       type="number"
                       min="1"
-                      
-                      max={estoqueDisponivel > 0 ? estoqueDisponivel : 1} 
+
+                      max={estoqueDisponivel > 0 ? estoqueDisponivel : 1}
                       value={novoItem.quantidadeSaida}
                       onChange={(e) => setNovoItem(prev => ({ ...prev, quantidadeSaida: Number(e.target.value) }))}
                       disabled={estoqueDisponivel === 0}
@@ -280,9 +310,9 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
             <Button variant="secondary" onClick={onCancel} disabled={isLoading}>
               Cancelar
             </Button>
-            <Button 
-              variant="warning" 
-              type="submit" 
+            <Button
+              variant="warning"
+              type="submit"
               disabled={isLoading || formData.itens.length === 0 || !formData.justificativa.trim()}
             >
               {isLoading ? 'Registrando...' : 'Registrar Saída'}
