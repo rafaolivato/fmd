@@ -84,11 +84,14 @@ const MedicamentosPage: React.FC = () => {
     <div className="container-fluid">
       <div className="row mb-4">
         <div className="col">
-          <h1>Cadastro de Medicamentos</h1>
+          <p></p>
+          <h2>Cadastro de Medicamentos</h2>
           <p className="lead">Gerencie os medicamentos do sistema</p>
         </div>
+        <p></p>
         <div className="col-auto">
           {!showForm && (
+            
             <button
               className="btn btn-primary"
               onClick={handleNewMedicamento}

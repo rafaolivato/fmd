@@ -1,3 +1,4 @@
+// src/layouts/DashboardLayout.tsx
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
@@ -5,24 +6,43 @@ import Header from '../components/Header';
 
 const DashboardLayout: React.FC = () => {
   return (
-    <>
-      <Sidebar />
-      <Header />
-      
-      {/* A área principal do conteúdo */}
-      <div 
-        style={{ 
-          marginLeft: '250px', // Espaço reservado para a Sidebar fixa
-          marginTop: '60px', // Espaço reservado para o Header fixo
-          padding: '20px', // Espaçamento interno para o conteúdo
-          minHeight: '100vh',
-          backgroundColor: '#f4f7f6', // Um fundo claro para o conteúdo
-        }}
-      >
-        {/* O Outlet renderiza o componente aninhado (ex: DashboardHome, EntradasPage) */}
-        <Outlet />
+    <div className="d-flex">
+      {/* Sidebar fixa */}
+      <div style={{ 
+        position: 'fixed', 
+        left: 0, 
+        top: 0, 
+        height: '100vh', 
+        width: '250px',
+        zIndex: 1000 
+      }}>
+        <Sidebar />
       </div>
-    </>
+      
+      {/* Header fixo */}
+      <div style={{ 
+        position: 'fixed', 
+        left: '250px', 
+        top: 0, 
+        right: 0, 
+        height: '60px',
+        zIndex: 999 
+      }}>
+        <Header />
+      </div>
+
+      {/* Conteúdo principal */}
+      <main style={{ 
+        marginLeft: '250px', 
+        marginTop: '60px', 
+        width: 'calc(100vw - 250px)',
+        minHeight: 'calc(100vh - 60px)',
+        padding: '20px',
+        backgroundColor: '#f4f7f6'
+      }}>
+        <Outlet />
+      </main>
+    </div>
   );
 };
 

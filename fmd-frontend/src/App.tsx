@@ -4,10 +4,12 @@ import Login from './pages/Login';
 import ProtectedLayout from './pages/ProtectedLayout'; 
 import EstabelecimentoPage from './pages/EstabelecimentoPage';
 import MedicamentosPage from './pages/MedicamentosPage';
+import EntradaMedicamentosPage from './pages/EntradaMedicamentosPage';
+import SaidaMedicamentosPage from './pages/SaidaMedicamentosPage';
 
 // Páginas
 const DashboardHome = () => <h1>Bem-vindo à Dashboard do FMD!</h1>;
-const Entradas = () => <h1>Página de Entradas</h1>;
+
 const NotFound = () => <h1>404 | Página não encontrada</h1>;
 
 const App: React.FC = () => {
@@ -25,13 +27,13 @@ const App: React.FC = () => {
         {/* Rotas dentro do ProtectedLayout */}
         <Route path="dashboard" element={<DashboardHome />} />
         
-        {/* Rota CORRIGIDA para Estabelecimentos */}
         <Route path="estabelecimentos" element={<EstabelecimentoPage />} />
         
-        {/* Rota CORRIGIDA para Medicamentos */}
         <Route path="medicamentos" element={<MedicamentosPage />} />
         
-        <Route path="entradas" element={<Entradas />} />
+        <Route path="entradas" element={<EntradaMedicamentosPage />} />
+
+        <Route path="saidas" element={<SaidaMedicamentosPage />} />
         
         {/* Adicione outras rotas aqui */}
       </Route>

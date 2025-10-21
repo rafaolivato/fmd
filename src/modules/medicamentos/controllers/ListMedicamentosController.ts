@@ -1,4 +1,3 @@
-// src/modules/medicamentos/controllers/ListMedicamentosController.ts
 import { Request, Response, NextFunction } from 'express';
 import { ListMedicamentosService } from '../services/ListMedicamentosService';
 

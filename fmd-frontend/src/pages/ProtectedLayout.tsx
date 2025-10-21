@@ -1,10 +1,8 @@
-// src/layouts/ProtectedLayout.tsx
-
 import React from 'react';
 import { useSelector } from 'react-redux';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import type { RootState } from '../store/store';
-import DashboardLayout from '../layouts/DashboardLayout'; // O componente que acabamos de criar
+import DashboardLayout from '../layouts/DashboardLayout'; 
 
 const ProtectedLayout: React.FC = () => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -14,7 +12,7 @@ const ProtectedLayout: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Se autenticado, renderiza o DashboardLayout, que por sua vez renderizará o <Outlet />
+ <Outlet />
   return <DashboardLayout />;
 };
 
