@@ -1,5 +1,3 @@
-// src/modules/requisicoes/controllers/CreateRequisicaoController.ts
-
 import { Request, Response, NextFunction } from 'express';
 import { CreateRequisicaoService } from '../services/CreateRequisicaoService';
 import { ICreateRequisicaoDTO } from '../dtos/ICreateRequisicaoDTO';

@@ -1,4 +1,3 @@
-// src/modules/movimentos/controllers/ListMovimentosController.ts
 import { Request, Response, NextFunction } from 'express';
 import { ListMovimentosService } from '../services/ListMovimentosService';
 

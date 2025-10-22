@@ -1,5 +1,3 @@
-// src/modules/dispensacao/services/CreateDispensacaoService.ts
-
 import { prisma } from '../../../database/prismaClient';
 import { AppError } from '../../../shared/errors/AppError';
 import { ICreateDispensacaoDTO } from '../dtos/ICreateDispensacaoDTO';

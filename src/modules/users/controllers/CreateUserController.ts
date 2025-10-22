@@ -1,5 +1,3 @@
-// modules/users/controllers/CreateUserController.ts
-
 import { Request, Response, NextFunction } from 'express';
 import { CreateUserService } from '../services/CreateUserService';
 

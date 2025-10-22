@@ -12,6 +12,7 @@ import {
   FaCapsules,
   FaBoxOpen,
   FaSignOutAlt,
+  FaHistory
 
 } from 'react-icons/fa';
 
@@ -43,6 +44,8 @@ const navItems: NavItem[] = [
         icon: <FaCapsules size={14} />,
         path: '/medicamentos'
       },
+
+       { name: 'Pacientes', icon: '👥', path: '/pacientes' },
     ]
   },
   {
@@ -57,6 +60,7 @@ const navItems: NavItem[] = [
     children: [
       
          { name: 'Saída', icon: <FaSignOutAlt size={14} />, path: '/saidas' },
+         { name: 'Histórico', icon: <FaHistory size={14} />, path: '/movimentacoes' }, 
       
     ]
 

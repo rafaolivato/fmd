@@ -1,4 +1,3 @@
-// src/components/medicamentos/MedicamentoList.tsx
 import React from 'react';
 import type { Medicamento } from '../../types/Medicamento';
 

@@ -1,5 +1,3 @@
-// src/modules/requisicoes/controllers/AtenderRequisicaoController.ts
-
 import { Request, Response, NextFunction } from 'express';
 import { AtenderRequisicaoService } from '../services/AtenderRequisicaoService';
 import { IAtendimentoRequisicaoDTO } from '../dtos/IAtendimentoRequisicaoDTO';

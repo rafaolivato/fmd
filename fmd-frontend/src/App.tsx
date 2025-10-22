@@ -6,6 +6,14 @@ import EstabelecimentoPage from './pages/EstabelecimentoPage';
 import MedicamentosPage from './pages/MedicamentosPage';
 import EntradaMedicamentosPage from './pages/EntradaMedicamentosPage';
 import SaidaMedicamentosPage from './pages/SaidaMedicamentosPage';
+import MovimentosPage from './pages/MovimentosPage';
+// No App.tsx
+import DispensacaoPage from './pages/DispensacaoPage';
+
+import PacientesPage from './pages/PacientesPage';
+
+// Dentro das rotas protegidas:
+
 
 
 // Páginas
@@ -35,6 +43,12 @@ const App: React.FC = () => {
         <Route path="entradas" element={<EntradaMedicamentosPage />} />
 
         <Route path="saidas" element={<SaidaMedicamentosPage />} />
+
+        <Route path="movimentacoes" element={<MovimentosPage />} />
+
+        <Route path="dispensacao" element={<DispensacaoPage />} />
+
+        <Route path="pacientes" element={<PacientesPage />} />
         
         {/* Adicione outras rotas aqui */}
       </Route>
