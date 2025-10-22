@@ -18,10 +18,20 @@ class ListDispensacoesService {
             },
           },
         },
+      
+
+       estabelecimentoOrigem: { // ← ADICIONE ESTE INCLUDE
+          select: {
+            id: true,
+            nome: true,
+          },
+        },
       },
       // Ordena do mais recente para o mais antigo
       orderBy: { dataDispensacao: 'desc' }, 
     });
+
+
 
     return dispensacoes;
   }

@@ -1,124 +1,148 @@
+// src/modules/dispensacao/services/CreateDispensacaoService.ts
 import { prisma } from '../../../database/prismaClient';
 import { AppError } from '../../../shared/errors/AppError';
 import { ICreateDispensacaoDTO } from '../dtos/ICreateDispensacaoDTO';
-import { Prisma } from '@prisma/client';
-
-// NOTE: Este código assume a existência de um modelo 'EstoqueLote' ou 'Lote' 
-// para rastrear o saldo por lote/vencimento.
 
 class CreateDispensacaoService {
   async execute(data: ICreateDispensacaoDTO) {
     const { estabelecimentoOrigemId, itens, ...dispensacaoData } = data;
 
-    // 1. Validação do Estabelecimento (A Farmácia)
+    // 1. Validação do Estabelecimento
     const estabelecimento = await prisma.estabelecimento.findUnique({
       where: { id: estabelecimentoOrigemId }
     });
 
-    if (!estabelecimento || estabelecimento.tipo !== 'FARMACIA_UNIDADE') {
-      throw new AppError('Estabelecimento de origem inválido ou não é uma Farmácia.', 400);
+    if (!estabelecimento) {
+      throw new AppError('Estabelecimento de origem não encontrado.', 400);
     }
 
     return await prisma.$transaction(async (tx) => {
-
-      // 2. Cria o cabeçalho da Dispensação
+      // 2. Cria o cabeçalho da Dispensação (SEM pacienteId)
       const novaDispensacao = await tx.dispensacao.create({
         data: {
-          ...dispensacaoData, // pacienteNome, pacienteCpf, etc.
+          pacienteNome: dispensacaoData.pacienteNome,
+          pacienteCpf: dispensacaoData.pacienteCpf || null,
+          profissionalSaude: dispensacaoData.profissionalSaude || null,
+          documentoReferencia: dispensacaoData.documentoReferencia,
+          observacao: dispensacaoData.observacao || null,
           estabelecimentoOrigemId,
           dataDispensacao: new Date(),
         },
       });
 
-      const operacoesEmLote: Promise<any>[] = [];
+      console.log('✅ Dispensação criada:', novaDispensacao.id);
 
       // 3. Processa cada Item
       for (const item of itens) {
-        // 1. Remova 'quantidadeSaida' da desestruturação.
-        const { medicamentoId, loteId: loteForcado } = item;
-
-        // 2. Crie uma variável numérica garantida:
+        const { medicamentoId } = item;
         const quantidadeSaidaNumerica = Number(item.quantidadeSaida);
 
-        // Validação extra (se for NaN, a requisição é inválida)
+        // Validações
         if (isNaN(quantidadeSaidaNumerica) || quantidadeSaidaNumerica <= 0) {
           throw new AppError('Quantidade de saída inválida.', 400);
         }
 
-        // 3.1. CHECAGEM DE ESTOQUE LOCAL (Geral)
+        // Verifica estoque geral
         const estoqueGeral = await tx.estoqueLocal.findUnique({
           where: {
-            medicamentoId_estabelecimentoId: { medicamentoId, estabelecimentoId: estabelecimentoOrigemId },
+            medicamentoId_estabelecimentoId: { 
+              medicamentoId, 
+              estabelecimentoId: estabelecimentoOrigemId 
+            },
           },
         });
 
-        if (!estoqueGeral || estoqueGeral.quantidade < quantidadeSaidaNumerica) { 
-        throw new AppError(`Estoque insuficiente de ID ${medicamentoId}. Saldo na farmácia: ${estoqueGeral?.quantidade ?? 0}.`, 400);
-    }
+        if (!estoqueGeral || estoqueGeral.quantidade < quantidadeSaidaNumerica) {
+          const medicamento = await tx.medicamento.findUnique({
+            where: { id: medicamentoId }
+          });
+          throw new AppError(
+            `Estoque insuficiente de ${medicamento?.principioAtivo}. Saldo: ${estoqueGeral?.quantidade ?? 0}.`, 
+            400
+          );
+        }
 
-        // 3.2. BUSCA DE LOTES (FIFO: Vencimento mais próximo primeiro)
+        console.log(`📦 Processando medicamento ${medicamentoId}, quantidade: ${quantidadeSaidaNumerica}`);
 
+        // Busca lotes (FIFO)
         let quantidadeRestante = quantidadeSaidaNumerica;
-
-        const lotesDisponiveis = await tx.estoqueLote.findMany({ // <--- Tabela Crítica
+        const lotesDisponiveis = await tx.estoqueLote.findMany({
           where: {
             medicamentoId,
             estabelecimentoId: estabelecimentoOrigemId,
             quantidade: { gt: 0 },
-            // Adiciona filtro se o usuário forçou um lote
-            ...(loteForcado && { id: loteForcado })
           },
-          orderBy: {
-            dataValidade: 'asc', // Regra FIFO: mais perto do vencimento primeiro
-          }
+          orderBy: { dataValidade: 'asc' }
         });
 
-        // 3.3. BAIXA DE ESTOQUE POR LOTE
-        const itensDispensadosCriados: Prisma.ItemDispensacaoCreateManyInput[] = [];
+        if (lotesDisponiveis.length === 0) {
+          throw new AppError(`Nenhum lote disponível para o medicamento selecionado.`, 400);
+        }
 
+        // Baixa de estoque por lote
         for (const lote of lotesDisponiveis) {
           if (quantidadeRestante === 0) break;
 
           const quantidadeBaixar = Math.min(quantidadeRestante, lote.quantidade);
 
-          // A. Atualiza o saldo do Lote (DECREMENTA)
-          operacoesEmLote.push(
-            ((loteId, baixa) => tx.estoqueLote.update({
-              where: { id: loteId },
-              data: { quantidade: { decrement: baixa } }
-            }))(lote.id, quantidadeBaixar)
-          );
+          console.log(`⬇️ Baixando ${quantidadeBaixar} unidades do lote ${lote.numeroLote}`);
 
-          // B. Prepara a criação do ItemDispensacao (para registro)
-          itensDispensadosCriados.push({
-            quantidadeSaida: quantidadeBaixar,
-            loteNumero: lote.numeroLote, // Assumindo que o lote tem numeroLote
-            medicamentoId: medicamentoId, // <--- ADICIONE O ID EXPLÍCITO AQUI!
-            dispensacaoId: novaDispensacao.id, // Adicione aqui também para simplificar
+          // Atualiza lote
+          await tx.estoqueLote.update({
+            where: { id: lote.id },
+            data: { quantidade: { decrement: quantidadeBaixar } }
+          });
+
+          // Cria item da dispensação
+          await tx.itemDispensacao.create({
+            data: {
+              quantidadeSaida: quantidadeBaixar,
+              loteNumero: lote.numeroLote,
+              medicamentoId: medicamentoId,
+              dispensacaoId: novaDispensacao.id,
+            }
           });
 
           quantidadeRestante -= quantidadeBaixar;
         }
 
-        // Adiciona a criação dos itens após o loop de lotes
-        operacoesEmLote.push(
-          tx.estoqueLocal.update({
-            where: { id: estoqueGeral.id },
-            data: { quantidade: { decrement: quantidadeSaidaNumerica } },
-          })
-        )
+        if (quantidadeRestante > 0) {
+          throw new AppError(`Não foi possível baixar toda a quantidade. Faltaram ${quantidadeRestante} unidades.`, 400);
+        }
 
-        await tx.itemDispensacao.createMany({
-          data: itensDispensadosCriados,
+        // Atualiza estoque geral
+        await tx.estoqueLocal.update({
+          where: { id: estoqueGeral.id },
+          data: { quantidade: { decrement: quantidadeSaidaNumerica } },
         });
 
+        console.log(`✅ Medicamento ${medicamentoId} processado com sucesso`);
       }
 
-      // 4. Executa todas as operações
-      await Promise.all(operacoesEmLote);
+      console.log('🎉 Dispensação finalizada com sucesso!');
 
-      // 5. Retorna o registro completo
-      return tx.dispensacao.findUnique({ where: { id: novaDispensacao.id }, include: { itensDispensados: true } });
+      // Retorna dispensação completa
+      return tx.dispensacao.findUnique({
+        where: { id: novaDispensacao.id },
+        include: { 
+          itensDispensados: {
+            include: {
+              medicamento: {
+                select: {
+                  principioAtivo: true,
+                  concentracao: true,
+                  formaFarmaceutica: true
+                }
+              }
+            }
+          },
+          estabelecimentoOrigem: {
+            select: {
+              nome: true
+            }
+          }
+        }
+      });
     });
   }
 }

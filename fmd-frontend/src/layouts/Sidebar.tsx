@@ -10,9 +10,10 @@ import {
   FaChartBar,
   FaHospital,
   FaCapsules,
-  FaBoxOpen,
   FaSignOutAlt,
-  FaHistory
+  FaHistory,
+  FaUserPlus,
+  FaPlus
 
 } from 'react-icons/fa';
 
@@ -45,7 +46,7 @@ const navItems: NavItem[] = [
         path: '/medicamentos'
       },
 
-       { name: 'Pacientes', icon: '👥', path: '/pacientes' },
+       { name: 'Pacientes', icon: <FaUserPlus size={14} />, path: '/pacientes' },
     ]
   },
   {
@@ -67,9 +68,14 @@ const navItems: NavItem[] = [
   },
   {
     name: 'Dispensação',
-    icon: <FaBoxOpen size={16} />,
-    path: '/dispensacao'
-  },
+    icon: <FaCapsules size={16} />,
+    path: '#',
+    children: [
+    { name: 'Nova Dispensação', icon: <FaPlus size={14} />, path: '/dispensacao' },
+    { name: 'Histórico', icon: <FaHistory size={14} />, path: '/dispensacoes' },
+  ]
+},
+     
   {
     name: 'Relatórios',
     icon: <FaChartBar size={16} />,

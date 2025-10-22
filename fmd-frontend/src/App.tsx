@@ -7,17 +7,19 @@ import MedicamentosPage from './pages/MedicamentosPage';
 import EntradaMedicamentosPage from './pages/EntradaMedicamentosPage';
 import SaidaMedicamentosPage from './pages/SaidaMedicamentosPage';
 import MovimentosPage from './pages/MovimentosPage';
-// No App.tsx
+
 import DispensacaoPage from './pages/DispensacaoPage';
 
 import PacientesPage from './pages/PacientesPage';
+
+import DispensacoesPage from './pages/DispensacoesPage';
 
 // Dentro das rotas protegidas:
 
 
 
 // Páginas
-const DashboardHome = () => <h1>Bem-vindo à Dashboard do FMD!</h1>;
+import DashboardHome from './pages/DashboardHome'; // ← Importe o novo componente
 
 const NotFound = () => <h1>404 | Página não encontrada</h1>;
 
@@ -36,6 +38,7 @@ const App: React.FC = () => {
         {/* Rotas dentro do ProtectedLayout */}
         <Route path="dashboard" element={<DashboardHome />} />
         
+        
         <Route path="estabelecimentos" element={<EstabelecimentoPage />} />
         
         <Route path="medicamentos" element={<MedicamentosPage />} />
@@ -49,6 +52,8 @@ const App: React.FC = () => {
         <Route path="dispensacao" element={<DispensacaoPage />} />
 
         <Route path="pacientes" element={<PacientesPage />} />
+
+        <Route path="dispensacoes" element={<DispensacoesPage />} />
         
         {/* Adicione outras rotas aqui */}
       </Route>
