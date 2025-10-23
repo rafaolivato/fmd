@@ -3,7 +3,7 @@ import { CreateRequisicaoController } from './controllers/CreateRequisicaoContro
 import { AtenderRequisicaoController } from './controllers/AtenderRequisicaoController';
 import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
 
-// Importando os novos controllers que você precisará criar
+// Importando os novos controllers
 import { ListAllRequisicoesController } from './controllers/ListAllRequisicoesController';
 import { ListMinhasRequisicoesController } from './controllers/ListMinhasRequisicoesController';
 import { ListParaAtenderRequisicoesController } from './controllers/ListParaAtenderRequisicoesController';
@@ -22,33 +22,33 @@ const cancelarRequisicaoController = new CancelarRequisicaoController();
 requisicoesRoutes.use(ensureAuthenticated);
 
 // Rota para criar uma nova solicitação de medicamentos
-requisicoesRoutes.post('/', (request, response, next) => {
-  createRequisicaoController.handle(request, response, next);
+requisicoesRoutes.post('/', (request, response) => {
+  return createRequisicaoController.handle(request, response);
 });
 
 // Rota para listar todas as requisições
-requisicoesRoutes.get('/', (request, response, next) => {
-  listAllRequisicoesController.handle(request, response, next);
+requisicoesRoutes.get('/', (request, response) => {
+  return listAllRequisicoesController.handle(request, response);
 });
 
 // Rota para listar minhas requisições (onde sou solicitante)
-requisicoesRoutes.get('/minhas', (request, response, next) => {
-  listMinhasRequisicoesController.handle(request, response, next);
+requisicoesRoutes.get('/minhas', (request, response) => {
+  return listMinhasRequisicoesController.handle(request, response);
 });
 
 // Rota para listar requisições para atender (onde sou atendente)
-requisicoesRoutes.get('/para-atender', (request, response, next) => {
-  listParaAtenderRequisicoesController.handle(request, response, next);
+requisicoesRoutes.get('/para-atender', (request, response) => {
+  return listParaAtenderRequisicoesController.handle(request, response);
 });
 
 // Rota para atender uma requisição (Transferência de Estoque)
-requisicoesRoutes.put('/:id/atender', (request, response, next) => { 
-  atenderRequisicaoController.handle(request, response, next);
+requisicoesRoutes.put('/:id/atender', (request, response) => { 
+  return atenderRequisicaoController.handle(request, response);
 });
 
 // Rota para cancelar uma requisição
-requisicoesRoutes.put('/:id/cancelar', (request, response, next) => {
-  cancelarRequisicaoController.handle(request, response, next);
+requisicoesRoutes.put('/:id/cancelar', (request, response) => {
+  return cancelarRequisicaoController.handle(request, response);
 });
 
 export { requisicoesRoutes };

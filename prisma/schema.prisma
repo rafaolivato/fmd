@@ -8,13 +8,17 @@ generator client {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("farmaceutico") // Ex: 'admin', 'farmaceutico'
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String          @id @default(uuid())
+  email            String          @unique
+  password         String
+  name             String
+  role             String          @default("farmaceutico") // 'admin', 'farmaceutico', 'almoxarife'
+  estabelecimentoId String?
+  estabelecimento  Estabelecimento? @relation(fields: [estabelecimentoId], references: [id])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+ 
 }
 
 model Medicamento {
@@ -145,6 +149,8 @@ model Estabelecimento {
   cnpj String? // Ex: 00.000.000/0001-00
   tipo String // Ex: 'ALMOXARIFADO', 'FARMACIA_UNIDADE'
 
+  usuarios     User[]
+
   // RELACIONAMENTOS INVERSOS:
   solicitacoes Requisicao[] @relation("Solicitante")
   atendimentos Requisicao[] @relation("Atendente")
@@ -185,14 +191,15 @@ model Requisicao {
 
   // Solicitante (Farmácia de destino)
   solicitanteId String
-  solicitante   Estabelecimento @relation("Solicitante", fields: [solicitanteId], references: [id])
+  solicitante   Estabelecimento @relation("Solicitante", fields: [solicitanteId], references: [id], onDelete: Cascade)
 
   // Atendente (Almoxarifado/Estabelecimento de origem)
   atendenteId String
-  atendente   Estabelecimento @relation("Atendente", fields: [atendenteId], references: [id])
+  atendente   Estabelecimento @relation("Atendente", fields: [atendenteId], references: [id], onDelete: Cascade)
 
-  status          String // Ex: 'PENDENTE', 'EM_SEPARACAO', 'ATENDIDA', 'CANCELADA'
+  status          String   @default("PENDENTE") // Ex: 'PENDENTE', 'EM_SEPARACAO', 'ATENDIDA', 'CANCELADA'
   dataSolicitacao DateTime @default(now())
+  observacoes     String?
 
   itens ItemRequisicao[]
 

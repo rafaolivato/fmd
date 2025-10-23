@@ -2,12 +2,11 @@
 import React from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Button, Navbar, Container, NavDropdown, Nav } from 'react-bootstrap';
+import { Navbar, Container, NavDropdown, Nav } from 'react-bootstrap';
 import { logout } from '../store/slices/authSlice';
 import type { AppDispatch } from '../store/store';
 import {
   FaUserCircle,
-  FaCog,
   FaBell,
   FaSignOutAlt,
   FaUser,

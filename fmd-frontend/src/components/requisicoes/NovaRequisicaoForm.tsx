@@ -29,11 +29,11 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
 
   const [novoItem, setNovoItem] = useState<ItemRequisicaoForm>({
     medicamentoId: '',
-    quantidadeSolicitada: 0
+    quantidadeSolicitada: 1  // CORREÇÃO: Mudar de 0 para 1
   });
 
   const adicionarItem = () => {
-    if (!novoItem.medicamentoId || novoItem.quantidadeSolicitada <= 0) {
+    if (!novoItem.medicamentoId || novoItem.quantidadeSolicitada < 1) {  // CORREÇÃO: < em vez de <=
       alert('Selecione um medicamento e informe a quantidade');
       return;
     }
@@ -46,7 +46,7 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
     // Reset novo item
     setNovoItem({
       medicamentoId: '',
-      quantidadeSolicitada: 0
+      quantidadeSolicitada: 1  // CORREÇÃO: Mudar de 0 para 1
     });
   };
 
@@ -166,14 +166,17 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
                       type="number"
                       min="1"
                       value={novoItem.quantidadeSolicitada}
-                      onChange={(e) => setNovoItem(prev => ({ ...prev, quantidadeSolicitada: Number(e.target.value) }))}
+                      onChange={(e) => setNovoItem(prev => ({ 
+                        ...prev, 
+                        quantidadeSolicitada: Math.max(1, Number(e.target.value) || 1) 
+                      }))}
                     />
                   </Form.Group>
                 </Col>
                 <Col md={2} className="d-flex align-items-end">
                   <Button variant="primary" onClick={adicionarItem} className="w-100">
                     <FaPlus className="me-2" />
-                    Add
+                    Adicionar
                   </Button>
                 </Col>
               </Row>

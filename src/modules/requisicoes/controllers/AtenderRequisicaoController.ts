@@ -1,25 +1,33 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { AtenderRequisicaoService } from '../services/AtenderRequisicaoService';
-import { IAtendimentoRequisicaoDTO } from '../dtos/IAtendimentoRequisicaoDTO';
+import { AppError } from '../../../shared/errors/AppError';
 
 class AtenderRequisicaoController {
-  async handle(request: Request, response: Response, next: NextFunction) {
-    // 1. Extrai o ID da Requisição da URL
-    const { id } = request.params; 
-    const { itensAtendidos } = request.body as IAtendimentoRequisicaoDTO;
+  async handle(request: Request, response: Response) {
+    const { id } = request.params;
+    const { itensAtendidos } = request.body;
 
     try {
       const atenderRequisicaoService = new AtenderRequisicaoService();
       
       const requisicaoAtendida = await atenderRequisicaoService.execute(
-        id,
+        id, 
         itensAtendidos
       );
 
-      // 2. Retorna a requisição atendida (Status 200 OK)
       return response.json(requisicaoAtendida);
     } catch (error) {
-      next(error);
+      console.error('Erro no AtenderRequisicaoController:', error);
+      
+      if (error instanceof AppError) {
+        return response.status(error.statusCode).json({
+          message: error.message
+        });
+      }
+
+      return response.status(500).json({
+        message: 'Erro interno do servidor'
+      });
     }
   }
 }
