@@ -1,5 +1,3 @@
-// src/modules/requisicoes/services/AtenderRequisicaoService.ts
-
 import { prisma } from '../../../database/prismaClient';
 import { AppError } from '../../../shared/errors/AppError';
 import { Prisma } from '@prisma/client';
@@ -74,6 +72,7 @@ class AtenderRequisicaoService {
             medicamentoId_estabelecimentoId: {
               medicamentoId: medicamentoId,
               estabelecimentoId: atendenteId,
+              
             },
           },
         });

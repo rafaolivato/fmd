@@ -1,5 +1,3 @@
-// src/modules/requisicoes/services/CreateRequisicaoService.ts
-
 import { prisma } from '../../../database/prismaClient';
 import { AppError } from '../../../shared/errors/AppError';
 import { ICreateRequisicaoDTO } from '../dtos/ICreateRequisicaoDTO';

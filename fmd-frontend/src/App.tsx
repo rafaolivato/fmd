@@ -14,7 +14,11 @@ import PacientesPage from './pages/PacientesPage';
 
 import DispensacoesPage from './pages/DispensacoesPage';
 
-// Dentro das rotas protegidas:
+import NovaRequisicaoPage from './pages/NovaRequisicaoPage';
+
+import RequisicoesPage from './pages/RequisicoesPage';
+
+
 
 
 
@@ -54,6 +58,10 @@ const App: React.FC = () => {
         <Route path="pacientes" element={<PacientesPage />} />
 
         <Route path="dispensacoes" element={<DispensacoesPage />} />
+
+        <Route path="requisicoes/nova" element={<NovaRequisicaoPage />} />
+
+       <Route path="requisicoes" element={<RequisicoesPage />} />
         
         {/* Adicione outras rotas aqui */}
       </Route>

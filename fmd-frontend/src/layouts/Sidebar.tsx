@@ -13,7 +13,9 @@ import {
   FaSignOutAlt,
   FaHistory,
   FaUserPlus,
-  FaPlus
+  FaPlus,
+  FaList,
+  FaHandshake
 
 } from 'react-icons/fa';
 
@@ -73,6 +75,17 @@ const navItems: NavItem[] = [
     children: [
     { name: 'Nova Dispensação', icon: <FaPlus size={14} />, path: '/dispensacao' },
     { name: 'Histórico', icon: <FaHistory size={14} />, path: '/dispensacoes' },
+  ]
+},
+
+  { 
+  name: 'Requisições', 
+  icon: <FaExchangeAlt size={16} />, 
+  path: '#',
+  children: [
+    { name: 'Nova Requisição', icon: <FaPlus size={14} />, path: '/requisicoes/nova' },
+    { name: 'Minhas Requisições', icon: <FaList size={14} />, path: '/requisicoes' },
+    { name: 'Para Atender', icon: <FaHandshake size={14} />, path: '/requisicoes/atender' },
   ]
 },
      

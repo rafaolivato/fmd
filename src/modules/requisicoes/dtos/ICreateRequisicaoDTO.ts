@@ -1,6 +1,3 @@
-// src/modules/requisicoes/dtos/ICreateRequisicaoDTO.ts
-
-// 1. O que é solicitado em cada linha
 export interface IItemRequisicaoDTO {
   medicamentoId: string;
   quantidadeSolicitada: number;
