@@ -1,67 +1,80 @@
 import { prisma } from '../../../database/prismaClient';
 import { AppError } from '../../../shared/errors/AppError';
-import { ICreateRequisicaoDTO } from '../dtos/ICreateRequisicaoDTO';
 
-class CreateRequisicaoService {
-  async execute(data: ICreateRequisicaoDTO) {
-    const { solicitanteId, atendenteId, itens, observacao } = data;
+interface IItemRequisicao {
+  medicamentoId: string;
+  quantidadeSolicitada: number;
+}
+
+interface ICreateRequisicaoDTO {
+  usuarioId: string;
+  itens: IItemRequisicao[];
+  observacao?: string;
+}
+
+export class CreateRequisicaoService {
+  async execute({ usuarioId, itens, observacao }: ICreateRequisicaoDTO) {
+    // Busca o estabelecimento do usuário logado (solicitante)
+    const usuario = await prisma.user.findUnique({
+      where: { id: usuarioId },
+      include: { estabelecimento: true }
+    });
+
+    if (!usuario || !usuario.estabelecimentoId) {
+      throw new AppError('Usuário não vinculado a nenhum estabelecimento', 400);
+    }
+
+    // Encontra um almoxarifado para atender (sempre almoxarifado)
+    const almoxarifado = await prisma.estabelecimento.findFirst({
+      where: {
+        tipo: 'ALMOXARIFADO'
+      }
+    });
+
+    if (!almoxarifado) {
+      throw new AppError('Nenhum almoxarifado disponível para atender requisições', 400);
+    }
 
     return await prisma.$transaction(async (tx) => {
-      
-      // 1. Verifica se os estabelecimentos existem
-      const solicitante = await tx.estabelecimento.findUnique({ where: { id: solicitanteId } });
-      const atendente = await tx.estabelecimento.findUnique({ where: { id: atendenteId } });
-
-      if (!solicitante) {
-        throw new AppError('Estabelecimento Solicitante não encontrado.', 404);
-      }
-      if (!atendente) {
-        throw new AppError('Estabelecimento Atendente (Almoxarifado) não encontrado.', 404);
-      }
-
-      // 2. Cria o cabeçalho da Requisição
+      // Cria a requisição - CORREÇÃO: Garantir que os IDs são strings válidas
       const requisicao = await tx.requisicao.create({
         data: {
-          solicitanteId,
-          atendenteId,
-          // Observacao não está no seu modelo, mas se estiver no DTO pode ser adicionada aqui
-          status: 'PENDENTE', 
-        },
-      });
-
-      const operacoesItens: Promise<any>[] = [];
-
-      // 3. Processa e cria os itens solicitados
-      for (const item of itens) {
-        
-        // Verifica se o Medicamento existe (Validação importante)
-        const medicamento = await tx.medicamento.findUnique({ 
-          where: { id: item.medicamentoId },
-          select: { id: true } 
-        });
-        
-        if (!medicamento) {
-            throw new AppError(`Medicamento ID ${item.medicamentoId} não encontrado.`, 404);
-        }
-
-        operacoesItens.push(
-          tx.itemRequisicao.create({
-            data: {
-              quantidadeSolicitada: item.quantidadeSolicitada,
-              quantidadeAtendida: 0, // Inicia em 0
+          solicitanteId: usuario.estabelecimentoId!, // Use ! para garantir que não é null
+          atendenteId: almoxarifado.id,
+          status: 'PENDENTE',
+          observacoes: observacao || null,
+          itens: {
+            create: itens.map(item => ({
               medicamentoId: item.medicamentoId,
-              requisicaoId: requisicao.id,
-            },
-          })
-        );
-      }
-      
-      // Executa a criação de todos os itens em lote
-      await Promise.all(operacoesItens);
+              quantidadeSolicitada: item.quantidadeSolicitada,
+              quantidadeAtendida: 0
+            }))
+          }
+        },
+        include: {
+          solicitante: {
+            select: {
+              id: true,
+              nome: true,
+              tipo: true
+            }
+          },
+          atendente: {
+            select: {
+              id: true,
+              nome: true,
+              tipo: true
+            }
+          },
+          itens: {
+            include: {
+              medicamento: true
+            }
+          }
+        }
+      });
 
       return requisicao;
     });
   }
 }
-
-export { CreateRequisicaoService };

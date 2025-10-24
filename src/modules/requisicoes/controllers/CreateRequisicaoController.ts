@@ -1,29 +1,23 @@
 import { Request, Response } from 'express';
 import { CreateRequisicaoService } from '../services/CreateRequisicaoService';
-import { ICreateRequisicaoDTO } from '../dtos/ICreateRequisicaoDTO';
 import { AppError } from '../../../shared/errors/AppError';
 
 class CreateRequisicaoController {
   async handle(request: Request, response: Response) {
-    // 1. Extrai todos os dados necessários do corpo da requisição
-    const { 
-      solicitanteId, 
-      atendenteId, 
-      itens, 
-      observacao 
-    } = request.body as ICreateRequisicaoDTO;
+    // Agora só recebe itens e observacao - solicitante vem do usuário logado
+    const { itens, observacao } = request.body;
+    const usuarioId = (request as any).user.id;
 
     try {
       const createRequisicaoService = new CreateRequisicaoService();
       
       const requisicao = await createRequisicaoService.execute({
-        solicitanteId,
-        atendenteId,
+        usuarioId, 
         itens,
         observacao,
+        // Não envia mais solicitanteId e atendenteId no body
       });
 
-      // Retorna o cabeçalho da requisição criada
       return response.status(201).json(requisicao);
     } catch (error) {
       console.error('Erro no CreateRequisicaoController:', error);

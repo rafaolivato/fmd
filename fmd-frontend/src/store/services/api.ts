@@ -1,4 +1,3 @@
-// src/store/services/api.ts
 import axios from 'axios';
 
 const BASE_URL = 'http://localhost:3333'; 
@@ -25,15 +24,22 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para tratar erros globalmente
+// Interceptor para tratar erros globalmente - CORREÇÃO AQUI
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Só desloga se for especificamente erro de autenticação
     if (error.response?.status === 401) {
-      // Token expirado ou inválido - redirecionar para login
-      localStorage.removeItem('@fmd:token');
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      const currentPath = window.location.pathname;
+      
+      // Não redireciona se já está na página de login
+      if (currentPath !== '/login' && currentPath !== '/') {
+        console.log('Token expirado ou inválido. Redirecionando para login...');
+        localStorage.removeItem('@fmd:token');
+        localStorage.removeItem('token');
+        localStorage.removeItem('@fmd:user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

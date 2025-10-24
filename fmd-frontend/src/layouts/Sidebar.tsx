@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Nav } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
+import logoFmd from '../assets/logo-fmd.png';
 
 import {
   FaHome,
@@ -50,7 +51,7 @@ const navItems: NavItem[] = [
         path: '/medicamentos'
       },
 
-       { name: 'Pacientes', icon: <FaUserPlus size={14} />, path: '/pacientes' },
+      { name: 'Pacientes', icon: <FaUserPlus size={14} />, path: '/pacientes' },
     ]
   },
   {
@@ -63,10 +64,10 @@ const navItems: NavItem[] = [
     icon: <FaExchangeAlt size={16} />,
     path: '#',
     children: [
-      
-         { name: 'Saída', icon: <FaSignOutAlt size={14} />, path: '/saidas' },
-         { name: 'Histórico', icon: <FaHistory size={14} />, path: '/movimentacoes' }, 
-      
+
+      { name: 'Saída', icon: <FaSignOutAlt size={14} />, path: '/saidas' },
+      { name: 'Histórico', icon: <FaHistory size={14} />, path: '/movimentacoes' },
+
     ]
 
   },
@@ -75,22 +76,22 @@ const navItems: NavItem[] = [
     icon: <FaCapsules size={16} />,
     path: '#',
     children: [
-    { name: 'Nova Dispensação', icon: <FaPlus size={14} />, path: '/dispensacao' },
-    { name: 'Histórico', icon: <FaHistory size={14} />, path: '/dispensacoes' },
-  ]
-},
+      { name: 'Nova Dispensação', icon: <FaPlus size={14} />, path: '/dispensacao' },
+      { name: 'Histórico', icon: <FaHistory size={14} />, path: '/dispensacoes' },
+    ]
+  },
 
-  { 
-  name: 'Requisições', 
-  icon: <FaExchangeAlt size={16} />, 
-  path: '#',
-  children: [
-    { name: 'Nova Requisição', icon: <FaPlus size={14} />, path: '/requisicoes/nova' },
-    { name: 'Minhas Requisições', icon: <FaList size={14} />, path: '/requisicoes' },
-    { name: 'Para Atender', icon: <FaHandshake size={14} />, path: '/requisicoes/atender' },
-  ]
-},
-     
+  {
+    name: 'Requisições',
+    icon: <FaExchangeAlt size={16} />,
+    path: '#',
+    children: [
+      { name: 'Nova Requisição', icon: <FaPlus size={14} />, path: '/requisicoes/nova' },
+      { name: 'Minhas Requisições', icon: <FaList size={14} />, path: '/requisicoes' },
+      { name: 'Para Atender', icon: <FaHandshake size={14} />, path: '/requisicoes/atender' },
+    ]
+  },
+
   {
     name: 'Relatórios',
     icon: <FaChartBar size={16} />,
@@ -118,61 +119,66 @@ const Sidebar: React.FC = () => {
 
   return (
     <div className="sidebar bg-light border-end" style={{ width: '250px', minHeight: '100vh' }}>
-      <Nav className="flex-column p-3">
-        {navItems.map((item) => (
-          <div key={item.name}>
-            {item.children ? (
-              <div className="mb-2">
+      <div className="sidebar bg-light border-end" style={{ width: '250px', minHeight: '100vh' }}>
+        <div className="text-center py-3">
+          <img src={logoFmd} alt="Logo FMD" style={{ maxWidth: '80%', height: 'auto' }} />
+        </div>
+        <Nav className="flex-column p-3">
+          {navItems.map((item) => (
+            <div key={item.name}>
+              {item.children ? (
+                <div className="mb-2">
+                  <Nav.Link
+                    as="button"
+                    className={`w-100 text-start border-0 bg-transparent d-flex justify-content-between align-items-center ${item.children.some(child => isActive(child.path)) ? 'text-primary' : 'text-dark'
+                      }`}
+                    onClick={() => toggleExpand(item.name)}
+                  >
+                    <span className="d-flex align-items-center">
+                      <span className="me-2">{item.icon}</span>
+                      {item.name}
+                    </span>
+                    <span>{expandedItems.has(item.name) ? '▼' : '►'}</span>
+                  </Nav.Link>
+
+                  {expandedItems.has(item.name) && (
+                    <div className="ms-3">
+                      {item.children.map((child) => (
+                        <Nav.Link
+                          key={child.name}
+                          as={Link}
+                          to={child.path}
+                          className={`d-block text-decoration-none py-1 ps-3 ${isActive(child.path) ? 'text-primary fw-bold' : 'text-dark'
+                            }`}
+                        >
+                          <span className="d-flex align-items-center">
+                            <span className="me-2">{child.icon}</span>
+                            {child.name}
+                          </span>
+                        </Nav.Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
                 <Nav.Link
-                  as="button"
-                  className={`w-100 text-start border-0 bg-transparent d-flex justify-content-between align-items-center ${item.children.some(child => isActive(child.path)) ? 'text-primary' : 'text-dark'
+                  as={Link}
+                  to={item.path}
+                  className={`mb-2 text-decoration-none ${isActive(item.path) ? 'text-primary fw-bold' : 'text-dark'
                     }`}
-                  onClick={() => toggleExpand(item.name)}
                 >
                   <span className="d-flex align-items-center">
                     <span className="me-2">{item.icon}</span>
                     {item.name}
                   </span>
-                  <span>{expandedItems.has(item.name) ? '▼' : '►'}</span>
                 </Nav.Link>
-
-                {expandedItems.has(item.name) && (
-                  <div className="ms-3">
-                    {item.children.map((child) => (
-                      <Nav.Link
-                        key={child.name}
-                        as={Link}
-                        to={child.path}
-                        className={`d-block text-decoration-none py-1 ps-3 ${isActive(child.path) ? 'text-primary fw-bold' : 'text-dark'
-                          }`}
-                      >
-                        <span className="d-flex align-items-center">
-                          <span className="me-2">{child.icon}</span>
-                          {child.name}
-                        </span>
-                      </Nav.Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Nav.Link
-                as={Link}
-                to={item.path}
-                className={`mb-2 text-decoration-none ${isActive(item.path) ? 'text-primary fw-bold' : 'text-dark'
-                  }`}
-              >
-                <span className="d-flex align-items-center">
-                  <span className="me-2">{item.icon}</span>
-                  {item.name}
-                </span>
-              </Nav.Link>
-            )}
-          </div>
-        ))}
-      </Nav>
-    </div>
-  );
+              )}
+            </div>
+          ))}
+        </Nav>
+        </div>
+      </div>
+      );
 };
 
-export default Sidebar;
+      export default Sidebar;

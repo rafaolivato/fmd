@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Button, Card, Form, Row, Col, Table, Alert } from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Button, Card, Form, Row, Col, Table, Alert, Spinner } from 'react-bootstrap';
 import type { RequisicaoFormData, ItemRequisicaoForm } from '../../types/Requisicao';
 import type { Medicamento } from '../../types/Medicamento';
 import type { Estabelecimento } from '../../types/Estabelecimento';
@@ -11,6 +11,11 @@ interface NovaRequisicaoFormProps {
   onSubmit: (data: RequisicaoFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  usuarioLogado?: { // Torna opcional com ?
+    id: string;
+    estabelecimentoId: string;
+    estabelecimentoNome: string;
+  };
 }
 
 const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
@@ -18,10 +23,22 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
   medicamentos,
   onSubmit,
   onCancel,
-  isLoading = false
+  isLoading = false,
+  usuarioLogado
 }) => {
+  // Estado de loading interno enquanto usuarioLogado não carrega
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Quando usuarioLogado chegar, remove o loading
+    if (usuarioLogado) {
+      setLoading(false);
+    }
+  }, [usuarioLogado]);
+
+  // Inicializa formData de forma segura
   const [formData, setFormData] = useState<RequisicaoFormData>({
-    solicitanteId: '',
+    solicitanteId: usuarioLogado?.estabelecimentoId || '',
     atendenteId: '',
     observacao: '',
     itens: []
@@ -29,11 +46,27 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
 
   const [novoItem, setNovoItem] = useState<ItemRequisicaoForm>({
     medicamentoId: '',
-    quantidadeSolicitada: 1  // CORREÇÃO: Mudar de 0 para 1
+    quantidadeSolicitada: 1
+  });
+
+  // Atualiza formData quando usuarioLogado carregar
+  useEffect(() => {
+    if (usuarioLogado?.estabelecimentoId) {
+      setFormData(prev => ({
+        ...prev,
+        solicitanteId: usuarioLogado.estabelecimentoId
+      }));
+    }
+  }, [usuarioLogado]);
+
+  // Filtra apenas almoxarifados - CORREÇÃO: uso seguro do tipo
+  const almoxarifados = estabelecimentos.filter(est => {
+    const estabelecimento = est as any;
+    return estabelecimento.tipo && estabelecimento.tipo === 'ALMOXARIFADO';
   });
 
   const adicionarItem = () => {
-    if (!novoItem.medicamentoId || novoItem.quantidadeSolicitada < 1) {  // CORREÇÃO: < em vez de <=
+    if (!novoItem.medicamentoId || novoItem.quantidadeSolicitada < 1) {
       alert('Selecione um medicamento e informe a quantidade');
       return;
     }
@@ -43,10 +76,9 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
       itens: [...prev.itens, { ...novoItem }]
     }));
 
-    // Reset novo item
     setNovoItem({
       medicamentoId: '',
-      quantidadeSolicitada: 1  // CORREÇÃO: Mudar de 0 para 1
+      quantidadeSolicitada: 1
     });
   };
 
@@ -60,13 +92,8 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.solicitanteId || !formData.atendenteId) {
-      alert('Selecione o solicitante e o atendente');
-      return;
-    }
-
-    if (formData.solicitanteId === formData.atendenteId) {
-      alert('Solicitante e atendente não podem ser o mesmo estabelecimento');
+    if (!formData.atendenteId) {
+      alert('Selecione o almoxarifado atendente');
       return;
     }
 
@@ -75,48 +102,65 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
       return;
     }
 
-    onSubmit(formData);
+    // Remove o solicitanteId do envio - agora é automático
+    const dataParaEnviar = {
+      itens: formData.itens,
+      observacao: formData.observacao
+    };
+
+    onSubmit(dataParaEnviar as any);
   };
 
-  const medicamentoSelecionado = medicamentos.find(m => m.id === novoItem.medicamentoId);
+  // Loading enquanto usuarioLogado não carrega
+  if (loading || !usuarioLogado) {
+    return (
+      <Card>
+        <Card.Body className="text-center">
+          <Spinner animation="border" role="status" className="mb-3">
+            <span className="visually-hidden">Carregando...</span>
+          </Spinner>
+          <p>Carregando dados do usuário...</p>
+        </Card.Body>
+      </Card>
+    );
+  }
 
   return (
     <Card>
       <Card.Header>
         <h5 className="card-title mb-0">
           <FaStore className="me-2" />
-          Nova Requisição entre Estabelecimentos
+          Nova Requisição para Almoxarifado
         </h5>
       </Card.Header>
       <Card.Body>
         <Form onSubmit={handleSubmit}>
-          {/* Estabelecimentos */}
+          {/* Estabelecimentos - Simplificado */}
           <Row className="mb-4">
             <Col md={6}>
               <Form.Group>
-                <Form.Label>Solicitante (Quem precisa) *</Form.Label>
-                <Form.Select
-                  value={formData.solicitanteId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, solicitanteId: e.target.value }))}
-                  required
-                >
-                  <option value="">Selecione o solicitante...</option>
-                  {estabelecimentos.map(est => (
-                    <option key={est.id} value={est.id}>{est.nome}</option>
-                  ))}
-                </Form.Select>
+                <Form.Label>Solicitante *</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={usuarioLogado.estabelecimentoNome || 'Carregando...'}
+                  disabled
+                  readOnly
+                />
+                <Form.Text className="text-muted">
+                  Seu estabelecimento (automático)
+                </Form.Text>
               </Form.Group>
             </Col>
             <Col md={6}>
               <Form.Group>
-                <Form.Label>Atendente (Quem fornece) *</Form.Label>
+                <Form.Label>Almoxarifado Atendente *</Form.Label>
                 <Form.Select
                   value={formData.atendenteId}
                   onChange={(e) => setFormData(prev => ({ ...prev, atendenteId: e.target.value }))}
                   required
                 >
-                  <option value="">Selecione o atendente...</option>
-                  {estabelecimentos.map(est => (
+                  <option value="">Selecione o almoxarifado...</option>
+                  {almoxarifados.map(est => (
                     <option key={est.id} value={est.id}>{est.nome}</option>
                   ))}
                 </Form.Select>
@@ -124,6 +168,9 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
             </Col>
           </Row>
 
+          {/* Resto do código permanece igual */}
+          {/* ... Observações, Adicionar Itens, Itens Adicionados ... */}
+          
           {/* Observações */}
           <Form.Group className="mb-4">
             <Form.Label>Observações</Form.Label>
@@ -224,8 +271,8 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
           )}
 
           <Alert variant="info">
-            <strong>💡 Como funciona:</strong> Esta requisição será enviada para o estabelecimento 
-            atendente, que poderá aprovar, reprovar ou atender parcialmente os itens solicitados.
+            <strong>💡 Como funciona:</strong> Esta requisição será enviada para o almoxarifado 
+            selecionado, que poderá aprovar, reprovar ou atender parcialmente os itens solicitados.
           </Alert>
 
           {/* Botões */}
