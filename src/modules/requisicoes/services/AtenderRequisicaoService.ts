@@ -42,7 +42,7 @@ class AtenderRequisicaoService {
       let totalItensSolicitados = requisicao.itens.length;
       let totalItensAtendidos = 0;
       
-      const operacoesEmLote: Promise<any>[] = []; 
+      const operacoesEmLote: Promise<any>[] = [];
       
       // 2. Processa cada Item de ATENDIMENTO enviado no BODY
       for (const itemAtendido of itensAtendidos) {
@@ -56,9 +56,10 @@ class AtenderRequisicaoService {
         const quantidadeAtender = itemAtendido.quantidadeAtendida;
         const { quantidadeSolicitada, medicamentoId } = itemOriginal;
 
+        // ✅ CORREÇÃO: Remove a restrição de quantidade máxima
         // Validação 2: Quantidade atendida é válida?
-        if (quantidadeAtender < 0 || quantidadeAtender > quantidadeSolicitada) {
-            throw new AppError(`Quantidade a atender (${quantidadeAtender}) é inválida. Deve ser entre 0 e ${quantidadeSolicitada}.`, 400);
+        if (quantidadeAtender < 0) {
+            throw new AppError(`Quantidade a atender (${quantidadeAtender}) não pode ser negativa.`, 400);
         }
         
         if (quantidadeAtender === 0) {
@@ -72,7 +73,6 @@ class AtenderRequisicaoService {
             medicamentoId_estabelecimentoId: {
               medicamentoId: medicamentoId,
               estabelecimentoId: atendenteId,
-              
             },
           },
         });
@@ -129,7 +129,17 @@ class AtenderRequisicaoService {
       // 4. Determina o Status Final da Requisição
       let novoStatus: string;
       if (totalItensAtendidos === totalItensSolicitados) {
-        novoStatus = 'ATENDIDA'; // Todos os itens foram atendidos
+        // ✅ CORREÇÃO: Considera se todos os itens foram atendidos (mesmo que com quantidades diferentes)
+        const todosItensAtendidos = requisicao.itens.every(item => {
+          const itemAtendido = itensAtendidos.find(ia => ia.itemId === item.id);
+          return itemAtendido && itemAtendido.quantidadeAtendida > 0;
+        });
+        
+        if (todosItensAtendidos) {
+          novoStatus = 'ATENDIDA';
+        } else {
+          novoStatus = 'ATENDIDA_PARCIALMENTE';
+        }
       } else if (totalItensAtendidos > 0) {
         novoStatus = 'ATENDIDA_PARCIALMENTE'; // Atendeu alguns
       } else {
@@ -151,7 +161,16 @@ class AtenderRequisicaoService {
       await Promise.all(operacoesEmLote);
       
       // Retorna a requisição atualizada (com os itens)
-      return tx.requisicao.findUnique({ where: { id: requisicaoId }, include: { itens: true } });
+      return tx.requisicao.findUnique({ 
+        where: { id: requisicaoId }, 
+        include: { 
+          itens: {
+            include: {
+              medicamento: true
+            }
+          } 
+        } 
+      });
     });
   }
 }

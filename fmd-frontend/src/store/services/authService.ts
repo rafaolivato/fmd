@@ -1,17 +1,5 @@
 import { api } from './api';
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  estabelecimentoId?: string;
-  estabelecimento?: {
-    id: string;
-    nome: string;
-    tipo: string;
-  };
-}
+import type { User } from '../../types/User';
 
 export interface AuthResponse {
   user: User;
@@ -36,22 +24,26 @@ class AuthService {
       this.setToken(token);
 
       return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Erro ao fazer login');
+    } catch (error: unknown) { // ✅ CORREÇÃO: Troca any por unknown
+      if (error instanceof Error && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        throw new Error(axiosError.response?.data?.message || 'Erro ao fazer login');
+      }
+      throw new Error('Erro ao fazer login');
     }
   }
 
   async getCurrentUser(): Promise<User | null> {
     try {
       // Tenta buscar da API primeiro (mais atualizado)
-      const response = await api.get<User>('/users/me'); // MUDEI: /users/me em vez de /usuarios/me
+      const response = await api.get<User>('/users/me');
       if (response.data) {
         this.setUser(response.data);
         return response.data;
       }
       return null;
-    } catch (error) {
-      console.log('Não foi possível buscar usuário da API, usando cache...');
+    } catch (error) { // ✅ CORREÇÃO: error está sendo usado no console.log
+      console.log('Não foi possível buscar usuário da API, usando cache...', error); // ✅ Agora error é usado
       // Se não conseguir da API, usa o localStorage
       return this.getUserFromStorage();
     }
@@ -102,6 +94,16 @@ class AuthService {
       estabelecimentoId: user.estabelecimentoId,
       estabelecimentoNome: user.estabelecimento?.nome || 'Meu Estabelecimento'
     };
+  }
+
+  // Método auxiliar para verificar se é almoxarifado
+  isUserAlmoxarifado(user: User): boolean {
+    return user.estabelecimento?.tipo === 'ALMOXARIFADO';
+  }
+
+  // Método auxiliar para verificar se é farmácia
+  isUserFarmacia(user: User): boolean {
+    return user.estabelecimento?.tipo === 'FARMACIA_UNIDADE';
   }
 }
 

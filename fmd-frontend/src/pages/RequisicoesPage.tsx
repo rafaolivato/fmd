@@ -1,14 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // ✅ Adiciona useCallback
 import { Container, Row, Col, Button, Tabs, Tab, Alert } from 'react-bootstrap';
 import RequisicoesList from '../components/requisicoes/RequisicoesList';
 import RequisicaoDetailsModal from '../components/requisicoes/RequisicaoDetailsModal';
 import AtenderRequisicaoModal from '../components/requisicoes/AtenderRequisicaoModal';
 import type { Requisicao } from '../types/Requisicao';
+import type { User } from '../types/User';
 import { requisicaoService } from '../store/services/requisicaoService';
-import { authService } from '../store/services/authService'; // Adicione este import
+import { authService } from '../store/services/authService';
 import { FaPlus, FaSync, FaStore, FaHandshake } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Badge from 'react-bootstrap/Badge';
+
+interface UsuarioLogadoState {
+  user: User | null;
+  isAlmoxarifado: boolean;
+}
 
 const RequisicoesPage: React.FC = () => {
   const [minhasRequisicoes, setMinhasRequisicoes] = useState<Requisicao[]>([]);
@@ -19,86 +25,120 @@ const RequisicoesPage: React.FC = () => {
   const [showAtenderModal, setShowAtenderModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('minhas');
-  const [usuarioLogado, setUsuarioLogado] = useState<any>(null); // Adicione este estado
+  const [usuarioLogado, setUsuarioLogado] = useState<UsuarioLogadoState>({
+    user: null,
+    isAlmoxarifado: false
+  });
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadUsuarioLogado();
-  }, []);
-
-  const loadUsuarioLogado = async () => {
+  // ✅ CORREÇÃO: useCallback para loadUsuarioLogado
+  const loadUsuarioLogado = useCallback(async (): Promise<void> => {
     try {
       const userData = await authService.getCurrentUser();
-      setUsuarioLogado(userData);
+      
       if (userData) {
-        loadRequisicoes(); 
+        const userIsAlmoxarifado = authService.isUserAlmoxarifado(userData);
+        
+        setUsuarioLogado({
+          user: userData,
+          isAlmoxarifado: userIsAlmoxarifado
+        });
+
+        console.log('👤 Usuário logado:', userData.name);
+        console.log('🏢 Estabelecimento:', userData.estabelecimento?.nome);
+        console.log('📋 Tipo:', userData.estabelecimento?.tipo);
+        console.log('🔧 É almoxarifado?', userIsAlmoxarifado);
+        
+        await loadRequisicoes(userIsAlmoxarifado);
       }
     } catch (error) {
       console.error('Erro ao carregar usuário:', error);
     }
-  };
+  }, []); // ✅ Dependências vazias pois não depende de state/props
 
-  const loadRequisicoes = async () => {
+  // ✅ CORREÇÃO: useCallback para loadRequisicoes
+  const loadRequisicoes = useCallback(async (userIsAlmoxarifado: boolean): Promise<void> => {
     try {
       setIsLoading(true);
       console.log('🔄 Carregando requisições...');
       
-      const [minhasData, paraAtenderData] = await Promise.all([
-        requisicaoService.getMinhasRequisicoes(),
-        requisicaoService.getParaAtender()
-      ]);
+      if (userIsAlmoxarifado) {
+        console.log('📦 Almoxarifado - carregando "Para Atender"');
+        const paraAtenderData = await requisicaoService.getParaAtender();
+        setParaAtender(paraAtenderData);
+        setMinhasRequisicoes([]);
+      } else {
+        console.log('📦 Farmácia - carregando "Minhas Requisições"');
+        const minhasData = await requisicaoService.getMinhasRequisicoes();
+        setMinhasRequisicoes(minhasData);
+        setParaAtender([]);
+      }
       
-      console.log('📦 Minhas requisições:', minhasData.length);
-      console.log('📦 Para atender:', paraAtenderData.length);
-      
-      setMinhasRequisicoes(minhasData);
-      setParaAtender(paraAtenderData);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao carregar requisições:', error);
-      alert('Erro ao carregar requisições');
+      
+      if (error instanceof Error && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 403) {
+          console.log('⚠️  Acesso negado para este endpoint - normal para este tipo de usuário');
+          return;
+        }
+      }
+      
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert('Erro ao carregar requisições: ' + errorMessage);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleViewDetails = (requisicao: Requisicao) => {
+  useEffect(() => {
+    loadUsuarioLogado();
+  }, [loadUsuarioLogado]); // ✅ CORREÇÃO: Agora loadUsuarioLogado é uma dependência
+
+  const handleViewDetails = (requisicao: Requisicao): void => {
     setSelectedRequisicao(requisicao);
     setShowDetailsModal(true);
   };
 
-  const handleAtender = (requisicao: Requisicao) => {
+  const handleAtender = (requisicao: Requisicao): void => {
     setRequisicaoParaAtender(requisicao);
     setShowAtenderModal(true);
   };
 
-  const handleCloseDetails = () => {
+  const handleCloseDetails = (): void => {
     setShowDetailsModal(false);
     setSelectedRequisicao(null);
   };
 
-  const handleCloseAtender = () => {
+  const handleCloseAtender = (): void => {
     setShowAtenderModal(false);
     setRequisicaoParaAtender(null);
   };
 
-  const handleAtendimentoSuccess = () => {
+  const handleAtendimentoSuccess = (): void => {
     handleCloseAtender();
-    if (usuarioLogado) {
-      loadRequisicoes();
+    if (usuarioLogado.user) {
+      loadRequisicoes(usuarioLogado.isAlmoxarifado);
     }
   };
 
-  const handleRefresh = () => {
-    if (usuarioLogado) {
-      loadRequisicoes();
-    }
-  };
 
-  const handleNewRequisicao = () => {
-    navigate('/requisicoes/nova');
-  };
 
-  if (!usuarioLogado) {
+  if (!usuarioLogado.user) {
+    return (
+      <Container fluid>
+        <div className="text-center py-5">
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Carregando...</span>
+          </div>
+          <p className="mt-2">Carregando dados do usuário...</p>
+        </div>
+      </Container>
+    );
+  }
+
+  if (!usuarioLogado.user) {
     return (
       <Container fluid>
         <div className="text-center py-5">
@@ -117,79 +157,105 @@ const RequisicoesPage: React.FC = () => {
         <Col>
           <h1>Requisições</h1>
           <p className="lead">
-            Gerencie requisições entre estabelecimentos - 
-            <strong> Logado como: {usuarioLogado.estabelecimento?.nome}</strong>
+            <strong>Logado como: {usuarioLogado.user?.estabelecimento?.nome}</strong>
+            {usuarioLogado.isAlmoxarifado && <span> 🏭 (Almoxarifado)</span>}
+            {!usuarioLogado.isAlmoxarifado && <span> 💊 (Farmácia)</span>}
           </p>
         </Col>
         <Col xs="auto" className="d-flex align-items-center gap-2">
-          <Button variant="primary" onClick={handleNewRequisicao}>
-            <FaPlus className="me-2" />
-            Nova Requisição
-          </Button>
-          <Button variant="outline-primary" onClick={handleRefresh}>
+          {!usuarioLogado.isAlmoxarifado && (
+            <Button variant="primary" onClick={() => navigate('/requisicoes/nova')}>
+              <FaPlus className="me-2" />
+              Nova Requisição
+            </Button>
+          )}
+          <Button variant="outline-primary" onClick={() => usuarioLogado.user && loadRequisicoes(usuarioLogado.isAlmoxarifado)}>
             <FaSync />
           </Button>
         </Col>
       </Row>
 
+
       <Row>
         <Col>
           <Tabs
             activeKey={activeTab}
-            onSelect={(tab) => setActiveTab(tab || 'minhas')}
+            onSelect={(tab: string | null) => setActiveTab(tab || 'minhas')}
             className="mb-4"
           >
-            <Tab 
-              eventKey="minhas" 
-              title={
-                <span>
-                  <FaStore className="me-2" />
-                  Minhas Requisições
-                  {minhasRequisicoes.length > 0 && (
-                    <Badge bg="secondary" className="ms-2">
-                      {minhasRequisicoes.length}
-                    </Badge>
-                  )}
-                </span>
-              }
-            >
-              <RequisicoesList
-                requisicoes={minhasRequisicoes}
-                onViewDetails={handleViewDetails}
-                isLoading={isLoading}
-                modo="minhas"
-              />
-            </Tab>
+            {/* ABA "MINHAS REQUISIÇÕES" - Só para Farmácias */}
+            {!usuarioLogado.isAlmoxarifado && (
+              <Tab 
+                eventKey="minhas" 
+                title={
+                  <span>
+                    <FaStore className="me-2" />
+                    Minhas Requisições
+                    {minhasRequisicoes.length > 0 && (
+                      <Badge bg="secondary" className="ms-2">
+                        {minhasRequisicoes.length}
+                      </Badge>
+                    )}
+                  </span>
+                }
+              >
+                <RequisicoesList
+                  requisicoes={minhasRequisicoes}
+                  onViewDetails={handleViewDetails}
+                  isLoading={isLoading}
+                  modo="minhas"
+                />
+              </Tab>
+            )}
             
-            <Tab 
-              eventKey="para-atender" 
-              title={
-                <span>
-                  <FaHandshake className="me-2" />
-                  Para Atender
-                  {paraAtender.length > 0 && (
-                    <Badge bg="warning" className="ms-2">
-                      {paraAtender.length}
-                    </Badge>
-                  )}
-                </span>
-              }
-            >
-              {paraAtender.filter(r => r.status === 'PENDENTE').length > 0 && (
-                <Alert variant="warning" className="mb-3">
-                  <FaHandshake className="me-2" />
-                  Você tem {paraAtender.filter(r => r.status === 'PENDENTE').length} requisição(ões) pendente(s) para atender
-                </Alert>
-              )}
-              <RequisicoesList
-                requisicoes={paraAtender}
-                onViewDetails={handleViewDetails}
-                onAtender={handleAtender}
-                isLoading={isLoading}
-                modo="para-atender"
-              />
-            </Tab>
+            {/* ABA "PARA ATENDER" - Só para Almoxarifados */}
+            {usuarioLogado.isAlmoxarifado && (
+              <Tab 
+                eventKey="para-atender" 
+                title={
+                  <span>
+                    <FaHandshake className="me-2" />
+                    Para Atender
+                    {paraAtender.length > 0 && (
+                      <Badge bg="warning" className="ms-2">
+                        {paraAtender.length}
+                      </Badge>
+                    )}
+                  </span>
+                }
+              >
+                {paraAtender.filter(r => r.status === 'PENDENTE').length > 0 && (
+                  <Alert variant="warning" className="mb-3">
+                    <FaHandshake className="me-2" />
+                    Você tem {paraAtender.filter(r => r.status === 'PENDENTE').length} requisição(ões) pendente(s) para atender
+                  </Alert>
+                )}
+                <RequisicoesList
+                  requisicoes={paraAtender}
+                  onViewDetails={handleViewDetails}
+                  onAtender={handleAtender}
+                  isLoading={isLoading}
+                  modo="para-atender"
+                />
+              </Tab>
+            )}
           </Tabs>
+
+          {/* MENSAGEM PARA FARMÁCIAS SEM REQUISIÇÕES */}
+          {!usuarioLogado.isAlmoxarifado && minhasRequisicoes.length === 0 && !isLoading && (
+            <Alert variant="info">
+              <FaStore className="me-2" />
+              Você ainda não fez nenhuma requisição. Clique em "Nova Requisição" para começar.
+            </Alert>
+          )}
+
+          {/* MENSAGEM PARA ALMOXARIFADOS SEM REQUISIÇÕES */}
+          {usuarioLogado.isAlmoxarifado && paraAtender.length === 0 && !isLoading && (
+            <Alert variant="info">
+              <FaHandshake className="me-2" />
+              Não há requisições pendentes para atender no momento.
+            </Alert>
+          )}
         </Col>
       </Row>
 
