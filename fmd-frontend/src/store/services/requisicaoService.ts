@@ -1,4 +1,3 @@
-// src/store/services/requisicaoService.ts
 import { api } from './api';
 import type { Requisicao, RequisicaoFormData, ItemRequisicaoAtendimento } from '../../types/Requisicao';
 
@@ -28,13 +27,14 @@ export const requisicaoService = {
     return response.data;
   },
 
-  async getMinhasRequisicoes(estabelecimentoId: string): Promise<Requisicao[]> {
-    const response = await api.get(`/requisicoes/minhas?estabelecimentoId=${estabelecimentoId}`);
+  async getMinhasRequisicoes(): Promise<Requisicao[]> {
+    const response = await api.get('/requisicoes/minhas');
     return response.data;
   },
 
-  async getParaAtender(estabelecimentoId: string): Promise<Requisicao[]> {
-    const response = await api.get(`/requisicoes/para-atender?estabelecimentoId=${estabelecimentoId}`);
+  
+  async getParaAtender(): Promise<Requisicao[]> {
+    const response = await api.get('/requisicoes/para-atender');
     return response.data;
   }
 };

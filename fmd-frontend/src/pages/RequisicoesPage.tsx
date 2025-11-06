@@ -5,6 +5,7 @@ import RequisicaoDetailsModal from '../components/requisicoes/RequisicaoDetailsM
 import AtenderRequisicaoModal from '../components/requisicoes/AtenderRequisicaoModal';
 import type { Requisicao } from '../types/Requisicao';
 import { requisicaoService } from '../store/services/requisicaoService';
+import { authService } from '../store/services/authService'; // Adicione este import
 import { FaPlus, FaSync, FaStore, FaHandshake } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Badge from 'react-bootstrap/Badge';
@@ -18,22 +19,38 @@ const RequisicoesPage: React.FC = () => {
   const [showAtenderModal, setShowAtenderModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('minhas');
+  const [usuarioLogado, setUsuarioLogado] = useState<any>(null); // Adicione este estado
   const navigate = useNavigate();
 
-  // Mock - depois você pega do contexto de autenticação
-  const estabelecimentoLogadoId = 'seu-estabelecimento-id-aqui';
-
   useEffect(() => {
-    loadRequisicoes();
+    loadUsuarioLogado();
   }, []);
+
+  const loadUsuarioLogado = async () => {
+    try {
+      const userData = await authService.getCurrentUser();
+      setUsuarioLogado(userData);
+      if (userData) {
+        loadRequisicoes(); 
+      }
+    } catch (error) {
+      console.error('Erro ao carregar usuário:', error);
+    }
+  };
 
   const loadRequisicoes = async () => {
     try {
       setIsLoading(true);
+      console.log('🔄 Carregando requisições...');
+      
       const [minhasData, paraAtenderData] = await Promise.all([
-        requisicaoService.getMinhasRequisicoes(estabelecimentoLogadoId),
-        requisicaoService.getParaAtender(estabelecimentoLogadoId)
+        requisicaoService.getMinhasRequisicoes(),
+        requisicaoService.getParaAtender()
       ]);
+      
+      console.log('📦 Minhas requisições:', minhasData.length);
+      console.log('📦 Para atender:', paraAtenderData.length);
+      
       setMinhasRequisicoes(minhasData);
       setParaAtender(paraAtenderData);
     } catch (error) {
@@ -66,23 +83,43 @@ const RequisicoesPage: React.FC = () => {
 
   const handleAtendimentoSuccess = () => {
     handleCloseAtender();
-    loadRequisicoes(); // Recarrega a lista
+    if (usuarioLogado) {
+      loadRequisicoes();
+    }
   };
 
   const handleRefresh = () => {
-    loadRequisicoes();
+    if (usuarioLogado) {
+      loadRequisicoes();
+    }
   };
 
   const handleNewRequisicao = () => {
     navigate('/requisicoes/nova');
   };
 
+  if (!usuarioLogado) {
+    return (
+      <Container fluid>
+        <div className="text-center py-5">
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Carregando...</span>
+          </div>
+          <p className="mt-2">Carregando dados do usuário...</p>
+        </div>
+      </Container>
+    );
+  }
+
   return (
     <Container fluid>
       <Row className="mb-4">
         <Col>
           <h1>Requisições</h1>
-          <p className="lead">Gerencie requisições entre estabelecimentos</p>
+          <p className="lead">
+            Gerencie requisições entre estabelecimentos - 
+            <strong> Logado como: {usuarioLogado.estabelecimento?.nome}</strong>
+          </p>
         </Col>
         <Col xs="auto" className="d-flex align-items-center gap-2">
           <Button variant="primary" onClick={handleNewRequisicao}>

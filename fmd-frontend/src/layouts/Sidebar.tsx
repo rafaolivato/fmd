@@ -1,8 +1,7 @@
-// src/components/Sidebar.tsx
 import React, { useState } from 'react';
 import { Nav } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
-import logoFmd from '../assets/logo-fmd.png';
+
 
 import {
   FaHome,
@@ -120,9 +119,7 @@ const Sidebar: React.FC = () => {
   return (
     <div className="sidebar bg-light border-end" style={{ width: '250px', minHeight: '100vh' }}>
       <div className="sidebar bg-light border-end" style={{ width: '250px', minHeight: '100vh' }}>
-        <div className="text-center py-3">
-          <img src={logoFmd} alt="Logo FMD" style={{ maxWidth: '80%', height: 'auto' }} />
-        </div>
+        
         <Nav className="flex-column p-3">
           {navItems.map((item) => (
             <div key={item.name}>

@@ -9,6 +9,10 @@ export class ListParaAtenderRequisicoesService {
       include: { estabelecimento: true }
     });
 
+    console.log('Usuário:', usuario?.name);
+    console.log('Estabelecimento:', usuario?.estabelecimento?.nome);
+    console.log('Tipo:', usuario?.estabelecimento?.tipo);
+
     if (!usuario || !usuario.estabelecimentoId) {
       throw new AppError('Usuário não vinculado a nenhum estabelecimento', 400);
     }
@@ -19,6 +23,7 @@ export class ListParaAtenderRequisicoesService {
     });
 
     if (estabelecimento?.tipo !== 'ALMOXARIFADO') {
+      console.log('❌ ERRO: Estabelecimento NÃO é almoxarifado!');
       throw new AppError('Apenas almoxarifados podem atender requisições', 403);
     }
 
