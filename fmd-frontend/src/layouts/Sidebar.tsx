@@ -87,7 +87,7 @@ const navItems: NavItem[] = [
     children: [
       { name: 'Nova Requisição', icon: <FaPlus size={14} />, path: '/requisicoes/nova' },
       { name: 'Minhas Requisições', icon: <FaList size={14} />, path: '/requisicoes' },
-      { name: 'Para Atender', icon: <FaHandshake size={14} />, path: '/requisicoes/atender' },
+      
     ]
   },
 

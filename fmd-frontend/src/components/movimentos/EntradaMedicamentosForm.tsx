@@ -33,18 +33,20 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
     itens: []
   });
 
+  // ✅ CORREÇÃO: Mude quantidade de 0 para 1
   const [novoItem, setNovoItem] = useState<Omit<ItemMovimentoEntrada, 'medicamentoId'> & { medicamentoId: string }>({
     medicamentoId: '',
     valorUnitario: 0,
     fabricante: '',
     numeroLote: '',
     dataValidade: '',
-    quantidade: 0,
+    quantidade: 1, // ✅ Mude de 0 para 1
     localizacaoFisica: ''
   });
 
   const adicionarItem = () => {
-    if (!novoItem.medicamentoId || novoItem.quantidade <= 0) {
+    // ✅ CORREÇÃO: Mude <= para <
+    if (!novoItem.medicamentoId || novoItem.quantidade < 1) {
       alert('Selecione um medicamento e informe a quantidade');
       return;
     }
@@ -55,14 +57,14 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
       valorTotal: prev.valorTotal + (novoItem.valorUnitario * novoItem.quantidade)
     }));
 
-    // Reset novo item
+    // ✅ CORREÇÃO: Reset mantém quantidade como 1
     setNovoItem({
       medicamentoId: '',
       valorUnitario: 0,
       fabricante: '',
       numeroLote: '',
       dataValidade: '',
-      quantidade: 0,
+      quantidade: 1, // ✅ Mude de 0 para 1
       localizacaoFisica: ''
     });
   };
@@ -86,8 +88,6 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
 
     onSubmit(formData);
   };
-
-
 
   return (
     <Card>
@@ -196,7 +196,10 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
                       type="number"
                       min="1"
                       value={novoItem.quantidade}
-                      onChange={(e) => setNovoItem(prev => ({ ...prev, quantidade: Number(e.target.value) }))}
+                      onChange={(e) => setNovoItem(prev => ({ 
+                        ...prev, 
+                        quantidade: Math.max(1, Number(e.target.value) || 1) // ✅ Garante mínimo 1
+                      }))}
                     />
                   </Form.Group>
                 </Col>

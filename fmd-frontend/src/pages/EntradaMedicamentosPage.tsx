@@ -6,10 +6,12 @@ import type { Estabelecimento } from '../types/Estabelecimento';
 import { movimentoEntradaService } from '../store/services/movimentoEntradaService';
 import { medicamentoService } from '../store/services/medicamentoService';
 import { estabelecimentoService } from '../store/services/estabelecimentoService';
+import { authService } from '../store/services/authService'; // ✅ Adicione este import
 
 const EntradaMedicamentosPage: React.FC = () => {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [estabelecimentos, setEstabelecimentos] = useState<Estabelecimento[]>([]);
+  const [usuarioLogado, setUsuarioLogado] = useState<any>(null); // ✅ Adicione estado do usuário
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
@@ -20,6 +22,11 @@ const EntradaMedicamentosPage: React.FC = () => {
   const loadData = async () => {
     try {
       setIsLoadingData(true);
+      
+      // ✅ Carrega usuário logado primeiro
+      const userData = await authService.getCurrentUser();
+      setUsuarioLogado(userData);
+      
       const [medsData, estsData] = await Promise.all([
         medicamentoService.getAll(),
         estabelecimentoService.getAll()
@@ -37,6 +44,13 @@ const EntradaMedicamentosPage: React.FC = () => {
   const handleSubmit = async (formData: MovimentoEntradaFormData) => {
     try {
       setIsLoading(true);
+      
+      // ✅ VALIDAÇÃO: Verifica se o estabelecimento selecionado é o mesmo do usuário logado
+      if (formData.estabelecimentoId !== usuarioLogado?.estabelecimentoId) {
+        alert('Você só pode registrar entrada no seu próprio estabelecimento');
+        return;
+      }
+      
       await movimentoEntradaService.create(formData);
       alert('Entrada de medicamentos registrada com sucesso!');
       // Limpar formulário ou redirecionar se quiser
@@ -49,7 +63,6 @@ const EntradaMedicamentosPage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    // Voltar para dashboard ou lista de movimentos
     window.history.back();
   };
 
@@ -66,19 +79,39 @@ const EntradaMedicamentosPage: React.FC = () => {
     );
   }
 
+  // ✅ Se não tem usuário logado, mostra erro
+  if (!usuarioLogado) {
+    return (
+      <div className="container-fluid">
+        <div className="alert alert-danger">
+          <h4>Erro de Autenticação</h4>
+          <p>Usuário não autenticado. Faça login novamente.</p>
+          <button 
+            className="btn btn-primary"
+            onClick={() => window.location.href = '/login'}
+          >
+            Fazer Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container-fluid">
       <div className="row mb-4">
         <div className="col">
-          <h1>Entrada de Medicamentos</h1>
-          <p className="lead">Registre a entrada de medicamentos no estoque</p>
+          
+          
         </div>
       </div>
 
       <div className="row">
         <div className="col-12">
           <EntradaMedicamentosForm
-            estabelecimentos={estabelecimentos}
+            estabelecimentos={estabelecimentos.filter(est => 
+              est.id === usuarioLogado.estabelecimentoId // ✅ Filtra apenas o estabelecimento do usuário
+            )}
             medicamentos={medicamentos}
             onSubmit={handleSubmit}
             onCancel={handleCancel}

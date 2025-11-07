@@ -77,10 +77,7 @@ const SaidaMedicamentosPage: React.FC = () => {
   return (
     <div className="container-fluid">
       <div className="row mb-4">
-        <div className="col">
-          <h1>Saída de Medicamentos</h1>
-          <p className="lead">Registre a saída de medicamentos do estoque</p>
-        </div>
+        
       </div>
 
       <div className="row">

@@ -96,6 +96,27 @@ const RequisicoesPage: React.FC = () => {
     loadUsuarioLogado();
   }, [loadUsuarioLogado]); // ✅ CORREÇÃO: Agora loadUsuarioLogado é uma dependência
 
+
+  const handleCancelarRequisicao = async (requisicao: Requisicao) => {
+    if (!window.confirm(`Tem certeza que deseja cancelar a requisição #${requisicao.id.substring(0, 8)}?`)) {
+      return;
+    }
+
+    try {
+      const requisicaoCancelada = await requisicaoService.cancelarRequisicao(requisicao.id);
+      
+      // Atualiza a lista
+      if (usuarioLogado.user) {
+        loadRequisicoes(usuarioLogado.isAlmoxarifado);
+      }
+      
+      alert(`Requisição #${requisicao.id.substring(0, 8)} cancelada com sucesso!`);
+    } catch (error: any) {
+      console.error('Erro ao cancelar requisição:', error);
+      alert(error.response?.data?.message || 'Erro ao cancelar requisição');
+    }
+  };
+
   const handleViewDetails = (requisicao: Requisicao): void => {
     setSelectedRequisicao(requisicao);
     setShowDetailsModal(true);
@@ -202,6 +223,7 @@ const RequisicoesPage: React.FC = () => {
                 <RequisicoesList
                   requisicoes={minhasRequisicoes}
                   onViewDetails={handleViewDetails}
+                  onCancelar={handleCancelarRequisicao} 
                   isLoading={isLoading}
                   modo="minhas"
                 />
@@ -234,6 +256,7 @@ const RequisicoesPage: React.FC = () => {
                   requisicoes={paraAtender}
                   onViewDetails={handleViewDetails}
                   onAtender={handleAtender}
+                  onCancelar={handleCancelarRequisicao}
                   isLoading={isLoading}
                   modo="para-atender"
                 />

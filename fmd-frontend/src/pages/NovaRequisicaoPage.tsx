@@ -126,12 +126,9 @@ const NovaRequisicaoPage: React.FC = () => {
 
   return (
     <Container fluid>
-      <Row className="mb-4">
-        <Col>
-          <h1>Nova Requisição</h1>
-          <p className="lead">Solicite medicamentos de outros estabelecimentos</p>
-        </Col>
-      </Row>
+      <div className="row mb-4">
+        
+      </div>
 
       {/* Mensagem de sucesso */}
       {successMessage && (

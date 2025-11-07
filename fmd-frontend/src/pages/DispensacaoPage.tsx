@@ -88,12 +88,9 @@ const DispensacaoPage: React.FC = () => {
 
   return (
     <Container fluid>
-      <Row className="mb-4">
-        <Col>
-          <h1>Dispensação de Medicamentos</h1>
-          <p className="lead">Registre a dispensação de medicamentos para pacientes</p>
-        </Col>
-      </Row>
+      <div className="row mb-4">
+        
+      </div>
 
       {successMessage && (
         <Row className="mb-4">
