@@ -50,7 +50,6 @@ const MedicamentoList: React.FC<MedicamentoListProps> = ({
                   <th>Concentração</th>
                   <th>Forma Farmacêutica</th>
                   <th>Psicotrópico</th>
-                  <th>Estoque</th>
                   <th>Cadastro</th>
                   <th>Ações</th>
                 </tr>
@@ -70,11 +69,7 @@ const MedicamentoList: React.FC<MedicamentoListProps> = ({
                         <span className="badge bg-secondary">Não</span>
                       )}
                     </td>
-                    <td>
-                      <span className={`badge ${medicamento.quantidadeEstoque > 0 ? 'bg-success' : 'bg-danger'}`}>
-                        {medicamento.quantidadeEstoque}
-                      </span>
-                    </td>
+                    
                     <td>{medicamento.createdAt && formatDate(medicamento.createdAt)}</td>
                     <td>
                       <div className="btn-group btn-group-sm">

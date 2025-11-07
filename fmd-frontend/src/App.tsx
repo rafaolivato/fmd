@@ -18,6 +18,8 @@ import NovaRequisicaoPage from './pages/NovaRequisicaoPage';
 
 import RequisicoesPage from './pages/RequisicoesPage';
 
+import PerfilPage from './pages/PerfilPage';
+
 
 
 
@@ -32,6 +34,8 @@ const App: React.FC = () => {
     <Routes>
       {/* Rota pública de Login */}
       <Route path="/login" element={<Login />} />
+
+      <Route path="/perfil" element={<PerfilPage />} />
       
       {/* ROTA PROTEGIDA COM LAYOUT ANINHADO */}
       <Route path="/" element={<ProtectedLayout />}>
