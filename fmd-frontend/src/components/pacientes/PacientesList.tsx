@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, Table, Badge, Button } from 'react-bootstrap';
 import type { Paciente } from '../../types/Paciente';
-import { FaEdit, FaUser } from 'react-icons/fa';
+import { FaEdit, FaUser , FaTrash} from 'react-icons/fa';
 
 interface PacientesListProps {
   pacientes: Paciente[];
@@ -124,9 +124,9 @@ const PacientesList: React.FC<PacientesListProps> = ({
                           variant="outline-danger"
                           onClick={() => onDelete(paciente)}
                           title="Excluir"
-                          disabled // ← Desabilitado por enquanto
+                          
                         >
-                          {/* <FaTrash /> */}
+                          <FaTrash/>
                         </Button>
                       </div>
                     </td>

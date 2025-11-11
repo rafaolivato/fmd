@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Button } from 'react-bootstrap';
 import PacienteForm from '../components/pacientes/PacienteForm';
 import PacientesList from '../components/pacientes/PacientesList';
-
 import type { Paciente, PacienteFormData } from '../types/Paciente';
 import { pacienteService } from '../store/services/pacienteService';
-import { FaUserPlus } from 'react-icons/fa';
+import { FaBuilding, FaUser, FaUserPlus } from 'react-icons/fa';
 
 const PacientesPage: React.FC = () => {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
@@ -34,10 +33,11 @@ const PacientesPage: React.FC = () => {
   const handleSubmit = async (formData: PacienteFormData) => {
     try {
       setIsLoading(true);
-      
+
       if (editingPaciente) {
-        // Atualizar - implemente se quiser
-        alert('Edição de paciente será implementada em breve');
+        // ✅ CORREÇÃO: Implementar edição
+        await pacienteService.update(editingPaciente.id, formData);
+        alert('Paciente atualizado com sucesso!');
       } else {
         await pacienteService.create(formData);
         alert('Paciente cadastrado com sucesso!');
@@ -61,8 +61,10 @@ const PacientesPage: React.FC = () => {
   const handleDelete = async (paciente: Paciente) => {
     if (window.confirm(`Tem certeza que deseja excluir "${paciente.nome}"?`)) {
       try {
-        // Implemente se quiser deletar
-        alert('Exclusão de paciente será implementada em breve');
+        // ✅ CORREÇÃO: Implementar exclusão
+        await pacienteService.delete(paciente.id);
+        alert('Paciente excluído com sucesso!');
+        await loadPacientes();
       } catch (error) {
         console.error('Erro ao excluir paciente:', error);
         alert('Erro ao excluir paciente');
@@ -84,10 +86,15 @@ const PacientesPage: React.FC = () => {
     <Container fluid>
       <Row className="mb-4">
         <Col>
-          <h1>Cadastro de Pacientes</h1>
-          <p className="lead">Gerencie os pacientes do sistema</p>
+          <div className="d-flex align-items-center mt-3">
+            <FaUser size={32} className="text-primary mb-3 me-3" />
+            <div>
+              <h1 className="h2 mb-0"> Cadastro de Pacientes</h1>
+              <p className="lead text-muted mb-0"> Gerencie os pacientes do sistema</p>
+            </div>
+          </div>
         </Col>
-        <Col xs="auto">
+         <Col xs="auto" className="d-flex align-items-center gap-2">
           {!showForm && (
             <Button variant="primary" onClick={handleNewPaciente}>
               <FaUserPlus className="me-2" />

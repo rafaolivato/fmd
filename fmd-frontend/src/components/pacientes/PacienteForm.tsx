@@ -61,10 +61,12 @@ const PacienteForm: React.FC<PacienteFormProps> = ({
   };
 
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formattedCpf = formatCPF(e.target.value);
+    const rawValue = e.target.value.replace(/\D/g, '');
+    const formattedCpf = formatCPF(rawValue);
+    
     setFormData(prev => ({
       ...prev,
-      cpf: formattedCpf
+      cpf: rawValue // ✅ GUARDA O CPF SEM FORMATAÇÃO
     }));
   };
 
@@ -93,7 +95,13 @@ const PacienteForm: React.FC<PacienteFormProps> = ({
     e.preventDefault();
     
     if (validateForm()) {
-      onSubmit(formData);
+      // ✅ CORREÇÃO: Garantir que o CPF está sem formatação
+      const dataToSubmit = {
+        ...formData,
+        cpf: formData.cpf.replace(/\D/g, '')
+      };
+      
+      onSubmit(dataToSubmit);
     }
   };
 
@@ -130,7 +138,7 @@ const PacienteForm: React.FC<PacienteFormProps> = ({
                   type="text"
                   className={errors.cpf ? 'is-invalid' : ''}
                   name="cpf"
-                  value={formData.cpf}
+                  value={formatCPF(formData.cpf)} // ✅ EXIBE FORMATADO
                   onChange={handleCpfChange}
                   placeholder="000.000.000-00"
                   maxLength={14}

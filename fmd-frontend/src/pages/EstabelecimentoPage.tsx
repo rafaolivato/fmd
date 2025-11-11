@@ -5,6 +5,7 @@ import type { AppDispatch, RootState } from '../store/store';
 import { fetchEstabelecimentos, deleteEstabelecimento} from '../store/slices/estabelecimentoSlice'; 
 import EstabelecimentoForm from '../components/estabelecimentos/EstabelecimentoForm';
 import type { Estabelecimento } from '../store/slices/estabelecimentoSlice';
+import { FaStore } from 'react-icons/fa';
 
 const EstabelecimentoPage: React.FC = () => {
     const dispatch = useDispatch<AppDispatch>();
@@ -54,9 +55,9 @@ const EstabelecimentoPage: React.FC = () => {
 
     return (
         <Container fluid className='mt-5'>
-            {/* ... Título e botão ... */}
+            
             <div className="d-flex justify-content-between align-items-center mb-4">
-                
+            <FaStore className="me-2" />
             <h2>Cadastro de Estabelecimentos</h2>
             <Button variant="primary" onClick={() => setShowModal(true)}>
                     + Novo Estabelecimento

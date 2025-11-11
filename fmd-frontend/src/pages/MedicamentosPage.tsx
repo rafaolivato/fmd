@@ -101,10 +101,10 @@ const MedicamentosPage: React.FC = () => {
 
   return (
     <Container fluid>
-      {/* Cabeçalho */}
+      
       <Row className="mb-4">
         <Col>
-          <div className="d-flex align-items-center mb-2">
+          <div className="d-flex align-items-center mt-3">
             <FaPills size={32} className="text-primary me-3" />
             <div>
               <h1 className="h2 mb-0">Cadastro de Medicamentos</h1>

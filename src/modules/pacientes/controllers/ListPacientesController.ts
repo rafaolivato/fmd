@@ -1,4 +1,3 @@
-// src/modules/pacientes/controllers/ListPacientesController.ts
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../../database/prismaClient';
 

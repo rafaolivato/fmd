@@ -21,7 +21,7 @@ class CreatePacienteController {
         data: {
           nome,
           cpf,
-          dataNascimento: new Date(dataNascimento),
+          dataNascimento: new Date(dataNascimento + 'T00:00:00'), 
           endereco
         }
       });
