@@ -101,7 +101,6 @@ const MedicamentosPage: React.FC = () => {
 
   return (
     <Container fluid>
-      
       <Row className="mb-4">
         <Col>
           <div className="d-flex align-items-center mt-3">

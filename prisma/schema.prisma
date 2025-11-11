@@ -43,22 +43,26 @@ model Movimento {
   // DADOS DA TRANSAÇÃO GERAL
   tipoMovimentacao   String // Ex: Entrada Ordinária, Ajuste de Estoque
   fonteFinanciamento String // Ex: Municipal, Estadual + Federal
-  fornecedor         String // Nome da Distribuidora/Entidade
+  fornecedorId String?
+ 
   documentoTipo      String // Ex: Nota Fiscal, Nota de Simples Remessa
   numeroDocumento    String   @unique // Chave única para o documento
   dataDocumento      DateTime
   dataRecebimento    DateTime
   valorTotal         Float
   observacao         String?
-
+  
   estabelecimentoId String
   estabelecimento   Estabelecimento @relation(fields: [estabelecimentoId], references: [id])
+  fornecedor   Fornecedor? @relation(fields: [fornecedorId], references: [id], onDelete: SetNull)
 
   // Relação com os Itens desta movimentação
   itensMovimentados ItemMovimento[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+
 }
 
 model ItemMovimento {
@@ -249,4 +253,20 @@ model EstoqueLote {
   @@unique([medicamentoId, estabelecimentoId, numeroLote])
 }
 
+model Fornecedor {
+  id        String   @id @default(uuid())
+  nome      String
+  cnpj      String   @unique
+  telefone  String?
+  email     String?
+  endereco  String?
+  ativo     Boolean  @default(true)
+  
+  movimentos Movimento[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("fornecedores")
+}
 

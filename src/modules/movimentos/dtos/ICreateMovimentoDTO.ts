@@ -14,7 +14,7 @@ export interface IItemMovimentoDTO {
     // Dados da Transação Geral
     tipoMovimentacao: string;
     fonteFinanciamento: string;
-    fornecedor: string;
+    fornecedorId: string;
     documentoTipo: string;
     numeroDocumento: string;
     dataDocumento: string;

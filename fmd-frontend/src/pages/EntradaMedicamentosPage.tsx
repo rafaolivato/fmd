@@ -6,12 +6,12 @@ import type { Estabelecimento } from '../types/Estabelecimento';
 import { movimentoEntradaService } from '../store/services/movimentoEntradaService';
 import { medicamentoService } from '../store/services/medicamentoService';
 import { estabelecimentoService } from '../store/services/estabelecimentoService';
-import { authService } from '../store/services/authService'; // ✅ Adicione este import
+import { authService } from '../store/services/authService';
 
 const EntradaMedicamentosPage: React.FC = () => {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [estabelecimentos, setEstabelecimentos] = useState<Estabelecimento[]>([]);
-  const [usuarioLogado, setUsuarioLogado] = useState<any>(null); // ✅ Adicione estado do usuário
+  const [usuarioLogado, setUsuarioLogado] = useState<any>(null); // 
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 

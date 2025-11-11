@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Container, Button, Table, Spinner, Alert } from 'react-bootstrap';
+import { Container, Button, Table, Spinner, Alert, Row, Col } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../store/store';
-import { fetchEstabelecimentos, deleteEstabelecimento} from '../store/slices/estabelecimentoSlice'; 
+import { fetchEstabelecimentos, deleteEstabelecimento } from '../store/slices/estabelecimentoSlice';
 import EstabelecimentoForm from '../components/estabelecimentos/EstabelecimentoForm';
 import type { Estabelecimento } from '../store/slices/estabelecimentoSlice';
-import { FaStore } from 'react-icons/fa';
+import { FaStore, FaPlusCircle } from 'react-icons/fa';
+
 
 const EstabelecimentoPage: React.FC = () => {
     const dispatch = useDispatch<AppDispatch>();
 
     const [showModal, setShowModal] = useState(false);
     const [editingEstabelecimento, setEditingEstabelecimento] = useState<Estabelecimento | null>(null);
-    
+
     // Pega o estado do Redux
     const { estabelecimentos, loading, error } = useSelector(
         (state: RootState) => state.estabelecimentos
@@ -39,7 +40,7 @@ const EstabelecimentoPage: React.FC = () => {
         }
     };
 
-    
+
 
     // Nova função para abrir o modal em modo de edição
     const handleEdit = (estabelecimento: Estabelecimento) => {
@@ -54,16 +55,26 @@ const EstabelecimentoPage: React.FC = () => {
     };
 
     return (
-        <Container fluid className='mt-5'>
-            
-            <div className="d-flex justify-content-between align-items-center mb-4">
-            <FaStore className="me-2" />
-            <h2>Cadastro de Estabelecimentos</h2>
-            <Button variant="primary" onClick={() => setShowModal(true)}>
-                    + Novo Estabelecimento
-            </Button>
-          
-            </div>
+        <Container fluid>
+            <Row className="mb-4">
+                <Col>
+                    <div className="d-flex align-items-center mt-3">
+                        <FaStore size={32} className="text-primary me-3" />
+                        <div>
+                            <h1 className="h2 mb-0">Cadastro de Estabelecimentos</h1>
+                            <p className="lead text-muted mb-0">Gerencie os estabelecimentos</p>
+                        </div>
+
+
+                    </div>
+                </Col>
+                <Col xs="auto" className="d-flex align-items-center gap-2">
+                    <Button variant="primary" onClick={() => setShowModal(true)}>
+                        <FaPlusCircle className="me-2" />
+                        Novo Estabelecimento
+                    </Button>
+                </Col>
+            </Row>
             <Table striped bordered hover responsive>
                 <thead>
                     <tr>
@@ -81,20 +92,20 @@ const EstabelecimentoPage: React.FC = () => {
                             <td>{est.cnpj}</td>
                             <td>{est.tipo}</td>
                             <td>
-                                <Button variant="warning" size="sm" className="me-2" 
-                                onClick={() => handleEdit(est)} >Editar</Button>
-                                <Button variant="danger" size="sm" 
-                                onClick={() => handleDelete(est.id, est.nome)} 
+                                <Button variant="warning" size="sm" className="me-2"
+                                    onClick={() => handleEdit(est)} >Editar</Button>
+                                <Button variant="danger" size="sm"
+                                    onClick={() => handleDelete(est.id, est.nome)}
                                 >Excluir</Button>
                             </td>
                         </tr>
                     ))}
                 </tbody>
             </Table>
-            
 
-            <EstabelecimentoForm 
-                show={showModal} 
+
+            <EstabelecimentoForm
+                show={showModal}
                 handleClose={handleCloseModal} // Use a nova função de fechar
                 estabelecimentoToEdit={editingEstabelecimento} // PASSA OS DADOS PARA O FORM
             />

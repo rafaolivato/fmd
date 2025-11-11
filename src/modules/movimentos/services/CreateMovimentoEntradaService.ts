@@ -12,7 +12,7 @@ class CreateMovimentoEntradaService {
       itens,
       tipoMovimentacao,
       fonteFinanciamento,
-      fornecedor,
+      fornecedorId,
       documentoTipo,
       numeroDocumento,
       dataDocumento,
@@ -31,11 +31,21 @@ class CreateMovimentoEntradaService {
         throw new AppError('Estabelecimento não encontrado.', 404);
       }
 
+      if (fornecedorId) {
+        const fornecedor = await tx.fornecedor.findUnique({
+          where: { id: fornecedorId },
+        });
+
+        if (!fornecedor) {
+          throw new AppError('Fornecedor não encontrado.', 404);
+        }
+      }
+
       const movimento = await tx.movimento.create({
         data: {
           tipoMovimentacao,
           fonteFinanciamento,
-          fornecedor,
+          fornecedorId: fornecedorId || null,
           documentoTipo,
           numeroDocumento,
           dataDocumento: new Date(dataDocumento),
@@ -81,7 +91,7 @@ class CreateMovimentoEntradaService {
             quantidade: { increment: item.quantidade },
             dataValidade: new Date(item.dataValidade),
             fabricante: item.fabricante,
-            // Opcional: Localização física pode ser atualizada
+           
           },
 
           create: {

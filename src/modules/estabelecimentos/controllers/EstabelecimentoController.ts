@@ -1,8 +1,5 @@
-// fmd-backend/src/modules/estabelecimentos/controllers/EstabelecimentoController.ts
 import { Request, Response, NextFunction } from 'express';
-// Importe o seu serviço de criação existente
 import { CreateEstabelecimentoService } from '../services/CreateEstabelecimentoService'; 
-// Importe o novo serviço de listagem
 import { FindAllEstabelecimentosService } from '../services/FindAllEstabelecimentosService'; 
 
 

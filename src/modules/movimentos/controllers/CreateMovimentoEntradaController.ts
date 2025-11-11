@@ -7,7 +7,7 @@ class CreateMovimentoEntradaController {
    const { 
       tipoMovimentacao,
       fonteFinanciamento,
-      fornecedor,
+      fornecedorId,
       documentoTipo,
       numeroDocumento,
       dataDocumento,
@@ -24,7 +24,7 @@ class CreateMovimentoEntradaController {
       const movimento = await createMovimentoEntradaService.execute({
         tipoMovimentacao,
         fonteFinanciamento,
-        fornecedor,
+        fornecedorId,
         documentoTipo,
         numeroDocumento,
         dataDocumento,

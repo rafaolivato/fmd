@@ -27,7 +27,7 @@ export interface MovimentoEntrada {
   id: string;
   tipoMovimentacao: string;
   fonteFinanciamento: string;
-  fornecedor: string;
+  fornecedorId: string;
   documentoTipo: string;
   numeroDocumento: string;
   dataDocumento: string;

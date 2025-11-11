@@ -16,7 +16,8 @@ import {
   FaUserPlus,
   FaPlus,
   FaList,
-  FaHandshake
+  FaTruck
+  
 
 } from 'react-icons/fa';
 
@@ -49,6 +50,11 @@ const navItems: NavItem[] = [
         icon: <FaCapsules size={14} />,
         path: '/medicamentos'
       },
+       {
+      name: 'Fornecedores', 
+      icon: <FaTruck size={14} />, 
+      path: '/fornecedores'
+    },
 
       { name: 'Pacientes', icon: <FaUserPlus size={14} />, path: '/pacientes' },
     ]

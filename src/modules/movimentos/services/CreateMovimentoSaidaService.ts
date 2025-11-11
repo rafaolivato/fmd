@@ -9,7 +9,7 @@ class CreateMovimentoSaidaService {
         const {
             estabelecimentoId,
             itens,
-            tipoMovimentacao,
+            tipoMovimentacao = 'SAIDA',
             documentoReferencia,
             dataMovimento,
             justificativa,
@@ -39,7 +39,7 @@ class CreateMovimentoSaidaService {
                     observacao: justificativa + (observacao ? ` | ${observacao}` : ''), // Combina as observações
                     estabelecimentoId,
                     fonteFinanciamento: 'N/A',
-                    fornecedor: 'N/A',
+                    fornecedorId: null,
                     valorTotal: 0,
                 },
             });

@@ -7,7 +7,7 @@ import { dispensacaoRoutes } from './modules/dispensacao/routes';
 import { relatoriosRoutes } from './modules/relatorios/routes'; 
 import { estabelecimentosRoutes } from './modules/estabelecimentos/routes'
 import { requisicoesRoutes } from './modules/requisicoes/routes';
-
+import { fornecedoresRoutes } from './modules/fornecedores/routes';
 
 const routes = Router();
 
@@ -19,5 +19,6 @@ routes.use('/dispensacao', dispensacaoRoutes);
 routes.use('/relatorios', relatoriosRoutes);
 routes.use('/estabelecimentos', estabelecimentosRoutes);
 routes.use('/requisicoes', requisicoesRoutes);
+routes.use('/fornecedores', fornecedoresRoutes);
 
 export { routes };

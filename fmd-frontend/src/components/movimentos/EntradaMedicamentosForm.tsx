@@ -3,10 +3,12 @@ import { Button, Card, Form, Row, Col, Table } from 'react-bootstrap';
 import type { MovimentoEntradaFormData, ItemMovimentoEntrada } from '../../types/MovimentoEntrada';
 import type { Medicamento } from '../../types/Medicamento';
 import type { Estabelecimento } from '../../types/Estabelecimento';
+import type { Fornecedor } from '../../types/Fornecedor';
 
 interface EntradaMedicamentosFormProps {
   estabelecimentos: Estabelecimento[];
   medicamentos: Medicamento[];
+  fornecedores: Fornecedor[]; 
   onSubmit: (data: MovimentoEntradaFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
@@ -15,6 +17,7 @@ interface EntradaMedicamentosFormProps {
 const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
   estabelecimentos,
   medicamentos,
+  fornecedores,
   onSubmit,
   onCancel,
   isLoading = false
@@ -23,7 +26,7 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
     estabelecimentoId: '',
     tipoMovimentacao: 'ENTRADA',
     fonteFinanciamento: '',
-    fornecedor: '',
+    fornecedorId: '', 
     documentoTipo: 'NOTA_FISCAL',
     numeroDocumento: '',
     dataDocumento: new Date().toISOString().split('T')[0],
@@ -33,19 +36,18 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
     itens: []
   });
 
-  // ✅ CORREÇÃO: Mude quantidade de 0 para 1
+ 
   const [novoItem, setNovoItem] = useState<Omit<ItemMovimentoEntrada, 'medicamentoId'> & { medicamentoId: string }>({
     medicamentoId: '',
     valorUnitario: 0,
     fabricante: '',
     numeroLote: '',
     dataValidade: '',
-    quantidade: 1, // ✅ Mude de 0 para 1
+    quantidade: 1, 
     localizacaoFisica: ''
   });
 
   const adicionarItem = () => {
-    // ✅ CORREÇÃO: Mude <= para <
     if (!novoItem.medicamentoId || novoItem.quantidade < 1) {
       alert('Selecione um medicamento e informe a quantidade');
       return;
@@ -57,14 +59,14 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
       valorTotal: prev.valorTotal + (novoItem.valorUnitario * novoItem.quantidade)
     }));
 
-    // ✅ CORREÇÃO: Reset mantém quantidade como 1
+ 
     setNovoItem({
       medicamentoId: '',
       valorUnitario: 0,
       fabricante: '',
       numeroLote: '',
       dataValidade: '',
-      quantidade: 1, // ✅ Mude de 0 para 1
+      quantidade: 1, 
       localizacaoFisica: ''
     });
   };
@@ -116,12 +118,18 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
             <Col md={6}>
               <Form.Group>
                 <Form.Label>Fornecedor *</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={formData.fornecedor}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fornecedor: e.target.value }))}
+                <Form.Select
+                  value={formData.fornecedorId} // ✅ Mudar para fornecedorId
+                  onChange={(e) => setFormData(prev => ({ ...prev, fornecedorId: e.target.value }))}
                   required
-                />
+                >
+                  <option value="">Selecione...</option>
+                  {fornecedores.map(fornecedor => ( // ✅ Usar array de fornecedores
+                    <option key={fornecedor.id} value={fornecedor.id}>
+                      {fornecedor.nome} - {fornecedor.cnpj}
+                    </option>
+                  ))}
+                </Form.Select>
               </Form.Group>
             </Col>
           </Row>
@@ -159,7 +167,7 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
                 >
                   <option value="">Selecione...</option>
                   <option value="RECURSOS_PRO PRIOS">Recursos Próprios</option>
-                  <option value="SUS">SUS</option>
+                  <option value="SUS">Entrada Ordinária</option>
                   <option value="CONVENIO">Convênio</option>
                 </Form.Select>
               </Form.Group>
