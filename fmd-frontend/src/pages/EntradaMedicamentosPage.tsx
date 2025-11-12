@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import { Container, Row, Col } from 'react-bootstrap';
+import { FaBoxOpen  } from 'react-icons/fa';
 import EntradaMedicamentosForm from '../components/movimentos/EntradaMedicamentosForm';
 import type { MovimentoEntradaFormData } from '../types/MovimentoEntrada';
 import type { Medicamento } from '../types/Medicamento';
 import type { Estabelecimento } from '../types/Estabelecimento';
+import type { Fornecedor } from '../types/Fornecedor'; // ✅ ADICIONAR IMPORT
 import { movimentoEntradaService } from '../store/services/movimentoEntradaService';
 import { medicamentoService } from '../store/services/medicamentoService';
 import { estabelecimentoService } from '../store/services/estabelecimentoService';
 import { authService } from '../store/services/authService';
+import { fornecedorService } from '../store/services/fornecedorService';
 
 const EntradaMedicamentosPage: React.FC = () => {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]); // ✅ TIPO CORRETO
   const [estabelecimentos, setEstabelecimentos] = useState<Estabelecimento[]>([]);
-  const [usuarioLogado, setUsuarioLogado] = useState<any>(null); // 
+  const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
@@ -27,12 +32,17 @@ const EntradaMedicamentosPage: React.FC = () => {
       const userData = await authService.getCurrentUser();
       setUsuarioLogado(userData);
       
-      const [medsData, estsData] = await Promise.all([
+      // ✅ CORREÇÃO: Ordem correta do Promise.all
+      const [medsData, fornecedoresData, estsData] = await Promise.all([
         medicamentoService.getAll(),
+        fornecedorService.getAll(), // ✅ AGORA ESTÁ NA POSIÇÃO CORRETA
         estabelecimentoService.getAll()
       ]);
+      
       setMedicamentos(medsData);
-      setEstabelecimentos(estsData);
+      setFornecedores(fornecedoresData); // ✅ ATRIBUINDO PARA FORNECEDORES
+      setEstabelecimentos(estsData); // ✅ ATRIBUINDO PARA ESTABELECIMENTOS
+      
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       alert('Erro ao carregar medicamentos e estabelecimentos');
@@ -98,29 +108,35 @@ const EntradaMedicamentosPage: React.FC = () => {
   }
 
   return (
-    <div className="container-fluid">
-      <div className="row mb-4">
-        <div className="col">
-          
-          
-        </div>
-      </div>
+    <Container fluid>
+          <Row className="mb-4">
+            <Col>
+            <div className="d-flex align-items-center mt-3">
+              <FaBoxOpen size={32} className="text-primary me-3" />
+            <div>
+              <h1 className="h2 mb-0">Entrada de Medicamentos</h1>
+                           </div>
+              </div>
+            </Col>
+            
+          </Row>
 
       <div className="row">
         <div className="col-12">
           <EntradaMedicamentosForm
             estabelecimentos={estabelecimentos.filter(est => 
-              est.id === usuarioLogado.estabelecimentoId // ✅ Filtra apenas o estabelecimento do usuário
+              est.id === usuarioLogado.estabelecimentoId 
             )}
             medicamentos={medicamentos}
+            fornecedores={fornecedores} 
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             isLoading={isLoading}
           />
         </div>
       </div>
-    </div>
-  );
-};
+    </Container>
+);
+}
 
 export default EntradaMedicamentosPage;

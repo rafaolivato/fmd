@@ -5,7 +5,7 @@ import DispensacoesList from '../components/dispensacao/DispensacoesList';
 import DispensacaoDetailsModal from '../components/dispensacao/DispensacaoDetailsModal';
 import type { Dispensacao } from '../types/Dispensacao';
 import { dispensacaoService } from '../store/services/dispensacaoService';
-import { FaSync, FaPlus } from 'react-icons/fa';
+import { FaSync, FaPlus, FaUserMd } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const DispensacoesPage: React.FC = () => {
@@ -44,7 +44,7 @@ const DispensacoesPage: React.FC = () => {
     } else {
       const term = searchTerm.toLowerCase();
       setFilteredDispensacoes(
-        dispensacoes.filter(disp => 
+        dispensacoes.filter(disp =>
           disp.pacienteNome.toLowerCase().includes(term) ||
           disp.documentoReferencia.toLowerCase().includes(term) ||
           (disp.pacienteCpf && disp.pacienteCpf.includes(term)) ||
@@ -76,8 +76,13 @@ const DispensacoesPage: React.FC = () => {
     <Container fluid>
       <Row className="mb-4">
         <Col>
-          <h1>Dispensações</h1>
-          <p className="lead">Histórico de dispensações de medicamentos</p>
+          <div className="d-flex align-items-center mt-3">
+            <FaUserMd size={32} className="text-primary me-3" />
+            <div>
+              <h1 className="h2 mb-0">Dispensações</h1>
+              <p className="lead text-muted mb-0">Histórico de dispensações de medicamentos</p>
+            </div>
+          </div>
         </Col>
         <Col xs="auto" className="d-flex align-items-center gap-2">
           <Form.Control

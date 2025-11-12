@@ -9,7 +9,7 @@ import { dispensacaoRoutes } from './modules/dispensacao/routes';
 import { userRoutes } from './modules/users/routes';
 
 
-// A forma PADRÃO e correta de inicializar o Express
+
 const app: Express = express(); 
 
 app.use(cors());         // CORS

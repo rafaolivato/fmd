@@ -8,7 +8,7 @@ import type { Fornecedor } from '../../types/Fornecedor';
 interface EntradaMedicamentosFormProps {
   estabelecimentos: Estabelecimento[];
   medicamentos: Medicamento[];
-  fornecedores: Fornecedor[]; 
+  fornecedores: Fornecedor[];
   onSubmit: (data: MovimentoEntradaFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
@@ -26,7 +26,7 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
     estabelecimentoId: '',
     tipoMovimentacao: 'ENTRADA',
     fonteFinanciamento: '',
-    fornecedorId: '', 
+    fornecedorId: '',
     documentoTipo: 'NOTA_FISCAL',
     numeroDocumento: '',
     dataDocumento: new Date().toISOString().split('T')[0],
@@ -36,14 +36,14 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
     itens: []
   });
 
- 
+
   const [novoItem, setNovoItem] = useState<Omit<ItemMovimentoEntrada, 'medicamentoId'> & { medicamentoId: string }>({
     medicamentoId: '',
     valorUnitario: 0,
     fabricante: '',
     numeroLote: '',
     dataValidade: '',
-    quantidade: 1, 
+    quantidade: 1,
     localizacaoFisica: ''
   });
 
@@ -59,14 +59,14 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
       valorTotal: prev.valorTotal + (novoItem.valorUnitario * novoItem.quantidade)
     }));
 
- 
+
     setNovoItem({
       medicamentoId: '',
       valorUnitario: 0,
       fabricante: '',
       numeroLote: '',
       dataValidade: '',
-      quantidade: 1, 
+      quantidade: 1,
       localizacaoFisica: ''
     });
   };
@@ -82,7 +82,7 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.itens.length === 0) {
       alert('Adicione pelo menos um item ao movimento');
       return;
@@ -119,12 +119,12 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
               <Form.Group>
                 <Form.Label>Fornecedor *</Form.Label>
                 <Form.Select
-                  value={formData.fornecedorId} // ✅ Mudar para fornecedorId
+                  value={formData.fornecedorId}
                   onChange={(e) => setFormData(prev => ({ ...prev, fornecedorId: e.target.value }))}
                   required
                 >
-                  <option value="">Selecione...</option>
-                  {fornecedores.map(fornecedor => ( // ✅ Usar array de fornecedores
+                  <option value="">Selecione um fornecedor...</option>
+                  {fornecedores.map(fornecedor => ( // ✅ AGORA fornecedores NÃO É MAIS UNDEFINED
                     <option key={fornecedor.id} value={fornecedor.id}>
                       {fornecedor.nome} - {fornecedor.cnpj}
                     </option>
@@ -204,8 +204,8 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
                       type="number"
                       min="1"
                       value={novoItem.quantidade}
-                      onChange={(e) => setNovoItem(prev => ({ 
-                        ...prev, 
+                      onChange={(e) => setNovoItem(prev => ({
+                        ...prev,
                         quantidade: Math.max(1, Number(e.target.value) || 1) // ✅ Garante mínimo 1
                       }))}
                     />

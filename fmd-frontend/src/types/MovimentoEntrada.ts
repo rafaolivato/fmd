@@ -1,4 +1,3 @@
-// src/types/MovimentoEntrada.ts
 export interface ItemMovimentoEntrada {
   medicamentoId: string;
   valorUnitario: number;
@@ -13,7 +12,7 @@ export interface MovimentoEntradaFormData {
   estabelecimentoId: string;
   tipoMovimentacao: string;
   fonteFinanciamento: string;
-  fornecedor: string;
+  fornecedorId: string;
   documentoTipo: string;
   numeroDocumento: string;
   dataDocumento: string;

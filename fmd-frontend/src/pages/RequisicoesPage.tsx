@@ -7,7 +7,7 @@ import type { Requisicao } from '../types/Requisicao';
 import type { User } from '../types/User';
 import { requisicaoService } from '../store/services/requisicaoService';
 import { authService } from '../store/services/authService';
-import { FaPlus, FaSync, FaStore, FaHandshake } from 'react-icons/fa';
+import { FaPlus, FaSync, FaStore, FaHandshake, FaClipboardList } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Badge from 'react-bootstrap/Badge';
 
@@ -176,12 +176,17 @@ const RequisicoesPage: React.FC = () => {
     <Container fluid>
       <Row className="mb-4">
         <Col>
+         <div className="d-flex align-items-center mt-3">
+                    <FaClipboardList size={32} className="text-primary me-3" />
+                    <div>
           <h1>Requisições</h1>
           <p className="lead">
             <strong>Logado como: {usuarioLogado.user?.estabelecimento?.nome}</strong>
             {usuarioLogado.isAlmoxarifado && <span> 🏭 (Almoxarifado)</span>}
             {!usuarioLogado.isAlmoxarifado && <span> 💊 (Farmácia)</span>}
           </p>
+          </div>
+          </div>
         </Col>
         <Col xs="auto" className="d-flex align-items-center gap-2">
           {!usuarioLogado.isAlmoxarifado && (

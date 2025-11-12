@@ -20,10 +20,7 @@ import RequisicoesPage from './pages/RequisicoesPage';
 
 import PerfilPage from './pages/PerfilPage';
 
-
-
-
-
+import FornecedoresPage from './pages/FornecedoresPage';
 // Páginas
 import DashboardHome from './pages/DashboardHome'; // ← Importe o novo componente
 
@@ -50,6 +47,8 @@ const App: React.FC = () => {
         <Route path="estabelecimentos" element={<EstabelecimentoPage />} />
         
         <Route path="medicamentos" element={<MedicamentosPage />} />
+
+        <Route path="fornecedores" element={<FornecedoresPage />} />
         
         <Route path="entradas" element={<EntradaMedicamentosPage />} />
 

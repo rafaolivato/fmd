@@ -1,7 +1,7 @@
 // src/pages/FornecedoresPage.tsx
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Button } from 'react-bootstrap';
-import { FaPlus } from 'react-icons/fa';
+import { FaPlus, FaSign } from 'react-icons/fa';
 import FornecedorForm from '../components/fornecedores/FornecedorForm';
 import FornecedoresList from '../components/fornecedores/FornecedoresList';
 import type { Fornecedor, FornecedorFormData } from '../types/Fornecedor';
@@ -85,10 +85,15 @@ const FornecedoresPage: React.FC = () => {
     <Container fluid>
       <Row className="mb-4">
         <Col>
-          <h1>Cadastro de Fornecedores</h1>
-          <p className="lead">Gerencie os fornecedores do sistema</p>
+        <div className="d-flex align-items-center mt-3">
+          <FaSign size={32} className="text-primary me-3" />
+        <div>
+          <h1 className="h2 mb-0">Cadastro de Fornecedores</h1>
+          <p className="lead text-muted mb-0">Gerencie os fornecedores do sistema</p>
+           </div>
+          </div>
         </Col>
-        <Col xs="auto">
+        <Col xs="auto" className="d-flex align-items-center gap-2">
           {!showForm && (
             <Button variant="primary" onClick={handleNewFornecedor}>
               <FaPlus className="me-2" />

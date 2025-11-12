@@ -4,7 +4,7 @@ import { Container, Row, Col, Button, Form } from 'react-bootstrap';
 import MovimentosList from '../components/movimentos/MovimentosList';
 import type { Movimento } from '../types/Movimento';
 import { movimentoService } from '../store/services/movimentoService';
-import { FaSync, FaFilter } from 'react-icons/fa';
+import { FaSync, FaExchangeAlt } from 'react-icons/fa';
 
 const MovimentosPage: React.FC = () => {
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
@@ -57,8 +57,13 @@ const MovimentosPage: React.FC = () => {
     <Container fluid>
       <Row className="mb-4">
         <Col>
-          <h1>Movimentações</h1>
-          <p className="lead">Histórico de entradas e saídas do estoque</p>
+          <div className="d-flex align-items-center mt-3">
+            <FaExchangeAlt size={32} className="text-primary me-3" />
+            <div>
+              <h1 className="h2 mb-0">Movimentações</h1>
+              <p className="lead text-muted mb-0">Histórico de entradas e saídas do estoque</p>
+            </div>
+          </div>
         </Col>
         <Col xs="auto" className="d-flex align-items-center gap-2">
           <Form.Select
