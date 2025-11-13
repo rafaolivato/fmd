@@ -23,3 +23,10 @@ npx prisma migrate dev --name sync_schema
 
 # 4. Tente rodar novamente
 npx ts-node src/server.ts
+
+# 5. Quando aparecer erro interno
+npx prisma migrate dev
+
+####Lembrete importante usar o prisma studio é bem fácil para mexer no banco
+
+npx prisma studio

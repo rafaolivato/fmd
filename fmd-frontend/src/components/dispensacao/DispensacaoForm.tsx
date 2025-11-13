@@ -1,15 +1,14 @@
-// src/components/dispensacao/DispensacaoForm.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // Adicionado useEffect
 import { Button, Card, Form, Row, Col, Table, Alert, Modal } from 'react-bootstrap';
 import type { DispensacaoFormData, ItemDispensacaoForm } from '../../types/Dispensacao';
 import type { Medicamento } from '../../types/Medicamento';
 import type { Estabelecimento } from '../../types/Estabelecimento';
 import type { Paciente } from '../../types/Paciente';
-import { FaPlus, FaSearch, FaUserPlus } from 'react-icons/fa';
+import { FaPlus, FaSearch} from 'react-icons/fa';
 import { estoqueService } from '../../store/services/estoqueService';
 
 interface DispensacaoFormProps {
-  estabelecimentos: Estabelecimento[];
+  estabelecimentos: Estabelecimento[]; // Deve vir com apenas 1 item (o do usuário)
   medicamentos: Medicamento[];
   pacientes: Paciente[];
   onSubmit: (data: DispensacaoFormData) => void;
@@ -25,6 +24,12 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   onCancel,
   isLoading = false
 }) => {
+  
+  // 🚨 NOVO: Identifica o único estabelecimento na lista
+  const estabelecimentoLogado = estabelecimentos.length > 0 ? estabelecimentos[0] : null;
+  const estabelecimentoIdInicial = estabelecimentoLogado ? estabelecimentoLogado.id : '';
+
+
   const [formData, setFormData] = useState<DispensacaoFormData>({
     pacienteNome: '',
     pacienteCpf: '',
@@ -32,8 +37,20 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     documentoReferencia: '',
     observacao: '',
     itens: [],
-    estabelecimentoOrigemId: ''
+    // 🚨 CORREÇÃO: Inicializa com o ID do estabelecimento logado
+    estabelecimentoOrigemId: estabelecimentoIdInicial
   });
+
+  // 🚨 NOVO: Garante que o ID do estabelecimento é setado (para o caso de carregamento assíncrono)
+  useEffect(() => {
+    if (estabelecimentoLogado && formData.estabelecimentoOrigemId !== estabelecimentoLogado.id) {
+        setFormData(prev => ({ 
+            ...prev, 
+            estabelecimentoOrigemId: estabelecimentoLogado.id 
+        }));
+    }
+  }, [estabelecimentoLogado]);
+
 
   const [novoItem, setNovoItem] = useState<ItemDispensacaoForm>({
     medicamentoId: '',
@@ -46,6 +63,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
 
   // Buscar paciente por CPF
   const handleSearchPaciente = () => {
+    // ... (lógica de busca permanece a mesma)
     const pacienteEncontrado = pacientes.find(p => p.cpf === searchCpf);
     if (pacienteEncontrado) {
       setFormData(prev => ({
@@ -60,6 +78,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   };
 
   const adicionarItem = () => {
+    // ... (lógica de adicionar item permanece a mesma)
     if (!novoItem.medicamentoId || novoItem.quantidadeSaida <= 0) {
       alert('Selecione um medicamento e informe a quantidade');
       return;
@@ -97,11 +116,12 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
       quantidadeSaida: 0
     }));
     
+    // A lógica agora depende apenas do ID que está no formData
     if (medicamentoId && formData.estabelecimentoOrigemId) {
       try {
         const estoque = await estoqueService.getEstoqueMedicamento(
           medicamentoId, 
-          formData.estabelecimentoOrigemId
+          formData.estabelecimentoOrigemId // Usa o ID inicializado
         );
         setEstoqueDisponivel(estoque);
       } catch (error) {
@@ -115,6 +135,12 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 🚨 NOVO: Validação de ID de estabelecimento
+    if (!formData.estabelecimentoOrigemId) {
+        alert('Erro interno: Estabelecimento não definido. Recarregue a página.');
+        return;
+    }
     
     if (!formData.pacienteNome.trim()) {
       alert('Nome do paciente é obrigatório');
@@ -135,16 +161,33 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   };
 
   const medicamentoSelecionado = medicamentos.find(m => m.id === novoItem.medicamentoId);
+  
+  // 🚨 NOVO: Renderização condicional se não houver estabelecimento
+  if (!estabelecimentoLogado) {
+      return (
+        <Card>
+            <Card.Header>
+                 <h5 className="card-title mb-0 fw-bold">Dispensação de Medicamentos</h5>
+            </Card.Header>
+            <Card.Body>
+                <Alert variant="danger" className="p-4">
+                    Não foi possível carregar o estabelecimento do usuário. Recarregue a página ou entre em contato com o suporte.
+                </Alert>
+            </Card.Body>
+        </Card>
+      );
+  }
 
   return (
     <>
       <Card>
         <Card.Header>
-          <h5 className="card-title mb-0">Dispensação de Medicamentos</h5>
+          {/* 🚨 CORREÇÃO: Aplica negrito (fw-bold) no título */}
+          <h5 className="card-title mb-0 fw-bold">Dispensação de Medicamentos</h5> 
         </Card.Header>
         <Card.Body>
           <Form onSubmit={handleSubmit}>
-            {/* Dados do Paciente */}
+            {/* Dados do Paciente (permanece o mesmo) */}
             <Card className="mb-4">
               <Card.Header>
                 <h6 className="mb-0">Dados do Paciente</h6>
@@ -193,16 +236,14 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
               <Col md={6}>
                 <Form.Group>
                   <Form.Label>Estabelecimento *</Form.Label>
-                  <Form.Select
-                    value={formData.estabelecimentoOrigemId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, estabelecimentoOrigemId: e.target.value }))}
-                    required
-                  >
-                    <option value="">Selecione a farmácia...</option>
-                    {estabelecimentos.map(est => (
-                      <option key={est.id} value={est.id}>{est.nome}</option>
-                    ))}
-                  </Form.Select>
+                  {/* 🚨 CORREÇÃO: Substituído o Form.Select por um Form.Control desabilitado */}
+                  <Form.Control
+                    type="text"
+                    value={estabelecimentoLogado.nome}
+                    disabled
+                    readOnly
+                  />
+                  {/* O ID está no estado formData.estabelecimentoOrigemId */}
                 </Form.Group>
               </Col>
               <Col md={6}>
@@ -218,7 +259,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                 </Form.Group>
               </Col>
             </Row>
-
             <Row className="mb-3">
               <Col md={6}>
                 <Form.Group>

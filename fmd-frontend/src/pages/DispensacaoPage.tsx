@@ -9,6 +9,7 @@ import { dispensacaoService } from '../store/services/dispensacaoService';
 import { medicamentoService } from '../store/services/medicamentoService';
 import { estabelecimentoService } from '../store/services/estabelecimentoService';
 import { pacienteService } from '../store/services/pacienteService';
+import { authService } from '../store/services/authService';
 
 const DispensacaoPage: React.FC = () => {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
@@ -17,6 +18,7 @@ const DispensacaoPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -25,14 +27,31 @@ const DispensacaoPage: React.FC = () => {
   const loadData = async () => {
     try {
       setIsLoadingData(true);
+
+      // 1. ✅ Carrega usuário logado primeiro
+      const userData = await authService.getCurrentUser();
+      setUsuarioLogado(userData);
+
       const [medsData, estsData, pacsData] = await Promise.all([
         medicamentoService.getAll(),
         estabelecimentoService.getAll(),
         pacienteService.getAll()
       ]);
       setMedicamentos(medsData);
-      setEstabelecimentos(estsData);
       setPacientes(pacsData);
+
+      let estabelecimentosFiltrados: Estabelecimento[] = [];
+      
+      if (userData && userData.estabelecimentoId) {
+          // Filtra a lista completa (estsData) para manter apenas o estabelecimento do usuário
+          estabelecimentosFiltrados = estsData.filter(
+              (est) => est.id === userData.estabelecimentoId
+          );
+      }
+      
+      // 4. Atualiza o estado apenas com a lista filtrada (um ou nenhum item)
+      setEstabelecimentos(estabelecimentosFiltrados);
+
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       alert('Erro ao carregar dados necessários para dispensação');
@@ -44,6 +63,7 @@ const DispensacaoPage: React.FC = () => {
   const handleSubmit = async (formData: DispensacaoFormData) => {
     try {
       setIsLoading(true);
+
       const dispensacao = await dispensacaoService.create(formData);
       
       setSuccessMessage(`Dispensação registrada com sucesso! Nº ${dispensacao.documentoReferencia}`);

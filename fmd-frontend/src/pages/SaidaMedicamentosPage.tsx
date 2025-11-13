@@ -7,26 +7,45 @@ import type { Estabelecimento } from '../types/Estabelecimento';
 import { movimentoSaidaService } from '../store/services/movimentoSaidaService';
 import { medicamentoService } from '../store/services/medicamentoService';
 import { estabelecimentoService } from '../store/services/estabelecimentoService';
+import { authService } from '../store/services/authService';
 
 const SaidaMedicamentosPage: React.FC = () => {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [estabelecimentos, setEstabelecimentos] = useState<Estabelecimento[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, []); 
 
   const loadData = async () => {
     try {
       setIsLoadingData(true);
+
+       // ✅ Carrega usuário logado primeiro
+      const userData = await authService.getCurrentUser();
+       setUsuarioLogado(userData);
+
       const [medsData, estsData] = await Promise.all([
         medicamentoService.getAll(),
         estabelecimentoService.getAll()
       ]);
       setMedicamentos(medsData);
-      setEstabelecimentos(estsData);
+     
+      let estabelecimentosFiltrados: Estabelecimento[] = [];
+      
+      if (userData && userData.estabelecimentoId) {
+          // Filtra a lista completa (estsData) para manter apenas o estabelecimento do usuário
+          estabelecimentosFiltrados = estsData.filter(
+              (est) => est.id === userData.estabelecimentoId
+          );
+      }
+      
+      // 4. Atualiza o estado apenas com a lista filtrada
+      setEstabelecimentos(estabelecimentosFiltrados);
+
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       alert('Erro ao carregar medicamentos e estabelecimentos');
@@ -37,10 +56,16 @@ const SaidaMedicamentosPage: React.FC = () => {
 
   const handleSubmit = async (formData: MovimentoSaidaFormData) => {
     try {
-     console.log('🔍 DEBUG - formData completo:', formData);
+    console.log('🔍 DEBUG - formData completo:', formData);
     console.log('🔍 DEBUG - itens:', formData.itens);
     console.log('🔍 DEBUG - número de itens:', formData.itens.length);
       setIsLoading(true);
+
+      if (formData.estabelecimentoId !== usuarioLogado?.estabelecimentoId) {
+        alert('Você só pode registrar entrada no seu próprio estabelecimento');
+        return;
+      }
+
       await movimentoSaidaService.create(formData);
        if (formData.itens.length === 0) {
       alert('Erro: Nenhum item foi adicionado à saída');
