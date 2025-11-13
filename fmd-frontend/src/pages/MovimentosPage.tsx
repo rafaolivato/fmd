@@ -45,7 +45,7 @@ const MovimentosPage: React.FC = () => {
     }
   };
 
-  // ✅ CORREÇÃO: Apenas navega, sem alert
+ 
   const handleViewDetails = (movimento: Movimento) => {
     console.log('📍 Navegando para:', `/movimentos/${movimento.id}`);
     navigate(`/movimentacoes/${movimento.id}`);
@@ -76,7 +76,7 @@ const MovimentosPage: React.FC = () => {
             <option value="TODOS">Todos os tipos</option>
             <option value="ENTRADA">Entradas</option>
             <option value="SAIDA">Saídas</option>
-            <option value="DISPENSACAO">Dispensações</option>
+            
           </Form.Select>
           <Button variant="outline-primary" onClick={handleRefresh}>
             <FaSync />

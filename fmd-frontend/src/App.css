@@ -40,3 +40,9 @@ html, body, #root {
 .read-the-docs {
   color: #888;
 }
+
+@media print {
+    .no-print { display: none !important; }
+    body { background: white; }
+    .card { border: none; box-shadow: none; }
+}

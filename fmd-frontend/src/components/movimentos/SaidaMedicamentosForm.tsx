@@ -200,6 +200,7 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
                   <option value="SAIDA">Vencido</option>
                   <option value="PERDA">Perda</option>
                   <option value="TRANSFERENCIA">Transferência</option>
+                  <option value="DOAÇÃO">Doação</option>
                 </Form.Select>
               </Form.Group>
             </Col>

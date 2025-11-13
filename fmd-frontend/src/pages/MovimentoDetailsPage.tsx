@@ -1,6 +1,5 @@
-// src/pages/MovimentoDetailsPage.tsx
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Badge, Button, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Badge, Button, Spinner, Alert,  } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaPrint } from 'react-icons/fa';
 import type { Movimento } from '../types/Movimento';
@@ -16,6 +15,7 @@ const MovimentoDetailsPage: React.FC = () => {
     useEffect(() => {
         if (id) {
             loadMovimento(id);
+
         }
     }, [id]);
 
@@ -24,12 +24,32 @@ const MovimentoDetailsPage: React.FC = () => {
             setIsLoading(true);
             setError(null);
 
+            console.log('🔍 Iniciando carga do movimento ID:', movimentoId);
+
             // ✅ CHAMADA REAL DA API
             const data = await movimentoService.getById(movimentoId);
+            console.log('✅ Dados recebidos da API:', data);
+
+            if (!data) {
+                console.log('❌ Dados são null ou undefined');
+                setError('Dados do movimento não encontrados');
+                return;
+            }
+
+            console.log('📦 Estrutura completa do movimento:', JSON.stringify(data, null, 2));
+
+            if (data.itensMovimentados && data.itensMovimentados.length > 0) {
+                console.log('🎯 Primeiro item detalhado:', data.itensMovimentados[0]);
+                console.log('💰 Valor unitário:', data.itensMovimentados[0].valorUnitario);
+                console.log('🔑 Campos do item:', Object.keys(data.itensMovimentados[0]));
+            } else {
+                console.log('⚠️  Nenhum item encontrado no movimento');
+            }
+
             setMovimento(data);
 
         } catch (err) {
-            console.error('Erro ao carregar movimento:', err);
+            console.error('❌ Erro ao carregar movimento:', err);
             setError('Erro ao carregar detalhes do movimento');
         } finally {
             setIsLoading(false);
@@ -91,17 +111,22 @@ const MovimentoDetailsPage: React.FC = () => {
         );
     }
 
+    function handlePrint(event: React.MouseEvent<HTMLButtonElement>): void {
+        event.preventDefault();
+        window.print();
+    }
+
     return (
         <Container fluid>
-            <Row className="mb-4">
+            <Row className="mt-4 mb-4">
                 <Col>
-                    <Button variant="outline-primary" onClick={() => navigate('/movimentos')}>
+                    <Button variant="outline-primary" onClick={() => navigate(-1)}>
                         <FaArrowLeft className="me-2" />
                         Voltar para Movimentos
                     </Button>
                 </Col>
                 <Col xs="auto">
-                    <Button variant="outline-secondary">
+                    <Button variant="outline-secondary" onClick={handlePrint} className="no-print">
                         <FaPrint className="me-2" />
                         Imprimir
                     </Button>
@@ -215,7 +240,12 @@ const MovimentoDetailsPage: React.FC = () => {
                                             <td>{item.numeroLote}</td>
                                             <td>{formatDate(item.dataValidade)}</td>
                                             <td>{item.quantidade}</td>
-                                            <td>{formatCurrency(item.valorUnitario)}</td>
+                                            <td>
+                                                {item.valorUnitario.toLocaleString('pt-BR', {
+                                                    style: 'currency',
+                                                    currency: 'BRL'
+                                                })}
+                                            </td>
                                             <td>{formatCurrency(item.valorUnitario * item.quantidade)}</td>
                                         </tr>
                                     ))}

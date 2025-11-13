@@ -12,6 +12,7 @@ export interface IItemSaidaDiversaDTO {
   medicamentoId: string;
   quantidadeSaida: number; // Quantidade total a ser retirada (ex: 50)
   // Nota: Não precisamos de 'loteId' forçado, pois a saída diversa deve priorizar o FIFO.
+  valorUnitario: number; 
 }
 
 // DTO principal para a requisição de Saída

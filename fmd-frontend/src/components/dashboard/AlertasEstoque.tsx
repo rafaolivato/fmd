@@ -1,56 +1,51 @@
 // src/components/dashboard/AlertasEstoque.tsx
-import React, { useState, useEffect } from 'react';
-import { Card, ListGroup, Badge, Button } from 'react-bootstrap';
-import type { AlertaEstoque } from '../../types/AlertaEstoque';
-import { alertaService } from '../../store/services/alertaService';
-import { FaExclamationTriangle, FaSync } from 'react-icons/fa';
+import React from 'react';
+import { Card, ListGroup, Badge } from 'react-bootstrap';
+import { FaExclamationTriangle, FaExclamationCircle, FaInfoCircle } from 'react-icons/fa';
 
-const AlertasEstoque: React.FC = () => {
-  const [alertas, setAlertas] = useState<AlertaEstoque[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface AlertaEstoque {
+  id: string;
+  medicamento: string;
+  quantidade: number;
+  estoqueMinimo: number;
+  tipo: 'CRITICO' | 'ALERTA' | 'ATENCAO';
+}
 
-  const loadAlertas = async () => {
-    try {
-      setIsLoading(true);
-      const data = await alertaService.getAlertasEstoque();
-      setAlertas(data);
-    } catch (error) {
-      console.error('Erro ao carregar alertas:', error);
-    } finally {
-      setIsLoading(false);
+interface AlertasEstoqueProps {
+  alertas: AlertaEstoque[];
+}
+
+const AlertasEstoque: React.FC<AlertasEstoqueProps> = ({ alertas }) => {
+  const getBadgeVariant = (tipo: string) => {
+    switch (tipo) {
+      case 'CRITICO': return 'danger';
+      case 'ALERTA': return 'warning';
+      case 'ATENCAO': return 'info';
+      default: return 'secondary';
     }
   };
 
-  useEffect(() => {
-    loadAlertas();
-  }, []);
-
-  const getNivelAlerta = (alerta: AlertaEstoque) => {
-    const percentual = (alerta.estoqueAtual / alerta.estoqueMinimo) * 100;
-    if (percentual <= 20) return 'danger';
-    if (percentual <= 50) return 'warning';
-    return 'info';
+  const getIcon = (tipo: string) => {
+    switch (tipo) {
+      case 'CRITICO': return <FaExclamationTriangle className="text-danger" />;
+      case 'ALERTA': return <FaExclamationCircle className="text-warning" />;
+      case 'ATENCAO': return <FaInfoCircle className="text-info" />;
+      default: return <FaInfoCircle />;
+    }
   };
 
-  const getTextoAlerta = (alerta: AlertaEstoque) => {
-    const percentual = (alerta.estoqueAtual / alerta.estoqueMinimo) * 100;
-    if (percentual <= 20) return 'Estoque Crítico';
-    if (percentual <= 50) return 'Estoque Baixo';
-    return 'Atenção ao Estoque';
-  };
-
-  if (isLoading) {
+  if (alertas.length === 0) {
     return (
       <Card>
-        <Card.Header className="bg-warning text-dark">
-          <FaExclamationTriangle className="me-2" />
-          Alertas de Estoque
+        <Card.Header className="d-flex justify-content-between align-items-center">
+          <h5 className="card-title mb-0">Alertas de Estoque</h5>
+          <Badge bg="success">Tudo OK</Badge>
         </Card.Header>
-        <Card.Body className="text-center py-3">
-          <div className="spinner-border spinner-border-sm" role="status">
-            <span className="visually-hidden">Carregando...</span>
+        <Card.Body>
+          <div className="text-center py-3">
+            <p className="text-muted mb-0">Nenhum alerta de estoque no momento</p>
+            <small className="text-muted">Todos os medicamentos com estoque adequado</small>
           </div>
-          <small className="ms-2">Carregando alertas...</small>
         </Card.Body>
       </Card>
     );
@@ -58,55 +53,28 @@ const AlertasEstoque: React.FC = () => {
 
   return (
     <Card>
-      <Card.Header className="bg-warning text-dark d-flex justify-content-between align-items-center">
-        <span>
-          <FaExclamationTriangle className="me-2" />
-          Alertas de Estoque
-        </span>
-        <Button variant="outline-dark" size="sm" onClick={loadAlertas}>
-          <FaSync />
-        </Button>
+      <Card.Header className="d-flex justify-content-between align-items-center">
+        <h5 className="card-title mb-0">Alertas de Estoque</h5>
+        <Badge bg="danger">{alertas.length} alertas</Badge>
       </Card.Header>
-      <Card.Body className="p-0">
-        {alertas.length === 0 ? (
-          <div className="text-center py-4">
-            <FaExclamationTriangle size={32} className="text-success mb-2" />
-            <p className="text-muted mb-0">Estoque em dia! 🎉</p>
-            <small className="text-muted">Nenhum alerta no momento</small>
-          </div>
-        ) : (
-          <ListGroup variant="flush">
-            {alertas.map((alerta, index) => (
-              <ListGroup.Item key={index} className="py-3">
-                <div className="d-flex justify-content-between align-items-start mb-2">
-                  <div>
-                    <h6 className="mb-1">{alerta.principioAtivo}</h6>
-                    <small className="text-muted">{alerta.concentracao}</small>
-                  </div>
-                  <Badge bg={getNivelAlerta(alerta)}>
-                    {getTextoAlerta(alerta)}
-                  </Badge>
-                </div>
-                <div className="d-flex justify-content-between align-items-center">
-                  <small>
-                    Estoque: <strong>{alerta.estoqueAtual}</strong> / Mín: {alerta.estoqueMinimo}
-                  </small>
-                  <small className="text-muted">{alerta.estabelecimento}</small>
-                </div>
-                {/* Barra de progresso visual */}
-                <div className="progress mt-2" style={{ height: '6px' }}>
-                  <div 
-                    className={`progress-bar bg-${getNivelAlerta(alerta)}`}
-                    style={{ 
-                      width: `${Math.min(100, (alerta.estoqueAtual / alerta.estoqueMinimo) * 100)}%` 
-                    }}
-                  ></div>
-                </div>
-              </ListGroup.Item>
-            ))}
-          </ListGroup>
-        )}
-      </Card.Body>
+      <ListGroup variant="flush">
+        {alertas.map((alerta) => (
+          <ListGroup.Item key={alerta.id} className="d-flex justify-content-between align-items-center">
+            <div className="d-flex align-items-center">
+              {getIcon(alerta.tipo)}
+              <div className="ms-3">
+                <div className="fw-semibold">{alerta.medicamento}</div>
+                <small className="text-muted">
+                  Estoque: {alerta.quantidade} | Mínimo: {alerta.estoqueMinimo}
+                </small>
+              </div>
+            </div>
+            <Badge bg={getBadgeVariant(alerta.tipo)}>
+              {alerta.tipo}
+            </Badge>
+          </ListGroup.Item>
+        ))}
+      </ListGroup>
     </Card>
   );
 };
