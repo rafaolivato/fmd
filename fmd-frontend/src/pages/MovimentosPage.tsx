@@ -5,12 +5,14 @@ import MovimentosList from '../components/movimentos/MovimentosList';
 import type { Movimento } from '../types/Movimento';
 import { movimentoService } from '../store/services/movimentoService';
 import { FaSync, FaExchangeAlt } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom'; 
 
 const MovimentosPage: React.FC = () => {
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
   const [filteredMovimentos, setFilteredMovimentos] = useState<Movimento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filtroTipo, setFiltroTipo] = useState<string>('TODOS');
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadMovimentos();
@@ -43,10 +45,10 @@ const MovimentosPage: React.FC = () => {
     }
   };
 
+  // ✅ CORREÇÃO: Apenas navega, sem alert
   const handleViewDetails = (movimento: Movimento) => {
-    // Aqui você pode abrir um modal ou navegar para página de detalhes
-    console.log('Ver detalhes do movimento:', movimento);
-    alert(`Detalhes do movimento ${movimento.numeroDocumento}\n\nEm desenvolvimento...`);
+    console.log('📍 Navegando para:', `/movimentos/${movimento.id}`);
+    navigate(`/movimentacoes/${movimento.id}`);
   };
 
   const handleRefresh = () => {

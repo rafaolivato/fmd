@@ -1,28 +1,21 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
-import ProtectedLayout from './pages/ProtectedLayout'; 
+import ProtectedLayout from './pages/ProtectedLayout';
 import EstabelecimentoPage from './pages/EstabelecimentoPage';
 import MedicamentosPage from './pages/MedicamentosPage';
 import EntradaMedicamentosPage from './pages/EntradaMedicamentosPage';
 import SaidaMedicamentosPage from './pages/SaidaMedicamentosPage';
 import MovimentosPage from './pages/MovimentosPage';
-
 import DispensacaoPage from './pages/DispensacaoPage';
-
 import PacientesPage from './pages/PacientesPage';
-
 import DispensacoesPage from './pages/DispensacoesPage';
-
 import NovaRequisicaoPage from './pages/NovaRequisicaoPage';
-
 import RequisicoesPage from './pages/RequisicoesPage';
-
 import PerfilPage from './pages/PerfilPage';
-
 import FornecedoresPage from './pages/FornecedoresPage';
-// Páginas
-import DashboardHome from './pages/DashboardHome'; // ← Importe o novo componente
+import DashboardHome from './pages/DashboardHome';
+import MovimentoDetailsPage from './pages/MovimentoDetailsPage';
 
 const NotFound = () => <h1>404 | Página não encontrada</h1>;
 
@@ -33,28 +26,29 @@ const App: React.FC = () => {
       <Route path="/login" element={<Login />} />
 
       <Route path="/perfil" element={<PerfilPage />} />
-      
+
       {/* ROTA PROTEGIDA COM LAYOUT ANINHADO */}
       <Route path="/" element={<ProtectedLayout />}>
-        
+
         {/* Rota padrão: / */}
         <Route index element={<Navigate to="dashboard" replace />} />
 
         {/* Rotas dentro do ProtectedLayout */}
         <Route path="dashboard" element={<DashboardHome />} />
-        
-        
+
         <Route path="estabelecimentos" element={<EstabelecimentoPage />} />
-        
+
         <Route path="medicamentos" element={<MedicamentosPage />} />
 
         <Route path="fornecedores" element={<FornecedoresPage />} />
-        
+
         <Route path="entradas" element={<EntradaMedicamentosPage />} />
 
         <Route path="saidas" element={<SaidaMedicamentosPage />} />
 
         <Route path="movimentacoes" element={<MovimentosPage />} />
+
+        <Route path="movimentacoes/:id" element={<MovimentoDetailsPage />} />
 
         <Route path="dispensacao" element={<DispensacaoPage />} />
 
@@ -64,8 +58,9 @@ const App: React.FC = () => {
 
         <Route path="requisicoes/nova" element={<NovaRequisicaoPage />} />
 
-       <Route path="requisicoes" element={<RequisicoesPage />} />
+        <Route path="requisicoes" element={<RequisicoesPage />} />
         
+
         {/* Adicione outras rotas aqui */}
       </Route>
 

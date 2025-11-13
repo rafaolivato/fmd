@@ -3,11 +3,15 @@ import { CreateMovimentoEntradaController } from './controllers/CreateMovimentoE
 import { ListMovimentosController } from './controllers/ListMovimentosController';
 import { CreateMovimentoSaidaController} from './controllers/CreateMovimentoSaidaController';
 import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
+import { GetMovimentoByIdController } from './controllers/GetMovimentoByIdController';
+
 
 const movimentosRoutes = Router();
 const createMovimentoEntradaController = new CreateMovimentoEntradaController();
 const createMovimentoSaidaController = new CreateMovimentoSaidaController();
-const listMovimentosController = new ListMovimentosController(); // <-- NOVA INSTÂNCIA
+const listMovimentosController = new ListMovimentosController(); 
+const getMovimentoByIdController = new GetMovimentoByIdController();
+
 
 // Todas as rotas de movimentos precisam de autenticação
 movimentosRoutes.use(ensureAuthenticated);
@@ -21,6 +25,8 @@ movimentosRoutes.post('/entrada', (request, response, next) => {
 movimentosRoutes.get('/', (request, response, next) => {
     listMovimentosController.handle(request, response, next);
 });
+
+movimentosRoutes.get('/:id', getMovimentoByIdController.handle);
 
 movimentosRoutes.post('/saida', (request, response, next) => {
   createMovimentoSaidaController.handle(request, response, next);

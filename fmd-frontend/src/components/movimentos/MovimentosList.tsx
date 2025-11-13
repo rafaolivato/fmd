@@ -1,3 +1,4 @@
+// src/components/movimentos/MovimentosList.tsx
 import React from 'react';
 import { Card, Table, Badge, Button } from 'react-bootstrap';
 import type { Movimento } from '../../types/Movimento';
@@ -29,13 +30,35 @@ const MovimentosList: React.FC<MovimentosListProps> = ({
     switch (tipo) {
       case 'ENTRADA': return 'success';
       case 'SAIDA': return 'warning';
-      case 'DISPENSACAO': return 'info';
       default: return 'secondary';
     }
   };
 
   const getTotalItens = (movimento: Movimento) => {
     return movimento.itensMovimentados.reduce((total, item) => total + item.quantidade, 0);
+  };
+
+  // ✅ FUNÇÃO PARA REFERÊNCIA DE SAÍDA
+  const getReferenciaSaida = (movimento: Movimento) => {
+    if (movimento.tipoMovimentacao === 'SAIDA') {
+      // Para saídas, usa observação ou um texto padrão
+      return movimento.observacao || 'Saída diversa';
+    }
+    // Para entradas, usa fornecedor + fonte financiamento
+    return movimento.fornecedor;
+  };
+
+  // ✅ FUNÇÃO PARA FONTE DE FINANCIAMENTO FORMATADA
+  const getFonteFinanciamentoFormatada = (fonte: string) => {
+    const fontes: { [key: string]: string } = {
+      'RECURSOS_PRO_PRIOS': 'Recursos Próprios',
+      'RECURSOS_PRO PRIOS': 'Recursos Próprios', // fallback
+      'SUS': 'SUS',
+      'CONVENIO': 'Convênio',
+      'DOACAO': 'Doação',
+      'TRANSFERENCIA': 'Transferência'
+    };
+    return fontes[fonte] || fonte;
   };
 
   if (isLoading) {
@@ -104,12 +127,21 @@ const MovimentosList: React.FC<MovimentosListProps> = ({
                     <td>
                       {movimento.tipoMovimentacao === 'ENTRADA' ? (
                         <div>
-                          <div>{movimento.fornecedor}</div>
-                          <small className="text-muted">{movimento.fonteFinanciamento}</small>
+                          <div className="fw-semibold">{movimento.fornecedor}</div>
+                          <small className="text-muted">
+                            {getFonteFinanciamentoFormatada(movimento.fonteFinanciamento)}
+                          </small>
                         </div>
                       ) : (
                         <div className="text-truncate" style={{ maxWidth: '200px' }}>
-                          {movimento.observacao}
+                          <div className="fw-semibold">
+                            {getReferenciaSaida(movimento)}
+                          </div>
+                          {movimento.fonteFinanciamento && (
+                            <small className="text-muted">
+                              {getFonteFinanciamentoFormatada(movimento.fonteFinanciamento)}
+                            </small>
+                          )}
                         </div>
                       )}
                     </td>
@@ -126,7 +158,10 @@ const MovimentosList: React.FC<MovimentosListProps> = ({
                       <Button
                         variant="outline-primary"
                         size="sm"
-                        onClick={() => onViewDetails(movimento)}
+                        onClick={() => {
+                          console.log('📍 Navegando para movimento:', movimento.id);
+                          onViewDetails(movimento);
+                        }}
                         title="Ver detalhes"
                       >
                         <FaEye />

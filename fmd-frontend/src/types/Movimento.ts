@@ -1,4 +1,3 @@
-// src/types/Movimento.ts
 export interface ItemMovimento {
   id: string;
   valorUnitario: number;
@@ -20,7 +19,7 @@ export interface Movimento {
   id: string;
   tipoMovimentacao: string;
   fonteFinanciamento: string;
-  fornecedor: string;
+  fornecedor: string; // ✅ String direta (não objeto)
   documentoTipo: string;
   numeroDocumento: string;
   dataDocumento: string;
@@ -30,5 +29,5 @@ export interface Movimento {
   estabelecimentoId: string;
   createdAt: string;
   updatedAt: string;
-  itensMovimentados: ItemMovimento[];
+  itensMovimentados: ItemMovimento[]; // ✅ Nome correto: itensMovimentados
 }

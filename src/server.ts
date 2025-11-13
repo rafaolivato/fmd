@@ -7,7 +7,7 @@ import { estoqueRoutes } from './modules/estoque/routes';
 import { pacientesRoutes } from './modules/pacientes/routes';
 import { dispensacaoRoutes } from './modules/dispensacao/routes';
 import { userRoutes } from './modules/users/routes';
-
+import { movimentosRoutes } from './modules/movimentos/routes';
 
 
 const app: Express = express(); 
@@ -27,6 +27,9 @@ app.use('/pacientes', pacientesRoutes);
 app.use('/dispensacoes', dispensacaoRoutes);
 
 app.use('/usuarios', userRoutes);
+
+app.use('/movimentos', movimentosRoutes);
+
 
 const PORT = process.env.PORT || 3333;
 app.listen(PORT, () => console.log(`🚀 Server is running on port ${PORT}`));
