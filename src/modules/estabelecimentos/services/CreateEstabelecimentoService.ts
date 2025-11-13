@@ -3,7 +3,7 @@ import { ICreateEstabelecimentoDTO } from '../dtos/ICreateEstabelecimentoDTO';
 import { AppError } from '../../../shared/errors/AppError';
 
 class CreateEstabelecimentoService {
-    async execute({ nome, cnpj, tipo }: ICreateEstabelecimentoDTO) {
+    async execute({ nome, cnes, tipo }: ICreateEstabelecimentoDTO) {
         // Verifica se já existe um estabelecimento com o mesmo nome (opcional, mas bom)
         const estabelecimentoExists = await prisma.estabelecimento.findUnique({
             where: { nome },
@@ -21,7 +21,7 @@ class CreateEstabelecimentoService {
         const estabelecimento = await prisma.estabelecimento.create({
             data: {
                 nome,
-                cnpj,
+                cnes,
                 tipo,
             },
         });

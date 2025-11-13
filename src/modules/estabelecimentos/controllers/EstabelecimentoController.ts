@@ -8,11 +8,11 @@ class EstabelecimentoController {
   // Método para CRIAÇÃO (POST)
   async create(request: Request, response: Response, next: NextFunction) {
     // Este código é o mesmo que você já tem no seu CreateEstabelecimentoController
-    const { nome, cnpj, tipo } = request.body; 
+    const { nome, cnes, tipo } = request.body; 
 
     try {
       const createService = new CreateEstabelecimentoService();
-      const estabelecimento = await createService.execute({ nome, cnpj, tipo });
+      const estabelecimento = await createService.execute({ nome, cnes, tipo });
 
       return response.status(201).json(estabelecimento);
     } catch (error) {

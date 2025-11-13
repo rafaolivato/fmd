@@ -6,17 +6,17 @@ import { AppError } from '../../../shared/errors/AppError';
 class UpdateEstabelecimentoController {
     async handle(request: Request, response: Response, next: NextFunction) {
         const { id } = request.params; // ID da URL
-        const { nome, cnpj, tipo } = request.body; // Dados do corpo
+        const { nome, cnes, tipo } = request.body; // Dados do corpo
 
         // Verifica se pelo menos um campo foi passado para atualização
-        if (!nome && !cnpj && !tipo) {
+        if (!nome && !cnes && !tipo) {
             throw new AppError('Nenhum dado fornecido para atualização.', 400);
         }
 
         try {
             const updateService = new UpdateEstabelecimentoService();
             
-            const estabelecimento = await updateService.execute(id, { nome, cnpj, tipo });
+            const estabelecimento = await updateService.execute(id, { nome, cnes, tipo });
 
             // Retorna o objeto atualizado
             return response.status(200).json(estabelecimento); 

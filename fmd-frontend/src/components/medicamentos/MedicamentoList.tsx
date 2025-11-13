@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Medicamento } from '../../types/Medicamento';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 
 interface MedicamentoListProps {
   medicamentos: Medicamento[];
@@ -43,7 +44,7 @@ const MedicamentoList: React.FC<MedicamentoListProps> = ({
           </div>
         ) : (
           <div className="table-responsive">
-            <table className="table table-striped table-hover">
+            <table className="table table-striped table-hover align-middle">
               <thead>
                 <tr>
                   <th>Princípio Ativo</th>
@@ -51,15 +52,13 @@ const MedicamentoList: React.FC<MedicamentoListProps> = ({
                   <th>Forma Farmacêutica</th>
                   <th>Psicotrópico</th>
                   <th>Cadastro</th>
-                  <th>Ações</th>
+                  <th className="text-center">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {medicamentos.map(medicamento => (
                   <tr key={medicamento.id}>
-                    <td>
-                      <strong>{medicamento.principioAtivo}</strong>
-                    </td>
+                    <td><strong>{medicamento.principioAtivo}</strong></td>
                     <td>{medicamento.concentracao}</td>
                     <td>{medicamento.formaFarmaceutica}</td>
                     <td>
@@ -69,23 +68,24 @@ const MedicamentoList: React.FC<MedicamentoListProps> = ({
                         <span className="badge bg-secondary">Não</span>
                       )}
                     </td>
-                    
                     <td>{medicamento.createdAt && formatDate(medicamento.createdAt)}</td>
-                    <td>
+                    <td className="text-center">
                       <div className="btn-group btn-group-sm">
                         <button
+                          type="button"
                           className="btn btn-outline-primary"
                           onClick={() => onEdit(medicamento)}
                           title="Editar"
                         >
-                          <i className="bi bi-pencil"></i>
+                          <FaEdit />
                         </button>
                         <button
+                          type="button"
                           className="btn btn-outline-danger"
                           onClick={() => onDelete(medicamento)}
                           title="Excluir"
                         >
-                          <i className="bi bi-trash"></i>
+                          <FaTrash />
                         </button>
                       </div>
                     </td>

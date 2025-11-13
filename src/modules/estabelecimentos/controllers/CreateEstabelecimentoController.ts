@@ -3,11 +3,11 @@ import { CreateEstabelecimentoService } from '../services/CreateEstabelecimentoS
 
 class CreateEstabelecimentoController {
     async handle(request: Request, response: Response, next: NextFunction) {
-        const { nome, cnpj, tipo } = request.body;
+        const { nome, cnes, tipo } = request.body;
 
         try {
             const createEstabelecimentoService = new CreateEstabelecimentoService();
-            const estabelecimento = await createEstabelecimentoService.execute({ nome, cnpj, tipo });
+            const estabelecimento = await createEstabelecimentoService.execute({ nome, cnes, tipo });
 
             return response.status(201).json(estabelecimento);
         } catch (error) {

@@ -5,7 +5,7 @@ import { AppError } from '../../../shared/errors/AppError';
 // Tipagem para os dados que podem ser atualizados
 interface IUpdateEstabelecimentoDTO {
     nome?: string;
-    cnpj?: string | null;
+    cnes?: string | null;
     tipo?: string;
 }
 
@@ -43,7 +43,7 @@ class UpdateEstabelecimentoService {
             data: {
                 // Passa apenas os campos que vieram no 'data' (patch)
                 nome: data.nome,
-                cnpj: data.cnpj,
+                cnes: data.cnes,
                 tipo: data.tipo,
                 // O 'updatedAt' é atualizado automaticamente pelo @updatedAt
             },
