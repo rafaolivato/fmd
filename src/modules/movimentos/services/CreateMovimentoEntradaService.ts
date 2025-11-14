@@ -91,6 +91,7 @@ class CreateMovimentoEntradaService {
             quantidade: { increment: item.quantidade },
             dataValidade: new Date(item.dataValidade),
             fabricante: item.fabricante,
+            valorUnitario: item.valorUnitario,
            
           },
 
@@ -101,7 +102,7 @@ class CreateMovimentoEntradaService {
             numeroLote: item.numeroLote,
             dataValidade: new Date(item.dataValidade),
             fabricante: item.fabricante,
-            // Opcional: Rastreabilidade
+            valorUnitario: item.valorUnitario,
             itemMovimentoEntradaId: itemMovimento.id,
           },
         });

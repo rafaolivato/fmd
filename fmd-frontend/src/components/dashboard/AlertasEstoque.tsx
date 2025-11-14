@@ -1,4 +1,3 @@
-// src/components/dashboard/AlertasEstoque.tsx
 import React from 'react';
 import { Card, ListGroup, Badge } from 'react-bootstrap';
 import { FaExclamationTriangle, FaExclamationCircle, FaInfoCircle } from 'react-icons/fa';

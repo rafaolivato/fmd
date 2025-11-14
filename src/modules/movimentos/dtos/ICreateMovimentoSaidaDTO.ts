@@ -1,4 +1,3 @@
-// Os tipos de saída diversas
 export enum TipoSaidaDiversa {
   EMPRESTIMO = 'EMPRESTIMO',
   AJUSTE_NEGATIVO = 'AJUSTE_NEGATIVO', // Para reduzir saldo, ex: contagem deu a menos
@@ -7,7 +6,6 @@ export enum TipoSaidaDiversa {
   VALIDADE_VENCIDA = 'VALIDADE_VENCIDA',
 }
 
-// DTO para os itens que serão retirados
 export interface IItemSaidaDiversaDTO {
   medicamentoId: string;
   quantidadeSaida: number; // Quantidade total a ser retirada (ex: 50)

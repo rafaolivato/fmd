@@ -17,6 +17,7 @@ export interface MovimentoEntradaFormData {
   numeroDocumento: string;
   dataDocumento: string;
   dataRecebimento: string;
+  valorUnitario: number;
   valorTotal: number;
   observacao?: string;
   itens: ItemMovimentoEntrada[];
@@ -31,6 +32,7 @@ export interface MovimentoEntrada {
   numeroDocumento: string;
   dataDocumento: string;
   dataRecebimento: string;
+  valorUnitario: number;
   valorTotal: number;
   observacao?: string;
   estabelecimentoId: string;

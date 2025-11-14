@@ -180,11 +180,7 @@ const RequisicoesPage: React.FC = () => {
                     <FaClipboardList size={32} className="text-primary me-3" />
                     <div>
           <h1>Requisições</h1>
-          <p className="lead">
-            <strong>Logado como: {usuarioLogado.user?.estabelecimento?.nome}</strong>
-            {usuarioLogado.isAlmoxarifado && <span> 🏭 (Almoxarifado)</span>}
-            {!usuarioLogado.isAlmoxarifado && <span> 💊 (Farmácia)</span>}
-          </p>
+          
           </div>
           </div>
         </Col>

@@ -28,6 +28,7 @@ model Medicamento {
   formaFarmaceutica String
   psicotropico      Boolean           @default(false)
   quantidadeEstoque Int               @default(0) // Estoque total, independente do lote
+  estoqueMinimo     Int     @default(100)
   itensMovimentados ItemMovimento[] // Indica que um Medicamento pode ter muitos ItemMovimento
   itensDispensados  ItemDispensacao[]
   estoqueLocal      EstoqueLocal[] // Referência inversa de EstoqueLocal
@@ -242,6 +243,8 @@ model EstoqueLote {
   numeroLote String
   dataValidade DateTime
   fabricante String
+
+  valorUnitario Decimal @default(0) @db.Decimal(10, 2)
 
   // CAMPOS DE RASTREABILIDADE
   itemMovimentoEntradaId String? // Opcional: Para saber qual ItemMovimento deu origem a este saldo

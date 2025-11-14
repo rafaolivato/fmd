@@ -152,21 +152,9 @@ class CreateMovimentoSaidaService {
 
                     const quantidadeBaixar = Math.min(quantidadeRestante, lote.quantidade);
 
-                    // Busca valor unitário original
-                    const itemEntradaOriginal = await tx.itemMovimento.findFirst({
-                        where: {
-                            medicamentoId: medicamentoId,
-                            numeroLote: lote.numeroLote,
-                            movimento: {
-                                tipoMovimentacao: 'ENTRADA'
-                            }
-                        },
-                        orderBy: {
-                            createdAt: 'desc'
-                        }
-                    });
+                    const valorUnitarioLote = Number(lote.valorUnitario);
+                    const valorUnitarioFinal = valorUnitario || valorUnitarioLote || 0;
 
-                    const valorUnitarioFinal = valorUnitario || itemEntradaOriginal?.valorUnitario || 0;
 
                     lotesInfo.push({
                         loteId: lote.id,
@@ -178,7 +166,7 @@ class CreateMovimentoSaidaService {
                     });
 
                     quantidadeRestante -= quantidadeBaixar;
-                    console.log(`   🎯 Lote ${lote.numeroLote}: baixar ${quantidadeBaixar}, restante: ${quantidadeRestante}`);
+                    console.log(`   🎯 Lote ${lote.numeroLote}: baixar ${quantidadeBaixar}, restante: ${quantidadeRestante}, valor: ${valorUnitarioFinal}`);
                 }
 
                 if (quantidadeRestante > 0) {
@@ -219,7 +207,7 @@ class CreateMovimentoSaidaService {
                 estabelecimento: {
                     connect: { id: estabelecimentoId }
                 },
-                
+
             };
 
             const novoMovimento = await tx.movimento.create({
