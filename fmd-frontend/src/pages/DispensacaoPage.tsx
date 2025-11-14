@@ -141,10 +141,9 @@ const DispensacaoPage: React.FC = () => {
           <Alert variant="info">
             <h6>💡 Como usar:</h6>
             <ul className="mb-0">
-              <li>Selecione o estabelecimento (farmácia)</li>
               <li>Informe os dados do paciente</li>
               <li>Adicione os medicamentos prescritos</li>
-              <li>Informe o documento de referência</li>
+              <li>Informe o documento de referência em caso de psicotrópicos</li>
               <li>Finalize a dispensação</li>
             </ul>
           </Alert>
@@ -153,7 +152,6 @@ const DispensacaoPage: React.FC = () => {
           <Alert variant="light">
             <h6>📋 Informações:</h6>
             <ul className="mb-0">
-              <li><strong>Estabelecimentos:</strong> {estabelecimentos.length}</li>
               <li><strong>Medicamentos:</strong> {medicamentos.length}</li>
               <li><strong>Pacientes:</strong> {pacientes.length}</li>
             </ul>

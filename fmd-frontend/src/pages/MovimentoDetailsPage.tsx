@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Badge, Button, Spinner, Alert,  } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Badge, Button, Spinner, Alert, } from 'react-bootstrap';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaPrint } from 'react-icons/fa';
 import type { Movimento } from '../types/Movimento';
@@ -70,6 +70,19 @@ const MovimentoDetailsPage: React.FC = () => {
     const getTotalItens = () => {
         if (!movimento) return 0;
         return movimento.itensMovimentados.reduce((total, item) => total + item.quantidade, 0);
+    };
+
+    const calcularTotalGeral = () => {
+        if (!movimento || !movimento.itensMovimentados) return 0;
+
+        const total = movimento.itensMovimentados.reduce((soma, item) => {
+            const valorItem = (item.valorUnitario || 0) * (item.quantidade || 0);
+            console.log(`💰 Item ${item.medicamento.principioAtivo}: ${item.quantidade} x ${item.valorUnitario} = ${valorItem}`);
+            return soma + valorItem;
+        }, 0);
+
+        console.log(`🎯 Total Geral Calculado: ${total}`);
+        return total;
     };
 
     const getFonteFinanciamentoFormatada = (fonte: string) => {
@@ -255,7 +268,7 @@ const MovimentoDetailsPage: React.FC = () => {
                                         <td colSpan={3} className="text-end fw-bold">Total Geral:</td>
                                         <td className="fw-bold">{getTotalItens()} unidades</td>
                                         <td colSpan={2} className="fw-bold">
-                                            {formatCurrency(movimento.valorTotal)}
+                                            {formatCurrency(calcularTotalGeral())}
                                         </td>
                                     </tr>
                                 </tfoot>

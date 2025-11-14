@@ -11,7 +11,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true, 
     "moduleResolution": "node",
-    "ignoreDeprecations": "6.0",
     "noImplicitAny": false,
     
     // Configuração para ler sua pasta de declarações de tipo (@types/express.d.ts)

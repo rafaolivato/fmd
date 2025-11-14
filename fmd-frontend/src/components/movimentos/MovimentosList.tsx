@@ -1,4 +1,3 @@
-// src/components/movimentos/MovimentosList.tsx (atualizado)
 import React from 'react';
 import { Card, Table, Badge, Button } from 'react-bootstrap';
 import type { Movimento } from '../../types/Movimento';
@@ -156,12 +155,8 @@ const MovimentosList: React.FC<MovimentosListProps> = ({
                 <tr key={movimento.id}>
                   <td>
                     <div>
-                      <small className="text-muted">Doc:</small>
-                      <div>{formatDate(movimento.dataDocumento)}</div>
-                    </div>
-                    <div>
                       <small className="text-muted">Receb:</small>
-                      <div>{formatDate(movimento.dataRecebimento)}</div>
+                      <div>{formatDate(movimento.createdAt)}</div>
                     </div>
                   </td>
                   <td>

@@ -24,6 +24,47 @@ interface ItemProcessado {
 }
 
 class CreateMovimentoSaidaService {
+
+    // ✅ MÉTODO PARA AGRUPAR ITENS DUPLICADOS
+    private agruparItensDuplicados(itens: any[]): any[] {
+        const agrupados = new Map();
+
+        console.log('📦 Itens recebidos para agrupamento:', itens);
+
+        for (const item of itens) {
+            const key = item.medicamentoId;
+            console.log(`🔍 Processando item: ${key}, quantidade: ${item.quantidadeSaida}`);
+
+            if (agrupados.has(key)) {
+                // Soma as quantidades de itens duplicados
+                const quantidadeAtual = Number(agrupados.get(key).quantidadeSaida);
+                const quantidadeNova = Number(item.quantidadeSaida);
+                const quantidadeTotal = quantidadeAtual + quantidadeNova;
+
+                console.log(`➡️ Item duplicado encontrado: ${key}`);
+                console.log(`   Quantidade anterior: ${quantidadeAtual}`);
+                console.log(`   Quantidade nova: ${quantidadeNova}`);
+                console.log(`   Quantidade total: ${quantidadeTotal}`);
+
+                agrupados.get(key).quantidadeSaida = quantidadeTotal;
+
+                // Se houver valorUnitario diferente, mantém o primeiro ou calcula média?
+                // Aqui estamos mantendo o primeiro valorUnitario encontrado
+            } else {
+                console.log(`✅ Novo item: ${key}, quantidade: ${item.quantidadeSaida}`);
+                agrupados.set(key, {
+                    ...item,
+                    quantidadeSaida: Number(item.quantidadeSaida) // Garante que é número
+                });
+            }
+        }
+
+        const resultado = Array.from(agrupados.values());
+        console.log('🎯 Itens agrupados final:', resultado);
+
+        return resultado;
+    }
+
     async execute(data: ICreateMovimentoSaidaDTO) {
         const {
             estabelecimentoId,
@@ -45,16 +86,23 @@ class CreateMovimentoSaidaService {
                 throw new AppError('Estabelecimento não encontrado.', 404);
             }
 
+            // ✅ AGRUPAR ITENS DUPLICADOS ANTES DE PROCESSAR
+            console.log('🔄 Iniciando agrupamento de itens...');
+            const itensAgrupados = this.agruparItensDuplicados(itens);
+            console.log('✅ Itens após agrupamento:', itensAgrupados);
+
             let valorTotal = 0;
             const operacoesEmLote: Promise<any>[] = [];
-            
+
             // Array para armazenar informações dos itens (com tipo explícito)
             const itensParaProcessar: ItemProcessado[] = [];
 
-            // 2. Processa cada Item para calcular valorTotal e preparar dados
-            for (const item of itens) {
+            // 2. Processa cada Item AGRUPADO para calcular valorTotal e preparar dados
+            for (const item of itensAgrupados) {
                 const { medicamentoId, quantidadeSaida, valorUnitario } = item;
                 const quantidadeSaidaNumerica = Number(quantidadeSaida);
+
+                console.log(`📊 Processando item agrupado: ${medicamentoId}, quantidade: ${quantidadeSaidaNumerica}`);
 
                 // Validação de Quantidade
                 if (isNaN(quantidadeSaidaNumerica) || quantidadeSaidaNumerica <= 0) {
@@ -75,9 +123,11 @@ class CreateMovimentoSaidaService {
                     );
                 }
 
-                // Calcula valor total - CORREÇÃO: Verificar se não é NaN
+                // Calcula valor total
                 const valorItem = quantidadeSaidaNumerica * (valorUnitario || 0);
                 valorTotal += valorItem;
+
+                console.log(`💰 Valor do item ${medicamentoId}: ${valorItem}, Valor total acumulado: ${valorTotal}`);
 
                 // Busca de Lotes (FIFO)
                 let quantidadeRestante = quantidadeSaidaNumerica;
@@ -91,6 +141,8 @@ class CreateMovimentoSaidaService {
                         dataValidade: 'asc',
                     }
                 });
+
+                console.log(`📦 Lotes disponíveis para ${medicamentoId}:`, lotesDisponiveis.length);
 
                 const lotesInfo: LoteInfo[] = [];
 
@@ -126,6 +178,14 @@ class CreateMovimentoSaidaService {
                     });
 
                     quantidadeRestante -= quantidadeBaixar;
+                    console.log(`   🎯 Lote ${lote.numeroLote}: baixar ${quantidadeBaixar}, restante: ${quantidadeRestante}`);
+                }
+
+                if (quantidadeRestante > 0) {
+                    throw new AppError(
+                        `Estoque insuficiente nos lotes para o medicamento ${medicamentoId}. Faltam ${quantidadeRestante} unidades.`,
+                        400
+                    );
                 }
 
                 itensParaProcessar.push({
@@ -139,41 +199,40 @@ class CreateMovimentoSaidaService {
 
             // CORREÇÃO: Garantir que valorTotal não seja NaN
             const valorTotalFinal = isNaN(valorTotal) ? 0 : valorTotal;
+            console.log(`💰 VALOR TOTAL FINAL DO MOVIMENTO: ${valorTotalFinal}`);
 
+            const numeroDocumentoUnico = documentoReferencia || `SAIDA-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+
+            console.log(`📄 Número documento único: ${numeroDocumentoUnico}`);
+
+            // ... continue com o resto do código original ...
             // 3. CRIA O MOVIMENTO COM VALOR TOTAL CALCULADO
-            // Preparar os dados do movimento
             const movimentoData: any = {
                 tipoMovimentacao,
                 documentoTipo: 'SAIDA_DIVERSA',
-                numeroDocumento: documentoReferencia || `SAIDA-${Date.now()}`,
+                numeroDocumento: numeroDocumentoUnico,
                 dataDocumento: new Date(dataMovimento),
                 dataRecebimento: new Date(dataMovimento),
                 observacao: justificativa + (observacao ? ` | ${observacao}` : ''),
                 fonteFinanciamento: 'RECURSOS_PRO_PRIOS',
                 valorTotal: valorTotalFinal,
+                estabelecimento: {
+                    connect: { id: estabelecimentoId }
+                },
+                
             };
-
-            // Adicionar estabelecimento baseado no schema
-            // Tente uma das opções abaixo:
-
-            // OPÇÃO A: Se o schema usa estabelecimento (relação)
-            movimentoData.estabelecimento = {
-                connect: { id: estabelecimentoId }
-            };
-
-            // OPÇÃO B: Se o schema usa estabelecimentoId diretamente
-            // movimentoData.estabelecimentoId = estabelecimentoId;
-
-            // Para fornecedorId, usar undefined em vez de null
-            movimentoData.fornecedorId = undefined;
 
             const novoMovimento = await tx.movimento.create({
                 data: movimentoData
             });
 
-            // 4. AGORA PROCESSA AS OPERAÇÕES COM O MOVIMENTO ID DISPONÍVEL
+            console.log(`✅ Movimento criado: ${novoMovimento.id}`);
+
+            // 4. PROCESSAR AS OPERAÇÕES (AGORA COM ITENS JÁ AGRUPADOS)
             for (const item of itensParaProcessar) {
                 const { medicamentoId, quantidadeSaidaNumerica, lotesInfo, estoqueGeralId } = item;
+
+                console.log(`🔄 Processando item final: ${medicamentoId}, quantidade: ${quantidadeSaidaNumerica}`);
 
                 // Baixa de estoque por lote e criação dos itens de movimento
                 for (const loteInfo of lotesInfo) {
@@ -185,7 +244,7 @@ class CreateMovimentoSaidaService {
                         })
                     );
 
-                    // Cria o item de movimento individualmente
+                    // Cria o item de movimento (AGORA SEM DUPLICAÇÃO)
                     operacoesEmLote.push(
                         tx.itemMovimento.create({
                             data: {

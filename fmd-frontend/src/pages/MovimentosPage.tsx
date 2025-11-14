@@ -71,11 +71,18 @@ const loadMovimentos = async () => {
     setFilteredMovimentos(filtered);
   };
 
-  // ✅ CORREÇÃO: Rota consistente com o backend
   const handleViewDetails = (movimento: Movimento) => {
-    console.log('📍 Navegando para movimento ID:', movimento.id);
-    navigate(`/movimentos/${movimento.id}`);
-  };
+  console.log('📍 Navegando para detalhes do movimento:', movimento.id);
+  console.log('🔄 URL que será acessada:', `/movimentos/${movimento.id}`);
+  
+  // Verifique se o ID é válido
+  if (!movimento.id) {
+    console.error('❌ Movimento sem ID!');
+    return;
+  }
+  
+  navigate(`/movimentacoes/${movimento.id}`);
+};
 
   const handleRefresh = () => {
     console.log('🔄 Recarregando dados...');

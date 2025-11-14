@@ -17,132 +17,147 @@ class CreateDispensacaoService {
     }
 
     return await prisma.$transaction(async (tx) => {
-      // 2. Cria o cabeçalho da Dispensação (SEM pacienteId)
-      const novaDispensacao = await tx.dispensacao.create({
-        data: {
-          pacienteNome: dispensacaoData.pacienteNome,
-          pacienteCpf: dispensacaoData.pacienteCpf || null,
-          profissionalSaude: dispensacaoData.profissionalSaude || null,
-          documentoReferencia: dispensacaoData.documentoReferencia,
-          observacao: dispensacaoData.observacao || null,
-          estabelecimentoOrigemId,
-          dataDispensacao: new Date(),
-        },
-      });
+      try { // ✅ ADICIONE ESTE TRY
+        console.log('🟡 Iniciando transação de dispensação...');
 
-      console.log('✅ Dispensação criada:', novaDispensacao.id);
+        // 2. Cria o cabeçalho da Dispensação
+        const novaDispensacao = await tx.dispensacao.create({
+          data: {
+            pacienteNome: dispensacaoData.pacienteNome,
+            pacienteCpf: dispensacaoData.pacienteCpf || null,
+            profissionalSaude: dispensacaoData.profissionalSaude || null,
+            documentoReferencia: dispensacaoData.documentoReferencia,
+            observacao: dispensacaoData.observacao || null,
+            estabelecimentoOrigemId,
+            dataDispensacao: new Date(),
+          },
+        });
 
-      // 3. Processa cada Item
-      for (const item of itens) {
-        const { medicamentoId } = item;
-        const quantidadeSaidaNumerica = Number(item.quantidadeSaida);
+        console.log('✅ Dispensação criada:', novaDispensacao.id);
 
-        // Validações
-        if (isNaN(quantidadeSaidaNumerica) || quantidadeSaidaNumerica <= 0) {
-          throw new AppError('Quantidade de saída inválida.', 400);
-        }
+        // 3. Processa cada Item
+        for (const item of itens) {
+          const { medicamentoId } = item;
+          const quantidadeSaidaNumerica = Number(item.quantidadeSaida);
 
-        // Verifica estoque geral
-        const estoqueGeral = await tx.estoqueLocal.findUnique({
-          where: {
-            medicamentoId_estabelecimentoId: { 
-              medicamentoId, 
-              estabelecimentoId: estabelecimentoOrigemId 
+          // Validações
+          if (isNaN(quantidadeSaidaNumerica) || quantidadeSaidaNumerica <= 0) {
+            throw new AppError('Quantidade de saída inválida.', 400);
+          }
+
+          // Verifica estoque geral
+          const estoqueGeral = await tx.estoqueLocal.findUnique({
+            where: {
+              medicamentoId_estabelecimentoId: { 
+                medicamentoId, 
+                estabelecimentoId: estabelecimentoOrigemId 
+              },
             },
-          },
-        });
-
-        if (!estoqueGeral || estoqueGeral.quantidade < quantidadeSaidaNumerica) {
-          const medicamento = await tx.medicamento.findUnique({
-            where: { id: medicamentoId }
-          });
-          throw new AppError(
-            `Estoque insuficiente de ${medicamento?.principioAtivo}. Saldo: ${estoqueGeral?.quantidade ?? 0}.`, 
-            400
-          );
-        }
-
-        console.log(`📦 Processando medicamento ${medicamentoId}, quantidade: ${quantidadeSaidaNumerica}`);
-
-        // Busca lotes (FIFO)
-        let quantidadeRestante = quantidadeSaidaNumerica;
-        const lotesDisponiveis = await tx.estoqueLote.findMany({
-          where: {
-            medicamentoId,
-            estabelecimentoId: estabelecimentoOrigemId,
-            quantidade: { gt: 0 },
-          },
-          orderBy: { dataValidade: 'asc' }
-        });
-
-        if (lotesDisponiveis.length === 0) {
-          throw new AppError(`Nenhum lote disponível para o medicamento selecionado.`, 400);
-        }
-
-        // Baixa de estoque por lote
-        for (const lote of lotesDisponiveis) {
-          if (quantidadeRestante === 0) break;
-
-          const quantidadeBaixar = Math.min(quantidadeRestante, lote.quantidade);
-
-          console.log(`⬇️ Baixando ${quantidadeBaixar} unidades do lote ${lote.numeroLote}`);
-
-          // Atualiza lote
-          await tx.estoqueLote.update({
-            where: { id: lote.id },
-            data: { quantidade: { decrement: quantidadeBaixar } }
           });
 
-          // Cria item da dispensação
-          await tx.itemDispensacao.create({
-            data: {
-              quantidadeSaida: quantidadeBaixar,
-              loteNumero: lote.numeroLote,
-              medicamentoId: medicamentoId,
-              dispensacaoId: novaDispensacao.id,
-            }
+          if (!estoqueGeral || estoqueGeral.quantidade < quantidadeSaidaNumerica) {
+            const medicamento = await tx.medicamento.findUnique({
+              where: { id: medicamentoId }
+            });
+            throw new AppError(
+              `Estoque insuficiente de ${medicamento?.principioAtivo}. Saldo: ${estoqueGeral?.quantidade ?? 0}.`, 
+              400
+            );
+          }
+
+          console.log(`📦 Processando medicamento ${medicamentoId}, quantidade: ${quantidadeSaidaNumerica}`);
+
+          // Busca lotes (FIFO)
+          let quantidadeRestante = quantidadeSaidaNumerica;
+          const lotesDisponiveis = await tx.estoqueLote.findMany({
+            where: {
+              medicamentoId,
+              estabelecimentoId: estabelecimentoOrigemId,
+              quantidade: { gt: 0 },
+            },
+            orderBy: { dataValidade: 'asc' }
           });
 
-          quantidadeRestante -= quantidadeBaixar;
-        }
+          if (lotesDisponiveis.length === 0) {
+            throw new AppError(`Nenhum lote disponível para o medicamento selecionado.`, 400);
+          }
 
-        if (quantidadeRestante > 0) {
-          throw new AppError(`Não foi possível baixar toda a quantidade. Faltaram ${quantidadeRestante} unidades.`, 400);
-        }
+          // Baixa de estoque por lote
+          for (const lote of lotesDisponiveis) {
+            if (quantidadeRestante === 0) break;
 
-        // Atualiza estoque geral
-        await tx.estoqueLocal.update({
-          where: { id: estoqueGeral.id },
-          data: { quantidade: { decrement: quantidadeSaidaNumerica } },
-        });
+            const quantidadeBaixar = Math.min(quantidadeRestante, lote.quantidade);
 
-        console.log(`✅ Medicamento ${medicamentoId} processado com sucesso`);
-      }
+            console.log(`⬇️ Baixando ${quantidadeBaixar} unidades do lote ${lote.numeroLote}`);
 
-      console.log('🎉 Dispensação finalizada com sucesso!');
+            // Atualiza lote
+            await tx.estoqueLote.update({
+              where: { id: lote.id },
+              data: { quantidade: { decrement: quantidadeBaixar } }
+            });
 
-      // Retorna dispensação completa
-      return tx.dispensacao.findUnique({
-        where: { id: novaDispensacao.id },
-        include: { 
-          itensDispensados: {
-            include: {
-              medicamento: {
-                select: {
-                  principioAtivo: true,
-                  concentracao: true,
-                  formaFarmaceutica: true
+            // Cria item da dispensação
+            await tx.itemDispensacao.create({
+              data: {
+                quantidadeSaida: quantidadeBaixar,
+                loteNumero: lote.numeroLote,
+                medicamentoId: medicamentoId,
+                dispensacaoId: novaDispensacao.id,
+              }
+            });
+
+            quantidadeRestante -= quantidadeBaixar;
+          }
+
+          if (quantidadeRestante > 0) {
+            throw new AppError(`Não foi possível baixar toda a quantidade. Faltaram ${quantidadeRestante} unidades.`, 400);
+          }
+
+          // Atualiza estoque geral
+          await tx.estoqueLocal.update({
+            where: { id: estoqueGeral.id },
+            data: { quantidade: { decrement: quantidadeSaidaNumerica } },
+          });
+
+          console.log(`✅ Medicamento ${medicamentoId} processado com sucesso`);
+        } // ✅ FIM DO FOR
+
+        console.log('🎉 Dispensação finalizada com sucesso!');
+
+        // Retorna dispensação completa
+        return tx.dispensacao.findUnique({
+          where: { id: novaDispensacao.id },
+          include: { 
+            itensDispensados: {
+              include: {
+                medicamento: {
+                  select: {
+                    principioAtivo: true,
+                    concentracao: true,
+                    formaFarmaceutica: true
+                  }
                 }
               }
-            }
-          },
-          estabelecimentoOrigem: {
-            select: {
-              nome: true
+            },
+            estabelecimentoOrigem: {
+              select: {
+                nome: true
+              }
             }
           }
-        }
-      });
+        });
+
+      } catch (error: any) { // ✅ ADICIONE ESTE CATCH
+        console.error('🔴 ERRO DETALHADO NA TRANSAÇÃO:', {
+          message: error.message,
+          code: error.code,
+          meta: error.meta,
+          stack: error.stack
+        });
+        
+        // Relança o erro para ser capturado pelo controller
+        throw error;
+      }
     });
   }
 }
