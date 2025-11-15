@@ -1,4 +1,3 @@
-// src/store/services/dispensacaoService.ts
 import { api } from './api';
 import type { Dispensacao, DispensacaoFormData } from '../../types/Dispensacao';
 

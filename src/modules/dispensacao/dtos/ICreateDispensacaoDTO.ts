@@ -1,7 +1,7 @@
 export interface IItemDispensacaoDTO {
   medicamentoId: string; // O ID do medicamento
   quantidadeSaida: number; // Quantidade total a ser dispensada
-  loteId?: string; 
+  loteId?: string;
 }
 
 // Interface para o cabeçalho da Dispensação (Receituário)
@@ -15,5 +15,10 @@ export interface ICreateDispensacaoDTO {
   estabelecimentoOrigemId: string;
 
   // Itens que serão baixados
-  itens: IItemDispensacaoDTO[]; 
+  itens: IItemDispensacaoDTO[];
+  
+  justificativaRetiradaAntecipada?: string;
+  usuarioAutorizador?: string;
 }
+
+

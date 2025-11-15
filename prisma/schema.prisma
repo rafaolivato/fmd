@@ -117,6 +117,10 @@ model Dispensacao {
   // Relação com os itens que foram dispensados
   itensDispensados ItemDispensacao[]
 
+  justificativaRetiradaAntecipada String?
+  usuarioAutorizador              String?
+  dataAutorizacao                 DateTime?
+
   estabelecimentoOrigemId String
   estabelecimentoOrigem   Estabelecimento @relation("DispensacaoOrigem", fields: [estabelecimentoOrigemId], references: [id])
 

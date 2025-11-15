@@ -7,6 +7,7 @@ class CreateDispensacaoService {
   async execute(data: ICreateDispensacaoDTO) {
     const { estabelecimentoOrigemId, itens, ...dispensacaoData } = data;
 
+    
     // 1. Validação do Estabelecimento
     const estabelecimento = await prisma.estabelecimento.findUnique({
       where: { id: estabelecimentoOrigemId }
@@ -20,6 +21,7 @@ class CreateDispensacaoService {
       try { // ✅ ADICIONE ESTE TRY
         console.log('🟡 Iniciando transação de dispensação...');
 
+        const { estabelecimentoOrigemId, itens, justificativaRetiradaAntecipada, usuarioAutorizador, ...dispensacaoData } = data;
         // 2. Cria o cabeçalho da Dispensação
         const novaDispensacao = await tx.dispensacao.create({
           data: {
@@ -30,6 +32,9 @@ class CreateDispensacaoService {
             observacao: dispensacaoData.observacao || null,
             estabelecimentoOrigemId,
             dataDispensacao: new Date(),
+            justificativaRetiradaAntecipada: justificativaRetiradaAntecipada || null,
+            usuarioAutorizador: usuarioAutorizador || null,
+            dataAutorizacao: justificativaRetiradaAntecipada ? new Date() : null,
           },
         });
 

@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react'; // Adicionado useEffect
+import React, { useState, useEffect } from 'react';
 import { Button, Card, Form, Row, Col, Table, Alert, Modal } from 'react-bootstrap';
 import type { DispensacaoFormData, ItemDispensacaoForm } from '../../types/Dispensacao';
 import type { Medicamento } from '../../types/Medicamento';
 import type { Estabelecimento } from '../../types/Estabelecimento';
 import type { Paciente } from '../../types/Paciente';
-import { FaPlus, FaSearch} from 'react-icons/fa';
+import { FaPlus, FaSearch, FaExclamationTriangle } from 'react-icons/fa';
 import { estoqueService } from '../../store/services/estoqueService';
+import { retiradaService } from '../../store/services/retiradaService';
 
 interface DispensacaoFormProps {
-  estabelecimentos: Estabelecimento[]; // Deve vir com apenas 1 item (o do usuário)
+  estabelecimentos: Estabelecimento[];
   medicamentos: Medicamento[];
   pacientes: Paciente[];
   onSubmit: (data: DispensacaoFormData) => void;
@@ -25,10 +26,8 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   isLoading = false
 }) => {
   
-  // 🚨 NOVO: Identifica o único estabelecimento na lista
   const estabelecimentoLogado = estabelecimentos.length > 0 ? estabelecimentos[0] : null;
   const estabelecimentoIdInicial = estabelecimentoLogado ? estabelecimentoLogado.id : '';
-
 
   const [formData, setFormData] = useState<DispensacaoFormData>({
     pacienteNome: '',
@@ -37,20 +36,8 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     documentoReferencia: '',
     observacao: '',
     itens: [],
-    // 🚨 CORREÇÃO: Inicializa com o ID do estabelecimento logado
     estabelecimentoOrigemId: estabelecimentoIdInicial
   });
-
-  // 🚨 NOVO: Garante que o ID do estabelecimento é setado (para o caso de carregamento assíncrono)
-  useEffect(() => {
-    if (estabelecimentoLogado && formData.estabelecimentoOrigemId !== estabelecimentoLogado.id) {
-        setFormData(prev => ({ 
-            ...prev, 
-            estabelecimentoOrigemId: estabelecimentoLogado.id 
-        }));
-    }
-  }, [estabelecimentoLogado]);
-
 
   const [novoItem, setNovoItem] = useState<ItemDispensacaoForm>({
     medicamentoId: '',
@@ -60,10 +47,138 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   const [estoqueDisponivel, setEstoqueDisponivel] = useState<number>(0);
   const [showPacienteModal, setShowPacienteModal] = useState(false);
   const [searchCpf, setSearchCpf] = useState('');
+  
+  // ✅ NOVOS ESTADOS PARA CONTROLE DE RETIRADA ANTECIPADA (ADICIONE APENAS ESTES)
+  const [alertasRetirada, setAlertasRetirada] = useState<{[key: string]: string}>({});
+  const [showModalJustificativa, setShowModalJustificativa] = useState(false);
+  const [justificativaTemp, setJustificativaTemp] = useState('');
+  const [medicamentoPendente, setMedicamentoPendente] = useState<string | null>(null);
 
-  // Buscar paciente por CPF
+  useEffect(() => {
+    if (estabelecimentoLogado && formData.estabelecimentoOrigemId !== estabelecimentoLogado.id) {
+        setFormData(prev => ({ 
+            ...prev, 
+            estabelecimentoOrigemId: estabelecimentoLogado.id 
+        }));
+    }
+  }, [estabelecimentoLogado]);
+
+  // ✅ 1. ADICIONE ESTA FUNÇÃO (VERIFICAÇÃO DE RETIRADA RECENTE)
+  const verificarRetiradaRecente = async (medicamentoId: string) => {
+    if (!formData.pacienteCpf || !formData.estabelecimentoOrigemId) return;
+
+    try {
+      console.log('🔍 Verificando retirada recente para:', medicamentoId);
+      const resultado = await retiradaService.verifyRetiradaRecente({
+        pacienteCpf: formData.pacienteCpf,
+        medicamentoId: medicamentoId,
+        estabelecimentoId: formData.estabelecimentoOrigemId
+      });
+
+      if (resultado.existeRetirada) {
+        setAlertasRetirada(prev => ({
+          ...prev,
+          [medicamentoId]: resultado.mensagem!
+        }));
+        setMedicamentoPendente(medicamentoId);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar retirada recente:', error);
+    }
+  };
+
+  // ✅ 2. MODIFIQUE A handleMedicamentoChange (ADICIONE APENAS ESTA LINHA)
+  const handleMedicamentoChange = async (medicamentoId: string) => {
+    setNovoItem(prev => ({ 
+      ...prev, 
+      medicamentoId,
+      quantidadeSaida: 0
+    }));
+    
+    if (medicamentoId && formData.estabelecimentoOrigemId) {
+      try {
+        const estoque = await estoqueService.getEstoqueMedicamento(
+          medicamentoId, 
+          formData.estabelecimentoOrigemId
+        );
+        setEstoqueDisponivel(estoque);
+        
+        // ✅ APENAS ESTA LINHA NOVA - Verifica retirada recente
+        if (formData.pacienteCpf) {
+          verificarRetiradaRecente(medicamentoId);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar estoque:', error);
+        setEstoqueDisponivel(0);
+      }
+    } else {
+      setEstoqueDisponivel(0);
+    }
+  };
+
+  // ✅ 3. MODIFIQUE A adicionarItem (ADICIONE ESTE BLOCO)
+  const adicionarItem = async () => {
+    if (!novoItem.medicamentoId || novoItem.quantidadeSaida <= 0) {
+      alert('Selecione um medicamento e informe a quantidade');
+      return;
+    }
+
+    if (novoItem.quantidadeSaida > estoqueDisponivel) {
+      alert(`Quantidade solicitada (${novoItem.quantidadeSaida}) excede o estoque disponível (${estoqueDisponivel})`);
+      return;
+    }
+
+    // ✅ BLOCO NOVO - Verifica se há alerta antes de adicionar
+    if (alertasRetirada[novoItem.medicamentoId]) {
+      setMedicamentoPendente(novoItem.medicamentoId);
+      setShowModalJustificativa(true);
+      return; // Não adiciona até justificar
+    }
+
+    // ✅ MANTENHA O RESTO DA FUNÇÃO ORIGINAL
+    setFormData(prev => ({
+      ...prev,
+      itens: [...prev.itens, { ...novoItem }]
+    }));
+
+    setNovoItem({
+      medicamentoId: '',
+      quantidadeSaida: 0
+    });
+    setEstoqueDisponivel(0);
+  };
+
+  // ✅ 4. ADICIONE ESTA FUNÇÃO (CONFIRMAÇÃO DE JUSTIFICATIVA)
+  const handleConfirmarJustificativa = () => {
+    if (!justificativaTemp.trim()) {
+      alert('Por favor, informe uma justificativa para a retirada antecipada.');
+      return;
+    }
+
+    // Adiciona o item com a justificativa
+    if (medicamentoPendente && novoItem.medicamentoId === medicamentoPendente) {
+      setFormData(prev => ({
+        ...prev,
+        itens: [...prev.itens, { ...novoItem }],
+        justificativaRetiradaAntecipada: justificativaTemp,
+        usuarioAutorizador: 'Sistema'
+      }));
+
+      // Limpa estados
+      setNovoItem({
+        medicamentoId: '',
+        quantidadeSaida: 0
+      });
+      setEstoqueDisponivel(0);
+    }
+
+    setShowModalJustificativa(false);
+    setJustificativaTemp('');
+    setMedicamentoPendente(null);
+  };
+
+  // ✅ MANTENHA TODAS AS SUAS FUNÇÕES ORIGINAIS (NÃO MUDE):
   const handleSearchPaciente = () => {
-    // ... (lógica de busca permanece a mesma)
     const pacienteEncontrado = pacientes.find(p => p.cpf === searchCpf);
     if (pacienteEncontrado) {
       setFormData(prev => ({
@@ -77,31 +192,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     }
   };
 
-  const adicionarItem = () => {
-    // ... (lógica de adicionar item permanece a mesma)
-    if (!novoItem.medicamentoId || novoItem.quantidadeSaida <= 0) {
-      alert('Selecione um medicamento e informe a quantidade');
-      return;
-    }
-
-    if (novoItem.quantidadeSaida > estoqueDisponivel) {
-      alert(`Quantidade solicitada (${novoItem.quantidadeSaida}) excede o estoque disponível (${estoqueDisponivel})`);
-      return;
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      itens: [...prev.itens, { ...novoItem }]
-    }));
-
-    // Reset novo item
-    setNovoItem({
-      medicamentoId: '',
-      quantidadeSaida: 0
-    });
-    setEstoqueDisponivel(0);
-  };
-
   const removerItem = (index: number) => {
     setFormData(prev => ({
       ...prev,
@@ -109,34 +199,9 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     }));
   };
 
-  const handleMedicamentoChange = async (medicamentoId: string) => {
-    setNovoItem(prev => ({ 
-      ...prev, 
-      medicamentoId,
-      quantidadeSaida: 0
-    }));
-    
-    // A lógica agora depende apenas do ID que está no formData
-    if (medicamentoId && formData.estabelecimentoOrigemId) {
-      try {
-        const estoque = await estoqueService.getEstoqueMedicamento(
-          medicamentoId, 
-          formData.estabelecimentoOrigemId // Usa o ID inicializado
-        );
-        setEstoqueDisponivel(estoque);
-      } catch (error) {
-        console.error('Erro ao buscar estoque:', error);
-        setEstoqueDisponivel(0);
-      }
-    } else {
-      setEstoqueDisponivel(0);
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 🚨 NOVO: Validação de ID de estabelecimento
     if (!formData.estabelecimentoOrigemId) {
         alert('Erro interno: Estabelecimento não definido. Recarregue a página.');
         return;
@@ -160,9 +225,17 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     onSubmit(formData);
   };
 
+  // ✅ 5. ADICIONE ESTE useEffect PARA VERIFICAR ITENS EXISTENTES
+  useEffect(() => {
+    if (formData.pacienteCpf && formData.itens.length > 0) {
+      formData.itens.forEach(item => {
+        verificarRetiradaRecente(item.medicamentoId);
+      });
+    }
+  }, [formData.pacienteCpf]);
+
   const medicamentoSelecionado = medicamentos.find(m => m.id === novoItem.medicamentoId);
   
-  // 🚨 NOVO: Renderização condicional se não houver estabelecimento
   if (!estabelecimentoLogado) {
       return (
         <Card>
@@ -180,7 +253,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
 
   return (
     <>
-      <Card>
+     <Card>
         <Card.Header>
           {/* 🚨 CORREÇÃO: Aplica negrito (fw-bold) no título */}
           <h5 className="card-title mb-0 fw-bold">Dispensação de Medicamentos</h5> 
@@ -452,6 +525,44 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
           <Button variant="primary" onClick={handleSearchPaciente}>
             <FaSearch className="me-2" />
             Buscar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+
+      {/* ✅ 7. ADICIONE ESTE NOVO MODAL PARA JUSTIFICATIVA */}
+      <Modal show={showModalJustificativa} onHide={() => setShowModalJustificativa(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            <FaExclamationTriangle className="text-warning me-2" />
+            Justificativa para Retirada Antecipada
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {medicamentoPendente && (
+            <Alert variant="warning" className="mb-3">
+              <strong>Medicamento:</strong> {medicamentos.find(m => m.id === medicamentoPendente)?.principioAtivo}
+              <br />
+              <strong>Paciente:</strong> {formData.pacienteNome}
+            </Alert>
+          )}
+          <Form.Group>
+            <Form.Label>Justificativa *</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={4}
+              value={justificativaTemp}
+              onChange={(e) => setJustificativaTemp(e.target.value)}
+              placeholder="Descreva o motivo da retirada antecipada..."
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModalJustificativa(false)}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={handleConfirmarJustificativa}>
+            Confirmar Justificativa
           </Button>
         </Modal.Footer>
       </Modal>

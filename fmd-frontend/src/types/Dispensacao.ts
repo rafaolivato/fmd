@@ -13,6 +13,8 @@ export interface DispensacaoFormData {
   observacao?: string;
   itens: ItemDispensacaoForm[];
   estabelecimentoOrigemId: string;
+  justificativaRetiradaAntecipada?: string;
+  usuarioAutorizador?: string;
 }
 
 export interface Dispensacao {
@@ -26,6 +28,10 @@ export interface Dispensacao {
   estabelecimentoOrigemId: string;
   createdAt: string;
   updatedAt: string;
+
+  justificativaRetiradaAntecipada?: string;
+  usuarioAutorizador?: string;
+  dataAutorizacao?: string;
   
   itensDispensados: Array<{
     id: string;
