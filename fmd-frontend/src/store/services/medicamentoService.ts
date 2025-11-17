@@ -31,32 +31,10 @@ export const medicamentoService = {
     return response.data;
   },
 
-getComEstoque: async (): Promise<Medicamento[]> => {
-  const response = await api.get('/medicamentos');
-  
-  console.log('🔄 TOTAL DE MEDICAMENTOS DA API:', response.data.length);
-  
-  // Encontra o medicamento com estoque zero
-  const medicamentoEstoqueZero = response.data.find((med: Medicamento) => 
-    med.quantidadeEstoque === 0
-  );
-  
-  if (medicamentoEstoqueZero) {
-    console.log('❌ MEDICAMENTO COM ESTOQUE ZERO ENCONTRADO:', {
-      id: medicamentoEstoqueZero.id,
-      principioAtivo: medicamentoEstoqueZero.principioAtivo,
-      quantidadeEstoque: medicamentoEstoqueZero.quantidadeEstoque
-    });
-  } else {
-    console.log('✅ NENHUM MEDICAMENTO COM ESTOQUE ZERO ENCONTRADO');
-  }
-  
-  const medicamentosComEstoque = response.data.filter((med: Medicamento) => 
-    med.quantidadeEstoque > 0
-  );
-  
-  console.log(`📊 FILTRO APLICADO: ${medicamentosComEstoque.length} medicamentos com estoque`);
-  return medicamentosComEstoque;
-}
+  async getComEstoque(): Promise<Medicamento[]> {
+    // ✅ CORREÇÃO: Chamar o endpoint que garante o filtro de estoque > 0 do Almoxarifado
+    const response = await api.get('/medicamentos/com-estoque-almoxarifado'); 
+    return response.data;
+  },
 
 };

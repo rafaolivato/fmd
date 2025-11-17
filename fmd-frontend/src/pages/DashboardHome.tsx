@@ -20,7 +20,7 @@ const DashboardHome: React.FC = () => {
       const data = await dashboardService.getMetrics();
       setMetrics(data);
     } catch (err) {
-      console.error('Erro ao carregar dashboard:', err);
+      
       setError('Erro ao carregar dados do dashboard');
     } finally {
       setIsLoading(false);

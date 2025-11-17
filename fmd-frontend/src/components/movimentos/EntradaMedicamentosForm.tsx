@@ -39,11 +39,11 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
 
   const [novoItem, setNovoItem] = useState<Omit<ItemMovimentoEntrada, 'medicamentoId'> & { medicamentoId: string }>({
     medicamentoId: '',
-    valorUnitario: 0,
+    valorUnitario: '' as unknown as number,
     fabricante: '',
     numeroLote: '',
     dataValidade: '',
-    quantidade: 1,
+    quantidade: '' as unknown as number,
     localizacaoFisica: ''
   });
 
@@ -201,14 +201,26 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
                   <Form.Group>
                     <Form.Label>Quantidade *</Form.Label>
                     <Form.Control
-                      type="number"
-                      min="1"
-                      value={novoItem.quantidade}
-                      onChange={(e) => setNovoItem(prev => ({
-                        ...prev,
-                        quantidade: Math.max(1, Number(e.target.value) || 1) // ✅ Garante mínimo 1
-                      }))}
+                      type="text"
+                      placeholder="Digite a quantidade"
+                      // ✅ Ajuste no valor para exibir '' quando for 0 (do item 2.1)
+                      value={novoItem.quantidade === 0 ? '' : novoItem.quantidade}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        let numValue = parseInt(value) || 0;
+
+                        // Garante que o valor não seja negativo, mas permite a string vazia para o input
+                        if (numValue < 0) {
+                          numValue = 0;
+                        }
+
+                        setNovoItem(prev => ({
+                          ...prev,
+                          quantidade: numValue // Pode ser 0, mas será validado no adicionarItem
+                        }));
+                      }}
                     />
+                  
                   </Form.Group>
                 </Col>
                 <Col md={2}>
@@ -237,8 +249,12 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
                     <Form.Control
                       type="number"
                       step="0.01"
-                      value={novoItem.valorUnitario}
-                      onChange={(e) => setNovoItem(prev => ({ ...prev, valorUnitario: Number(e.target.value) }))}
+                      placeholder="0,00"
+                      value={novoItem.valorUnitario === 0 ? '' : novoItem.valorUnitario}
+                      onChange={(e) => setNovoItem(prev => ({
+                        ...prev,
+                        valorUnitario: Number(e.target.value) || 0
+                      }))}
                     />
                   </Form.Group>
                 </Col>

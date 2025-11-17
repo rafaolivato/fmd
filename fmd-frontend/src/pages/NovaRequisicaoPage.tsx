@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Alert } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom'; // Adicione este import
+import { Container, Row, Col, Alert, Card} from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom'; 
 import NovaRequisicaoForm from '../components/requisicoes/NovaRequisicaoForm';
 import type { RequisicaoFormData } from '../types/Requisicao';
 import type { Medicamento } from '../types/Medicamento';
@@ -9,6 +9,7 @@ import { requisicaoService } from '../store/services/requisicaoService';
 import { medicamentoService } from '../store/services/medicamentoService';
 import { estabelecimentoService } from '../store/services/estabelecimentoService';
 import { authService } from '../store/services/authService';
+import { FaTruckLoading } from 'react-icons/fa';
 
 const NovaRequisicaoPage: React.FC = () => {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
@@ -18,7 +19,7 @@ const NovaRequisicaoPage: React.FC = () => {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [error, setError] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
-  const [infoMessage, setInfoMessage] = useState<string>(''); // Estado para mensagem de sucesso
+  const [infoMessage, setInfoMessage] = useState<string>(''); 
 
   const navigate = useNavigate(); // Hook para navegação
 
@@ -26,7 +27,6 @@ const NovaRequisicaoPage: React.FC = () => {
     loadData();
   }, []);
 
- // Na NovaRequisicaoPage.tsx - SOLUÇÃO FUNCIONAL
 const loadData = async () => {
   try {
     setIsLoadingData(true);
@@ -45,15 +45,13 @@ const loadData = async () => {
       estabelecimentoNome: userData.estabelecimento?.nome || 'Meu Estabelecimento'
     });
     
- // ✅ CORREÇÃO AQUI: Use getComEstoque() em vez de getAll()
+ 
     const [medsData, estsData] = await Promise.all([
-      medicamentoService.getComEstoque(), // ✅ MUDANÇA CRÍTICA
+      medicamentoService.getComEstoque(), 
       estabelecimentoService.getAll()
     ]);
     
-    console.log('✅ Medicamentos com estoque:', medsData);
-    console.log('📈 Resultado:', medsData.length, 'medicamentos disponíveis');
-    
+        
     setMedicamentos(medsData);
     setEstabelecimentos(estsData);
 
@@ -140,16 +138,29 @@ const loadData = async () => {
   }
 
   return (
-    <Container fluid>
-      <div className="row mb-4">
+    // Usa um Container padrão para melhor espaçamento
+    <Container className="py-4"> 
+      
+      {/* 1. CABEÇALHO DA PÁGINA (Com título e ícone) */}
+      <Row className="mb-4">
+          <Col>
+              <h2 className="d-flex align-items-center">
+                  <FaTruckLoading className="me-3 text-primary" size={32} /> 
+                  Nova Requisição de Medicamentos
+              </h2>
+              {usuarioLogado && (
+                  <p className="text-muted">
+                      Estabelecimento Solicitante: <strong>{usuarioLogado.estabelecimentoNome}</strong>
+                  </p>
+              )}
+          </Col>
+      </Row>
 
-      </div>
-
-      {/* Mensagem de sucesso */}
+      {/* 2. MENSAGENS DE ALERTA E SUCESSO */}
       {successMessage && (
         <Row className="mb-4">
           <Col>
-            <Alert variant="success">
+            <Alert variant="success" dismissible onClose={() => setSuccessMessage('')}>
               ✅ {successMessage}
               <br />
               <small>Redirecionando para a lista de requisições...</small>
@@ -161,25 +172,47 @@ const loadData = async () => {
       {infoMessage && (
         <Row className="mb-4">
           <Col>
-            <Alert variant="info">
+            <Alert variant="info" dismissible onClose={() => setInfoMessage('')}>
               ℹ️ {infoMessage}
             </Alert>
           </Col>
         </Row>
       )}
 
-      <Row>
-        <Col lg={10} xl={8}>
-          <NovaRequisicaoForm
-            estabelecimentos={estabelecimentos}
-            medicamentos={medicamentos}
-            usuarioLogado={usuarioLogado}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            isLoading={isLoading}
-          />
+      {/* 3. FORMULÁRIO CENTRALIZADO E MAIOR */}
+      <Row className="justify-content-center"> {/* ✅ CENTRALIZAÇÃO */}
+        <Col xl={10} lg={12}> {/* ✅ LARGURA MAIOR (10 em telas extra-grandes, 12 em grandes) */}
+          <Card className="shadow-sm"> {/* Adiciona um CARD para um visual mais limpo */}
+            <Card.Header as="h5" className="bg-light">
+                Detalhes da Requisição
+            </Card.Header>
+            <Card.Body>
+                <NovaRequisicaoForm
+                    estabelecimentos={estabelecimentos}
+                    medicamentos={medicamentos}
+                    usuarioLogado={usuarioLogado}
+                    onSubmit={handleSubmit}
+                    onCancel={handleCancel}
+                    isLoading={isLoading}
+                />
+            </Card.Body>
+          </Card>
         </Col>
       </Row>
+      
+      {/* 4. BLOCO OPCIONAL DE INFORMAÇÕES DE ESTOQUE */}
+      {medicamentos.length > 0 && (
+          <Row className="justify-content-center mt-4">
+              <Col xl={10} lg={12}>
+                <Alert variant="light" className="text-center p-2">
+                    <small>
+                        Apenas medicamentos com estoque disponível no Almoxarifado estão listados.
+                        <strong> ({medicamentos.length} itens disponíveis)</strong>
+                    </small>
+                </Alert>
+              </Col>
+          </Row>
+      )}
     </Container>
   );
 };

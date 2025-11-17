@@ -5,7 +5,7 @@ import EntradaMedicamentosForm from '../components/movimentos/EntradaMedicamento
 import type { MovimentoEntradaFormData } from '../types/MovimentoEntrada';
 import type { Medicamento } from '../types/Medicamento';
 import type { Estabelecimento } from '../types/Estabelecimento';
-import type { Fornecedor } from '../types/Fornecedor'; // ✅ ADICIONAR IMPORT
+import type { Fornecedor } from '../types/Fornecedor'; 
 import { movimentoEntradaService } from '../store/services/movimentoEntradaService';
 import { medicamentoService } from '../store/services/medicamentoService';
 import { estabelecimentoService } from '../store/services/estabelecimentoService';
@@ -14,7 +14,7 @@ import { fornecedorService } from '../store/services/fornecedorService';
 
 const EntradaMedicamentosPage: React.FC = () => {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]); // ✅ TIPO CORRETO
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]); 
   const [estabelecimentos, setEstabelecimentos] = useState<Estabelecimento[]>([]);
   const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
