@@ -1,13 +1,71 @@
-// src/modules/dispensacao/services/CreateDispensacaoService.ts
 import { prisma } from '../../../database/prismaClient';
 import { AppError } from '../../../shared/errors/AppError';
 import { ICreateDispensacaoDTO } from '../dtos/ICreateDispensacaoDTO';
 
 class CreateDispensacaoService {
+
+  // ✅ FUNÇÃO PARA DETECTAR TIPO PELO PADRÃO DO DOCUMENTO
+  private detectarTipoDocumento(documentoReferencia: string): 'COMUM' | 'PSICOTROPICO' {
+    if (!documentoReferencia) return 'COMUM';
+
+    // Padrões para psicotrópicos: RF-12345/2024, CRM-12345/2024, RC-12345/2024, etc.
+    const regexSimples = /^\d{1,8}$|^[A-Z]{1,4}-\d{1,8}$/;
+
+    if (regexSimples.test(documentoReferencia)) {
+      return 'PSICOTROPICO';
+    }
+
+    return 'COMUM';
+  }
+
+  // ✅ FUNÇÃO PARA GERAR NÚMERO AUTOMÁTICO (para documentos comuns)
+  private async gerarNumeroDocumentoUnico(tx: any, estabelecimentoId: string): Promise<string> {
+    const estabelecimento = await tx.estabelecimento.findUnique({
+      where: { id: estabelecimentoId },
+      select: { sigla: true, nome: true }
+    });
+
+    const prefixo = estabelecimento?.sigla || 'DISP';
+    const maxTentativas = 5;
+    let tentativas = 0;
+
+    while (tentativas < maxTentativas) {
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const numeroDocumento = `${prefixo}-${timestamp}-${random}`;
+
+      const documentoExistente = await tx.dispensacao.findFirst({
+        where: { documentoReferencia: numeroDocumento }
+      });
+
+      if (!documentoExistente) {
+        console.log(`✅ Número automático gerado: ${numeroDocumento}`);
+        return numeroDocumento;
+      }
+
+      tentativas++;
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+
+    throw new AppError('Não foi possível gerar um número de documento único.', 500);
+  }
+
+  // ✅ FUNÇÃO DE VALIDAÇÃO SIMPLIFICADA
+  private validarDocumentoPsicotropico(documentoReferencia: string): void {
+    // ✅ ACEITA QUALQUER COISA que pareça um número de receita
+    const regexSimples = /^\d{1,8}$|^[A-Z]{1,4}-\d{1,8}$/;
+
+    if (!regexSimples.test(documentoReferencia)) {
+      throw new AppError(
+        'Para medicamentos controlados, informe apenas o número da receita (ex: 12345678 ou RF-123456)',
+        400
+      );
+    }
+  }
+
   async execute(data: ICreateDispensacaoDTO) {
     const { estabelecimentoOrigemId, itens, ...dispensacaoData } = data;
 
-    
     // 1. Validação do Estabelecimento
     const estabelecimento = await prisma.estabelecimento.findUnique({
       where: { id: estabelecimentoOrigemId }
@@ -18,27 +76,76 @@ class CreateDispensacaoService {
     }
 
     return await prisma.$transaction(async (tx) => {
-      try { // ✅ ADICIONE ESTE TRY
+      try {
         console.log('🟡 Iniciando transação de dispensação...');
 
-        const { estabelecimentoOrigemId, itens, justificativaRetiradaAntecipada, usuarioAutorizador, ...dispensacaoData } = data;
+        // ✅ VALIDAÇÃO E GERAÇÃO DO DOCUMENTO DE REFERÊNCIA
+        let documentoReferenciaFinal = dispensacaoData.documentoReferencia;
+        const tipoDetectado = this.detectarTipoDocumento(documentoReferenciaFinal);
+
+
+        if (tipoDetectado === 'COMUM') {
+          // Para documentos comuns, gera automaticamente se não foi fornecido
+          if (!documentoReferenciaFinal || documentoReferenciaFinal.trim() === '') {
+            documentoReferenciaFinal = await this.gerarNumeroDocumentoUnico(tx, estabelecimentoOrigemId);
+            console.log(`✅ Número automático gerado: ${documentoReferenciaFinal}`);
+          } else {
+            console.log(`📄 Usando número fornecido: ${documentoReferenciaFinal}`);
+          }
+        } else if (tipoDetectado === 'PSICOTROPICO') {
+
+          this.validarDocumentoPsicotropico(documentoReferenciaFinal);
+
+          console.log(`✅ Receita de psicotrópico validada: ${documentoReferenciaFinal}`);
+
+          // ✅ VERIFICA SE JÁ EXISTE DISPENSAÇÃO COM ESTA RECEITA
+          const receitaExistente = await tx.dispensacao.findFirst({
+            where: {
+              documentoReferencia: documentoReferenciaFinal,
+              estabelecimentoOrigemId: estabelecimentoOrigemId
+            }
+          });
+
+          if (receitaExistente) {
+            throw new AppError(
+              `Já existe uma dispensação com o número de receita ${documentoReferenciaFinal}. Cada receita de psicotrópico só pode ser utilizada uma vez.`,
+              400
+            );
+          }
+        }
+
+        // ✅ VERIFICA SE O NÚMERO JÁ EXISTE (DUPLICIDADE GERAL)
+        if (documentoReferenciaFinal) {
+          const documentoExistente = await tx.dispensacao.findFirst({
+            where: { documentoReferencia: documentoReferenciaFinal }
+          });
+
+          if (documentoExistente) {
+            throw new AppError(
+              `Já existe uma dispensação com o número ${documentoReferenciaFinal}. Por favor, use um número diferente.`,
+              400
+            );
+          }
+        }
+
         // 2. Cria o cabeçalho da Dispensação
         const novaDispensacao = await tx.dispensacao.create({
           data: {
             pacienteNome: dispensacaoData.pacienteNome,
             pacienteCpf: dispensacaoData.pacienteCpf || null,
             profissionalSaude: dispensacaoData.profissionalSaude || null,
-            documentoReferencia: dispensacaoData.documentoReferencia,
+            documentoReferencia: documentoReferenciaFinal,
             observacao: dispensacaoData.observacao || null,
             estabelecimentoOrigemId,
             dataDispensacao: new Date(),
-            justificativaRetiradaAntecipada: justificativaRetiradaAntecipada || null,
-            usuarioAutorizador: usuarioAutorizador || null,
-            dataAutorizacao: justificativaRetiradaAntecipada ? new Date() : null,
+            justificativaRetiradaAntecipada: dispensacaoData.justificativaRetiradaAntecipada || null,
+            usuarioAutorizador: dispensacaoData.usuarioAutorizador || null,
+            dataAutorizacao: dispensacaoData.justificativaRetiradaAntecipada ? new Date() : null,
+
           },
         });
 
-        console.log('✅ Dispensação criada:', novaDispensacao.id);
+        console.log(`✅ Dispensação criada: ${novaDispensacao.id} - ${documentoReferenciaFinal}`);
 
         // 3. Processa cada Item
         for (const item of itens) {
@@ -53,9 +160,9 @@ class CreateDispensacaoService {
           // Verifica estoque geral
           const estoqueGeral = await tx.estoqueLocal.findUnique({
             where: {
-              medicamentoId_estabelecimentoId: { 
-                medicamentoId, 
-                estabelecimentoId: estabelecimentoOrigemId 
+              medicamentoId_estabelecimentoId: {
+                medicamentoId,
+                estabelecimentoId: estabelecimentoOrigemId
               },
             },
           });
@@ -65,7 +172,7 @@ class CreateDispensacaoService {
               where: { id: medicamentoId }
             });
             throw new AppError(
-              `Estoque insuficiente de ${medicamento?.principioAtivo}. Saldo: ${estoqueGeral?.quantidade ?? 0}.`, 
+              `Estoque insuficiente de ${medicamento?.principioAtivo}. Saldo: ${estoqueGeral?.quantidade ?? 0}.`,
               400
             );
           }
@@ -125,14 +232,14 @@ class CreateDispensacaoService {
           });
 
           console.log(`✅ Medicamento ${medicamentoId} processado com sucesso`);
-        } // ✅ FIM DO FOR
+        }
 
         console.log('🎉 Dispensação finalizada com sucesso!');
 
         // Retorna dispensação completa
         return tx.dispensacao.findUnique({
           where: { id: novaDispensacao.id },
-          include: { 
+          include: {
             itensDispensados: {
               include: {
                 medicamento: {
@@ -152,14 +259,14 @@ class CreateDispensacaoService {
           }
         });
 
-      } catch (error: any) { // ✅ ADICIONE ESTE CATCH
+      } catch (error: any) {
         console.error('🔴 ERRO DETALHADO NA TRANSAÇÃO:', {
           message: error.message,
           code: error.code,
           meta: error.meta,
           stack: error.stack
         });
-        
+
         // Relança o erro para ser capturado pelo controller
         throw error;
       }

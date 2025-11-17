@@ -19,6 +19,7 @@ export interface ICreateDispensacaoDTO {
   
   justificativaRetiradaAntecipada?: string;
   usuarioAutorizador?: string;
+
 }
 
 

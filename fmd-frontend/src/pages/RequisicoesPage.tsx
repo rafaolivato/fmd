@@ -35,10 +35,10 @@ const RequisicoesPage: React.FC = () => {
   const loadUsuarioLogado = useCallback(async (): Promise<void> => {
     try {
       const userData = await authService.getCurrentUser();
-      
+
       if (userData) {
         const userIsAlmoxarifado = authService.isUserAlmoxarifado(userData);
-        
+
         setUsuarioLogado({
           user: userData,
           isAlmoxarifado: userIsAlmoxarifado
@@ -48,7 +48,7 @@ const RequisicoesPage: React.FC = () => {
         console.log('🏢 Estabelecimento:', userData.estabelecimento?.nome);
         console.log('📋 Tipo:', userData.estabelecimento?.tipo);
         console.log('🔧 É almoxarifado?', userIsAlmoxarifado);
-        
+
         await loadRequisicoes(userIsAlmoxarifado);
       }
     } catch (error) {
@@ -61,7 +61,7 @@ const RequisicoesPage: React.FC = () => {
     try {
       setIsLoading(true);
       console.log('🔄 Carregando requisições...');
-      
+
       if (userIsAlmoxarifado) {
         console.log('📦 Almoxarifado - carregando "Para Atender"');
         const paraAtenderData = await requisicaoService.getParaAtender();
@@ -73,10 +73,10 @@ const RequisicoesPage: React.FC = () => {
         setMinhasRequisicoes(minhasData);
         setParaAtender([]);
       }
-      
+
     } catch (error: unknown) {
       console.error('Erro ao carregar requisições:', error);
-      
+
       if (error instanceof Error && 'response' in error) {
         const axiosError = error as { response?: { status?: number } };
         if (axiosError.response?.status === 403) {
@@ -84,7 +84,7 @@ const RequisicoesPage: React.FC = () => {
           return;
         }
       }
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       alert('Erro ao carregar requisições: ' + errorMessage);
     } finally {
@@ -104,12 +104,12 @@ const RequisicoesPage: React.FC = () => {
 
     try {
       const requisicaoCancelada = await requisicaoService.cancelarRequisicao(requisicao.id);
-      
+
       // Atualiza a lista
       if (usuarioLogado.user) {
         loadRequisicoes(usuarioLogado.isAlmoxarifado);
       }
-      
+
       alert(`Requisição #${requisicao.id.substring(0, 8)} cancelada com sucesso!`);
     } catch (error: any) {
       console.error('Erro ao cancelar requisição:', error);
@@ -176,12 +176,11 @@ const RequisicoesPage: React.FC = () => {
     <Container fluid>
       <Row className="mb-4">
         <Col>
-         <div className="d-flex align-items-center mt-3">
-                    <FaClipboardList size={32} className="text-primary me-3" />
-                    <div>
-          <h1>Requisições</h1>
-          
-          </div>
+          <div className="d-flex align-items-center mb-3">
+            <FaClipboardList size={32} className="text-primary me-3" />
+            <div>
+              <h1>Requisições</h1>
+            </div>
           </div>
         </Col>
         <Col xs="auto" className="d-flex align-items-center gap-2">
@@ -207,8 +206,8 @@ const RequisicoesPage: React.FC = () => {
           >
             {/* ABA "MINHAS REQUISIÇÕES" - Só para Farmácias */}
             {!usuarioLogado.isAlmoxarifado && (
-              <Tab 
-                eventKey="minhas" 
+              <Tab
+                eventKey="minhas"
                 title={
                   <span>
                     <FaStore className="me-2" />
@@ -224,17 +223,17 @@ const RequisicoesPage: React.FC = () => {
                 <RequisicoesList
                   requisicoes={minhasRequisicoes}
                   onViewDetails={handleViewDetails}
-                  onCancelar={handleCancelarRequisicao} 
+                  onCancelar={handleCancelarRequisicao}
                   isLoading={isLoading}
                   modo="minhas"
                 />
               </Tab>
             )}
-            
+
             {/* ABA "PARA ATENDER" - Só para Almoxarifados */}
             {usuarioLogado.isAlmoxarifado && (
-              <Tab 
-                eventKey="para-atender" 
+              <Tab
+                eventKey="para-atender"
                 title={
                   <span>
                     <FaHandshake className="me-2" />

@@ -10,6 +10,7 @@ import { medicamentoService } from '../store/services/medicamentoService';
 import { estabelecimentoService } from '../store/services/estabelecimentoService';
 import { pacienteService } from '../store/services/pacienteService';
 import { authService } from '../store/services/authService';
+import { FaExchangeAlt } from 'react-icons/fa';
 
 const DispensacaoPage: React.FC = () => {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
@@ -105,61 +106,72 @@ const DispensacaoPage: React.FC = () => {
       </Container>
     );
   }
+return (
+  <Container fluid>
+    {/* Cabeçalho */}
+    <Row className="mb-4">
+      
+    </Row>
 
-  return (
-    <Container fluid>
-      <div className="row mb-4">
-        
-      </div>
-
-      {successMessage && (
-        <Row className="mb-4">
-          <Col>
-            <Alert variant="success" dismissible onClose={() => setSuccessMessage('')}>
-              ✅ {successMessage}
-            </Alert>
-          </Col>
-        </Row>
-      )}
-
-      <Row>
+    {successMessage && (
+      <Row className="mb-4">
         <Col>
-          <DispensacaoForm
-            estabelecimentos={estabelecimentos}
-            medicamentos={medicamentos}
-            pacientes={pacientes}
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            isLoading={isLoading}
-          />
+          <Alert variant="success" dismissible onClose={() => setSuccessMessage('')}>
+            ✅ {successMessage}
+          </Alert>
         </Col>
       </Row>
+    )}
 
-      {/* Informações de Ajuda */}
-      <Row className="mt-4">
-        <Col md={6}>
-          <Alert variant="info">
-            <h6>💡 Como usar:</h6>
-            <ul className="mb-0">
-              <li>Informe os dados do paciente</li>
-              <li>Adicione os medicamentos prescritos</li>
-              <li>Informe o documento de referência em caso de psicotrópicos</li>
-              <li>Finalize a dispensação</li>
-            </ul>
-          </Alert>
-        </Col>
-        <Col md={6}>
-          <Alert variant="light">
-            <h6>📋 Informações:</h6>
-            <ul className="mb-0">
-              <li><strong>Medicamentos:</strong> {medicamentos.length}</li>
-              <li><strong>Pacientes:</strong> {pacientes.length}</li>
-            </ul>
-          </Alert>
-        </Col>
-      </Row>
-    </Container>
-  );
+    {/* Formulário */}
+    <Row className="justify-content-center">
+      <Col xl={10} lg={12}>
+        <DispensacaoForm
+          estabelecimentos={estabelecimentos}
+          medicamentos={medicamentos}
+          pacientes={pacientes}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+          isLoading={isLoading}
+        />
+      </Col>
+    </Row>
+
+    {/* Informações de Ajuda */}
+    <Row className="mt-5">
+      <Col lg={6} className="mb-3">
+        <Alert variant="info">
+          <h6 className="fw-bold">💡 Como usar:</h6>
+          <ul className="mb-0 ps-3">
+            <li>Informe os dados do paciente</li>
+            <li>Adicione os medicamentos prescritos</li>
+            <li>Documento de referência para psicotrópicos</li>
+            <li>Finalize a dispensação</li>
+          </ul>
+        </Alert>
+      </Col>
+      <Col lg={6} className="mb-3">
+        <Alert variant="light">
+          <h6 className="fw-bold">📋 Estatísticas:</h6>
+          <div className="row">
+            <div className="col-6">
+              <div className="text-center p-2">
+                <div className="h4 text-primary mb-1">{medicamentos.length}</div>
+                <small className="text-muted">Medicamentos</small>
+              </div>
+            </div>
+            <div className="col-6">
+              <div className="text-center p-2">
+                <div className="h4 text-success mb-1">{pacientes.length}</div>
+                <small className="text-muted">Pacientes</small>
+              </div>
+            </div>
+          </div>
+        </Alert>
+      </Col>
+    </Row>
+  </Container>
+);
 };
 
 export default DispensacaoPage;

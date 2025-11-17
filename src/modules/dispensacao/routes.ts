@@ -22,7 +22,7 @@ dispensacaoRoutes.get('/', (request, response, next) => {
 });
 
 // Rota para verificar retirada recente
-dispensacaoRoutes.post('/dispensacoes/verify-retirada-recente', (request, response) => {
+dispensacaoRoutes.post('/verify-retirada-recente', (request, response) => {
   verifyRetiradaRecenteController.handle(request, response);
 });
 

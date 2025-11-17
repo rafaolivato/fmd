@@ -17,6 +17,7 @@ interface DispensacaoFormProps {
   isLoading?: boolean;
 }
 
+
 const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   estabelecimentos,
   medicamentos,
@@ -25,7 +26,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   onCancel,
   isLoading = false
 }) => {
-  
+
   const estabelecimentoLogado = estabelecimentos.length > 0 ? estabelecimentos[0] : null;
   const estabelecimentoIdInicial = estabelecimentoLogado ? estabelecimentoLogado.id : '';
 
@@ -47,25 +48,33 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   const [estoqueDisponivel, setEstoqueDisponivel] = useState<number>(0);
   const [showPacienteModal, setShowPacienteModal] = useState(false);
   const [searchCpf, setSearchCpf] = useState('');
-  
+
+  const [tipoDocumento, setTipoDocumento] = useState<'COMUM' | 'PSICOTROPICO'>('COMUM');
+
   // ✅ NOVOS ESTADOS PARA CONTROLE DE RETIRADA ANTECIPADA (ADICIONE APENAS ESTES)
-  const [alertasRetirada, setAlertasRetirada] = useState<{[key: string]: string}>({});
+  const [alertasRetirada, setAlertasRetirada] = useState<{ [key: string]: string }>({});
   const [showModalJustificativa, setShowModalJustificativa] = useState(false);
   const [justificativaTemp, setJustificativaTemp] = useState('');
   const [medicamentoPendente, setMedicamentoPendente] = useState<string | null>(null);
 
   useEffect(() => {
     if (estabelecimentoLogado && formData.estabelecimentoOrigemId !== estabelecimentoLogado.id) {
-        setFormData(prev => ({ 
-            ...prev, 
-            estabelecimentoOrigemId: estabelecimentoLogado.id 
-        }));
+      setFormData(prev => ({
+        ...prev,
+        estabelecimentoOrigemId: estabelecimentoLogado.id
+      }));
     }
   }, [estabelecimentoLogado]);
 
-  // ✅ 1. ADICIONE ESTA FUNÇÃO (VERIFICAÇÃO DE RETIRADA RECENTE)
   const verificarRetiradaRecente = async (medicamentoId: string) => {
+    console.log('🔍 Iniciando verificação de retirada recente...');
+    console.log('📋 Dados para verificação:', {
+      pacienteCpf: formData.pacienteCpf,
+      medicamentoId: medicamentoId,
+      estabelecimentoId: formData.estabelecimentoOrigemId
+    });
     if (!formData.pacienteCpf || !formData.estabelecimentoOrigemId) return;
+    console.log('❌ Dados insuficientes para verificação');
 
     try {
       console.log('🔍 Verificando retirada recente para:', medicamentoId);
@@ -87,22 +96,50 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     }
   };
 
+  const gerarNumeroAutomatico = () => {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+
+    // Pega as primeiras 4 letras do nome, remove espaços
+    let prefixo = 'DISP';
+    if (estabelecimentoLogado?.nome) {
+      prefixo = estabelecimentoLogado.nome
+        .substring(0, 4)
+        .toUpperCase()
+        .replace(/\s/g, ''); // Remove espaços
+    }
+
+    return `${prefixo}-${timestamp}-${random}`;
+  };
+
+  // ✅ GERA AUTOMATICAMENTE AO CARREGAR
+  useEffect(() => {
+    if (!formData.documentoReferencia || formData.documentoReferencia.trim() === '') {
+      const numeroAutomatico = gerarNumeroAutomatico();
+      setFormData(prev => ({
+        ...prev,
+        documentoReferencia: numeroAutomatico
+      }));
+      console.log('🔢 Número automático gerado:', numeroAutomatico);
+    }
+  }, []);
+
   // ✅ 2. MODIFIQUE A handleMedicamentoChange (ADICIONE APENAS ESTA LINHA)
   const handleMedicamentoChange = async (medicamentoId: string) => {
-    setNovoItem(prev => ({ 
-      ...prev, 
+    setNovoItem(prev => ({
+      ...prev,
       medicamentoId,
       quantidadeSaida: 0
     }));
-    
+
     if (medicamentoId && formData.estabelecimentoOrigemId) {
       try {
         const estoque = await estoqueService.getEstoqueMedicamento(
-          medicamentoId, 
+          medicamentoId,
           formData.estabelecimentoOrigemId
         );
         setEstoqueDisponivel(estoque);
-        
+
         // ✅ APENAS ESTA LINHA NOVA - Verifica retirada recente
         if (formData.pacienteCpf) {
           verificarRetiradaRecente(medicamentoId);
@@ -135,7 +172,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
       return; // Não adiciona até justificar
     }
 
-    // ✅ MANTENHA O RESTO DA FUNÇÃO ORIGINAL
+
     setFormData(prev => ({
       ...prev,
       itens: [...prev.itens, { ...novoItem }]
@@ -201,12 +238,12 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.estabelecimentoOrigemId) {
-        alert('Erro interno: Estabelecimento não definido. Recarregue a página.');
-        return;
+      alert('Erro interno: Estabelecimento não definido. Recarregue a página.');
+      return;
     }
-    
+
     if (!formData.pacienteNome.trim()) {
       alert('Nome do paciente é obrigatório');
       return;
@@ -235,28 +272,29 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   }, [formData.pacienteCpf]);
 
   const medicamentoSelecionado = medicamentos.find(m => m.id === novoItem.medicamentoId);
-  
+
   if (!estabelecimentoLogado) {
-      return (
-        <Card>
-            <Card.Header>
-                 <h5 className="card-title mb-0 fw-bold">Dispensação de Medicamentos</h5>
-            </Card.Header>
-            <Card.Body>
-                <Alert variant="danger" className="p-4">
-                    Não foi possível carregar o estabelecimento do usuário. Recarregue a página ou entre em contato com o suporte.
-                </Alert>
-            </Card.Body>
-        </Card>
-      );
+    return (
+      <Card>
+        <Card.Header>
+          <h5 className="card-title mb-0 fw-bold">Dispensação de Medicamentos</h5>
+        </Card.Header>
+        <Card.Body>
+          <Alert variant="danger" className="p-4">
+            Não foi possível carregar o estabelecimento do usuário. Recarregue a página ou entre em contato com o suporte.
+          </Alert>
+        </Card.Body>
+      </Card>
+    );
   }
+
 
   return (
     <>
-     <Card>
+      <Card>
         <Card.Header>
           {/* 🚨 CORREÇÃO: Aplica negrito (fw-bold) no título */}
-          <h5 className="card-title mb-0 fw-bold">Dispensação de Medicamentos</h5> 
+          <h5 className="card-title mb-0 fw-bold">Dispensação de Medicamentos</h5>
         </Card.Header>
         <Card.Body>
           <Form onSubmit={handleSubmit}>
@@ -291,8 +329,8 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                     </Form.Group>
                   </Col>
                   <Col md={2} className="d-flex align-items-end">
-                    <Button 
-                      variant="outline-primary" 
+                    <Button
+                      variant="outline-primary"
                       onClick={() => setShowPacienteModal(true)}
                       className="w-100"
                     >
@@ -321,14 +359,29 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
               </Col>
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label>Documento de Referência *</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.documentoReferencia}
-                    onChange={(e) => setFormData(prev => ({ ...prev, documentoReferencia: e.target.value }))}
-                    placeholder="Nº do receituário, prontuário..."
-                    required
-                  />
+                  <Form.Label>Tipo de Documento *</Form.Label>
+                  <Form.Select
+                    value={tipoDocumento}
+                    onChange={(e) => {
+                      setTipoDocumento(e.target.value as 'COMUM' | 'PSICOTROPICO');
+                      // Se mudar para comum, gera número automático
+                      if (e.target.value === 'COMUM') {
+                        setFormData(prev => ({
+                          ...prev,
+                          documentoReferencia: `DISP-${Date.now()}`
+                        }));
+                      } else {
+                        // Se mudar para psicotrópico, limpa para digitar
+                        setFormData(prev => ({
+                          ...prev,
+                          documentoReferencia: ''
+                        }));
+                      }
+                    }}
+                  >
+                    <option value="COMUM">Dispensação Comum</option>
+                    <option value="PSICOTROPICO">Psicotrópico (Controlado)</option>
+                  </Form.Select>
                 </Form.Group>
               </Col>
             </Row>
@@ -341,6 +394,22 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                     value={formData.profissionalSaude}
                     onChange={(e) => setFormData(prev => ({ ...prev, profissionalSaude: e.target.value }))}
                     placeholder="Nome do médico/dentista..."
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+
+                <Form.Group>
+                  <Form.Label>
+                    Documento de Referência *
+                    <small className="text-muted ms-2">
+                    </small>
+                  </Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.documentoReferencia}
+                    onChange={(e) => setFormData(prev => ({ ...prev, documentoReferencia: e.target.value }))}
+                    placeholder=" Digite o número da Notificação da Receita"
                   />
                 </Form.Group>
               </Col>
@@ -396,8 +465,8 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                   <Col md={4} className="d-flex align-items-end">
                     <div className="w-100">
                       {novoItem.medicamentoId && (
-                        <Alert 
-                          variant={estoqueDisponivel > 0 ? "info" : "warning"} 
+                        <Alert
+                          variant={estoqueDisponivel > 0 ? "info" : "warning"}
                           className="py-2 mb-2"
                         >
                           <small>
@@ -406,9 +475,9 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                           </small>
                         </Alert>
                       )}
-                      <Button 
-                        variant="primary" 
-                        onClick={adicionarItem} 
+                      <Button
+                        variant="primary"
+                        onClick={adicionarItem}
                         className="w-100"
                         disabled={estoqueDisponivel === 0 || novoItem.quantidadeSaida === 0}
                       >
@@ -466,9 +535,9 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
               <Button variant="secondary" onClick={onCancel} disabled={isLoading}>
                 Cancelar
               </Button>
-              <Button 
-                variant="success" 
-                type="submit" 
+              <Button
+                variant="success"
+                type="submit"
                 disabled={isLoading || formData.itens.length === 0 || !formData.pacienteNome.trim()}
               >
                 {isLoading ? 'Registrando...' : 'Finalizar Dispensação'}

@@ -16,11 +16,9 @@ interface RetiradaRecente {
 
 class VerifyRetiradaRecenteService {
   async execute({ pacienteCpf, medicamentoId, estabelecimentoId }: IVerifyRetiradaRecenteDTO): Promise<RetiradaRecente> {
-    // Calcula a data limite (28 dias atrás)
     const dataLimite = new Date();
     dataLimite.setDate(dataLimite.getDate() - 28);
 
-    // Busca dispensações recentes do mesmo paciente e medicamento
     const dispensacoesRecentes = await prisma.dispensacao.findMany({
       where: {
         pacienteCpf: pacienteCpf,
