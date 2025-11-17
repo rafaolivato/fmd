@@ -17,54 +17,69 @@ const NovaRequisicaoPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [error, setError] = useState<string>('');
-  const [successMessage, setSuccessMessage] = useState<string>(''); // Estado para mensagem de sucesso
-  
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [infoMessage, setInfoMessage] = useState<string>(''); // Estado para mensagem de sucesso
+
   const navigate = useNavigate(); // Hook para navegação
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = async () => {
-    try {
-      setIsLoadingData(true);
-      setError('');
-      
-      // Carrega usuário logado
-      const userData = await authService.getCurrentUser();
-      if (!userData) {
-        setError('Usuário não autenticado. Faça login novamente.');
-        return;
-      }
-      
-      setUsuarioLogado({
-        id: userData.id,
-        estabelecimentoId: userData.estabelecimentoId,
-        estabelecimentoNome: userData.estabelecimento?.nome || 'Meu Estabelecimento'
-      });
-      
-      const [medsData, estsData] = await Promise.all([
-        medicamentoService.getAll(),
-        estabelecimentoService.getAll()
-      ]);
-      setMedicamentos(medsData);
-      setEstabelecimentos(estsData);
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      setError('Erro ao carregar dados necessários para requisição');
-    } finally {
-      setIsLoadingData(false);
+ // Na NovaRequisicaoPage.tsx - SOLUÇÃO FUNCIONAL
+const loadData = async () => {
+  try {
+    setIsLoadingData(true);
+    setError('');
+    setInfoMessage('');
+    
+    const userData = await authService.getCurrentUser();
+    if (!userData) {
+      setError('Usuário não autenticado. Faça login novamente.');
+      return;
     }
-  };
+    
+    setUsuarioLogado({
+      id: userData.id,
+      estabelecimentoId: userData.estabelecimentoId,
+      estabelecimentoNome: userData.estabelecimento?.nome || 'Meu Estabelecimento'
+    });
+    
+ // ✅ CORREÇÃO AQUI: Use getComEstoque() em vez de getAll()
+    const [medsData, estsData] = await Promise.all([
+      medicamentoService.getComEstoque(), // ✅ MUDANÇA CRÍTICA
+      estabelecimentoService.getAll()
+    ]);
+    
+    console.log('✅ Medicamentos com estoque:', medsData);
+    console.log('📈 Resultado:', medsData.length, 'medicamentos disponíveis');
+    
+    setMedicamentos(medsData);
+    setEstabelecimentos(estsData);
+
+    if (medsData.length === 0) {
+      setInfoMessage('Não há medicamentos disponíveis em estoque no momento.');
+    } else {
+      setInfoMessage(`Mostrando ${medsData.length} medicamento(s) disponível(eis) em estoque`);
+    }
+
+  } catch (error) {
+    console.error('Erro ao carregar dados:', error);
+    setError('Erro ao carregar dados necessários para requisição');
+  } finally {
+    setIsLoadingData(false);
+  }
+};
+
 
   const handleSubmit = async (formData: RequisicaoFormData) => {
     try {
       setIsLoading(true);
       const requisicao = await requisicaoService.create(formData);
-      
+
       // Mostra mensagem de sucesso
       setSuccessMessage(`Requisição #${requisicao.id.substring(0, 8)} criada com sucesso!`);
-      
+
       // Limpa o formulário após 2 segundos e redireciona
       setTimeout(() => {
         setSuccessMessage('');
@@ -75,7 +90,7 @@ const NovaRequisicaoPage: React.FC = () => {
     } catch (error: any) {
       console.error('Erro ao criar requisição:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Erro ao criar requisição';
-      
+
       // Se for erro 401 (não autorizado), redireciona para login
       if (error.response?.status === 401) {
         authService.logout();
@@ -113,7 +128,7 @@ const NovaRequisicaoPage: React.FC = () => {
           {error}
         </Alert>
         <div className="text-center">
-          <button 
+          <button
             className="btn btn-primary"
             onClick={() => navigate('/login')}
           >
@@ -127,7 +142,7 @@ const NovaRequisicaoPage: React.FC = () => {
   return (
     <Container fluid>
       <div className="row mb-4">
-        
+
       </div>
 
       {/* Mensagem de sucesso */}
@@ -138,6 +153,16 @@ const NovaRequisicaoPage: React.FC = () => {
               ✅ {successMessage}
               <br />
               <small>Redirecionando para a lista de requisições...</small>
+            </Alert>
+          </Col>
+        </Row>
+      )}
+
+      {infoMessage && (
+        <Row className="mb-4">
+          <Col>
+            <Alert variant="info">
+              ℹ️ {infoMessage}
             </Alert>
           </Col>
         </Row>

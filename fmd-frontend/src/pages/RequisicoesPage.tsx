@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'; // ✅ Adiciona useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Button, Tabs, Tab, Alert } from 'react-bootstrap';
 import RequisicoesList from '../components/requisicoes/RequisicoesList';
 import RequisicaoDetailsModal from '../components/requisicoes/RequisicaoDetailsModal';
@@ -173,13 +173,14 @@ const RequisicoesPage: React.FC = () => {
   }
 
   return (
-    <Container fluid>
+    <Container>
       <Row className="mb-4">
         <Col>
-          <div className="d-flex align-items-center mb-3">
+          <div className="d-flex align-items-center mt-3">
             <FaClipboardList size={32} className="text-primary me-3" />
             <div>
-              <h1>Requisições</h1>
+              <h1 className="h2 mb-0">Requisições</h1>
+              <p className="lead text-muted mb-0">Histórico de requisições de materiais</p>
             </div>
           </div>
         </Col>
@@ -190,7 +191,10 @@ const RequisicoesPage: React.FC = () => {
               Nova Requisição
             </Button>
           )}
-          <Button variant="outline-primary" onClick={() => usuarioLogado.user && loadRequisicoes(usuarioLogado.isAlmoxarifado)}>
+          <Button
+            variant="outline-primary"
+            onClick={() => usuarioLogado.user && loadRequisicoes(usuarioLogado.isAlmoxarifado)}
+          >
             <FaSync />
           </Button>
         </Col>

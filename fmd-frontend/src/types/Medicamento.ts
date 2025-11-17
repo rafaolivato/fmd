@@ -5,6 +5,7 @@ export interface Medicamento {
     formaFarmaceutica: string;
     psicotropico: boolean;
     quantidadeEstoque: number;
+    estoqueMinimo: number;
     createdAt?: string;
     updatedAt?: string;
   }
