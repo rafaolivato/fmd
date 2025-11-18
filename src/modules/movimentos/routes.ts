@@ -12,7 +12,6 @@ const createMovimentoSaidaController = new CreateMovimentoSaidaController();
 const listMovimentosController = new ListMovimentosController(); 
 const getMovimentoByIdController = new GetMovimentoByIdController();
 
-
 // Todas as rotas de movimentos precisam de autenticação
 movimentosRoutes.use(ensureAuthenticated);
 

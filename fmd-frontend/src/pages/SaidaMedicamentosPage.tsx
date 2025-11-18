@@ -1,8 +1,7 @@
-// src/pages/SaidaMedicamentosPage.tsx
 import React, { useState, useEffect } from 'react';
 import SaidaMedicamentosForm from '../components/movimentos/SaidaMedicamentosForm';
 import type { MovimentoSaidaFormData } from '../types/MovimentoSaida';
-import type  { Medicamento } from '../types/Medicamento';
+import type { Medicamento } from '../types/Medicamento';
 import type { Estabelecimento } from '../types/Estabelecimento';
 import { movimentoSaidaService } from '../store/services/movimentoSaidaService';
 import { medicamentoService } from '../store/services/medicamentoService';
@@ -18,31 +17,31 @@ const SaidaMedicamentosPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []); 
+  }, []);
 
   const loadData = async () => {
     try {
       setIsLoadingData(true);
 
-       // ✅ Carrega usuário logado primeiro
+      // ✅ Carrega usuário logado primeiro
       const userData = await authService.getCurrentUser();
-       setUsuarioLogado(userData);
+      setUsuarioLogado(userData);
 
       const [medsData, estsData] = await Promise.all([
         medicamentoService.getAll(),
         estabelecimentoService.getAll()
       ]);
       setMedicamentos(medsData);
-     
+
       let estabelecimentosFiltrados: Estabelecimento[] = [];
-      
+
       if (userData && userData.estabelecimentoId) {
-          // Filtra a lista completa (estsData) para manter apenas o estabelecimento do usuário
-          estabelecimentosFiltrados = estsData.filter(
-              (est) => est.id === userData.estabelecimentoId
-          );
+        // Filtra a lista completa (estsData) para manter apenas o estabelecimento do usuário
+        estabelecimentosFiltrados = estsData.filter(
+          (est) => est.id === userData.estabelecimentoId
+        );
       }
-      
+
       // 4. Atualiza o estado apenas com a lista filtrada
       setEstabelecimentos(estabelecimentosFiltrados);
 
@@ -56,9 +55,11 @@ const SaidaMedicamentosPage: React.FC = () => {
 
   const handleSubmit = async (formData: MovimentoSaidaFormData) => {
     try {
-    console.log('🔍 DEBUG - formData completo:', formData);
-    console.log('🔍 DEBUG - itens:', formData.itens);
-    console.log('🔍 DEBUG - número de itens:', formData.itens.length);
+      console.log('📤 ========== ENVIANDO SAÍDA ==========');
+      console.log('📋 Dados completos do formulário:', JSON.stringify(formData, null, 2));
+      console.log('📅 Data movimento:', formData.dataMovimento, 'Tipo:', typeof formData.dataMovimento);
+      console.log('📄 Documento referência:', formData.documentoReferencia);
+      
       setIsLoading(true);
 
       if (formData.estabelecimentoId !== usuarioLogado?.estabelecimentoId) {
@@ -67,14 +68,17 @@ const SaidaMedicamentosPage: React.FC = () => {
       }
 
       await movimentoSaidaService.create(formData);
-       if (formData.itens.length === 0) {
-      alert('Erro: Nenhum item foi adicionado à saída');
-      return;
-    }
+      if (formData.itens.length === 0) {
+        alert('Erro: Nenhum item foi adicionado à saída');
+        return;
+      }
       alert('Saída de medicamentos registrada com sucesso!');
       // Recarregar medicamentos para atualizar estoque
       await loadData();
     } catch (error) {
+    console.error('❌ ========== ERRO DETALHADO ==========');
+    
+    
       console.error('Erro ao registrar saída:', error);
       alert(error instanceof Error ? error.message : 'Erro ao registrar saída');
     } finally {
@@ -102,7 +106,7 @@ const SaidaMedicamentosPage: React.FC = () => {
   return (
     <div className="container-fluid">
       <div className="row mb-4">
-        
+
       </div>
 
       <div className="row">

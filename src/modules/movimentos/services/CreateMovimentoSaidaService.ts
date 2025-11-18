@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { AppError } from '../../../shared/errors/AppError';
 import { ICreateMovimentoSaidaDTO } from '../dtos/ICreateMovimentoSaidaDTO';
 
@@ -29,40 +29,50 @@ class CreateMovimentoSaidaService {
     private agruparItensDuplicados(itens: any[]): any[] {
         const agrupados = new Map();
 
-        console.log('📦 Itens recebidos para agrupamento:', itens);
-
         for (const item of itens) {
             const key = item.medicamentoId;
-            console.log(`🔍 Processando item: ${key}, quantidade: ${item.quantidadeSaida}`);
 
             if (agrupados.has(key)) {
-                // Soma as quantidades de itens duplicados
                 const quantidadeAtual = Number(agrupados.get(key).quantidadeSaida);
                 const quantidadeNova = Number(item.quantidadeSaida);
                 const quantidadeTotal = quantidadeAtual + quantidadeNova;
 
-                console.log(`➡️ Item duplicado encontrado: ${key}`);
-                console.log(`   Quantidade anterior: ${quantidadeAtual}`);
-                console.log(`   Quantidade nova: ${quantidadeNova}`);
-                console.log(`   Quantidade total: ${quantidadeTotal}`);
-
                 agrupados.get(key).quantidadeSaida = quantidadeTotal;
-
-                // Se houver valorUnitario diferente, mantém o primeiro ou calcula média?
-                // Aqui estamos mantendo o primeiro valorUnitario encontrado
             } else {
-                console.log(`✅ Novo item: ${key}, quantidade: ${item.quantidadeSaida}`);
                 agrupados.set(key, {
                     ...item,
-                    quantidadeSaida: Number(item.quantidadeSaida) // Garante que é número
+                    quantidadeSaida: Number(item.quantidadeSaida)
                 });
             }
         }
 
-        const resultado = Array.from(agrupados.values());
-        console.log('🎯 Itens agrupados final:', resultado);
+        return Array.from(agrupados.values());
+    }
 
-        return resultado;
+    // ✅ MÉTODO PARA GERAR DOCUMENTO DE REFERÊNCIA AUTOMÁTICO
+    private gerarDocumentoReferencia(): string {
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+        return `SAIDA-${timestamp}-${random}`;
+    }
+
+    // ✅ MÉTODO PARA VALIDAR DATA (CORREÇÃO DEFINITIVA DO FUSO HORÁRIO)
+    private validarDataMovimento(dataMovimento: string | Date): void {
+        const dataString = typeof dataMovimento === 'string' ? dataMovimento : dataMovimento.toISOString().split('T')[0];
+        
+        const [ano, mes, dia] = dataString.split('-').map(Number);
+        const dataInformada = new Date(ano, mes - 1, dia);
+        const dataAtual = new Date();
+        
+        const dataInformadaSemHora = new Date(dataInformada.getFullYear(), dataInformada.getMonth(), dataInformada.getDate());
+        const dataAtualSemHora = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate());
+
+        if (dataInformadaSemHora < dataAtualSemHora) {
+            throw new AppError(
+                'Não é permitido registrar movimentos com data anterior à data atual.',
+                400
+            );
+        }
     }
 
     async execute(data: ICreateMovimentoSaidaDTO) {
@@ -76,7 +86,49 @@ class CreateMovimentoSaidaService {
             observacao
         } = data;
 
+        console.log('📅 Data recebida do frontend:', dataMovimento, 'Tipo:', typeof dataMovimento);
+        console.log('📄 Documento referência recebido:', documentoReferencia);
+
+        // ✅ VALIDAÇÃO DA DATA (CORRIGIDA)
+        try {
+            this.validarDataMovimento(dataMovimento);
+            console.log('✅ Validação de data passou');
+        } catch (error) {
+            console.error('❌ Erro na validação de data:', error);
+            throw error;
+        }
+
+        // ✅ VALIDAÇÃO DA JUSTIFICATIVA/OBSERVAÇÃO
+        const justificativaValida = justificativa && justificativa.trim().length > 0;
+        const observacaoValida = observacao && observacao.trim().length > 0;
+
+        if (!justificativaValida && !observacaoValida) {
+            throw new AppError(
+                'Justificativa ou observação é obrigatória para movimentos de saída.',
+                400
+            );
+        }
+
         return await prisma.$transaction(async (tx) => {
+            // ✅ VERIFICAÇÃO DO NÚMERO DO DOCUMENTO (ADICIONE ESTA PARTE)
+            const numeroDocumentoUnico = documentoReferencia || this.gerarDocumentoReferencia();
+            
+            console.log('🔍 Verificando número do documento:', numeroDocumentoUnico);
+            const documentoExistente = await tx.movimento.findFirst({
+                where: { 
+                    numeroDocumento: numeroDocumentoUnico 
+                },
+            });
+
+            if (documentoExistente) {
+                console.log('❌ Número de documento já existe:', numeroDocumentoUnico);
+                throw new AppError(
+                    `Já existe um movimento com o número de documento: ${numeroDocumentoUnico}. Por favor, utilize um número único.`,
+                    400
+                );
+            }
+            console.log('✅ Número de documento disponível');
+
             // 1. Validação do Estabelecimento
             const estabelecimento = await tx.estabelecimento.findUnique({
                 where: { id: estabelecimentoId }
@@ -86,23 +138,17 @@ class CreateMovimentoSaidaService {
                 throw new AppError('Estabelecimento não encontrado.', 404);
             }
 
-            // ✅ AGRUPAR ITENS DUPLICADOS ANTES DE PROCESSAR
-            console.log('🔄 Iniciando agrupamento de itens...');
+            // 2. Agrupa itens duplicados
             const itensAgrupados = this.agruparItensDuplicados(itens);
-            console.log('✅ Itens após agrupamento:', itensAgrupados);
-
+           
             let valorTotal = 0;
             const operacoesEmLote: Promise<any>[] = [];
-
-            // Array para armazenar informações dos itens (com tipo explícito)
             const itensParaProcessar: ItemProcessado[] = [];
 
-            // 2. Processa cada Item AGRUPADO para calcular valorTotal e preparar dados
+            // 3. Processa cada Item AGRUPADO
             for (const item of itensAgrupados) {
                 const { medicamentoId, quantidadeSaida, valorUnitario } = item;
                 const quantidadeSaidaNumerica = Number(quantidadeSaida);
-
-                console.log(`📊 Processando item agrupado: ${medicamentoId}, quantidade: ${quantidadeSaidaNumerica}`);
 
                 // Validação de Quantidade
                 if (isNaN(quantidadeSaidaNumerica) || quantidadeSaidaNumerica <= 0) {
@@ -118,7 +164,7 @@ class CreateMovimentoSaidaService {
 
                 if (!estoqueGeral || estoqueGeral.quantidade < quantidadeSaidaNumerica) {
                     throw new AppError(
-                        `Estoque insuficiente de ID ${medicamentoId}. Saldo na unidade: ${estoqueGeral?.quantidade ?? 0}.`,
+                        `Estoque insuficiente para o medicamento ${medicamentoId}. Saldo disponível: ${estoqueGeral?.quantidade ?? 0}.`,
                         400
                     );
                 }
@@ -126,8 +172,6 @@ class CreateMovimentoSaidaService {
                 // Calcula valor total
                 const valorItem = quantidadeSaidaNumerica * (valorUnitario || 0);
                 valorTotal += valorItem;
-
-                console.log(`💰 Valor do item ${medicamentoId}: ${valorItem}, Valor total acumulado: ${valorTotal}`);
 
                 // Busca de Lotes (FIFO)
                 let quantidadeRestante = quantidadeSaidaNumerica;
@@ -142,8 +186,6 @@ class CreateMovimentoSaidaService {
                     }
                 });
 
-                console.log(`📦 Lotes disponíveis para ${medicamentoId}:`, lotesDisponiveis.length);
-
                 const lotesInfo: LoteInfo[] = [];
 
                 // Prepara informações dos lotes para baixa
@@ -151,10 +193,8 @@ class CreateMovimentoSaidaService {
                     if (quantidadeRestante === 0) break;
 
                     const quantidadeBaixar = Math.min(quantidadeRestante, lote.quantidade);
-
                     const valorUnitarioLote = Number(lote.valorUnitario);
                     const valorUnitarioFinal = valorUnitario || valorUnitarioLote || 0;
-
 
                     lotesInfo.push({
                         loteId: lote.id,
@@ -166,7 +206,6 @@ class CreateMovimentoSaidaService {
                     });
 
                     quantidadeRestante -= quantidadeBaixar;
-                    console.log(`   🎯 Lote ${lote.numeroLote}: baixar ${quantidadeBaixar}, restante: ${quantidadeRestante}, valor: ${valorUnitarioFinal}`);
                 }
 
                 if (quantidadeRestante > 0) {
@@ -185,44 +224,38 @@ class CreateMovimentoSaidaService {
                 });
             }
 
-            // CORREÇÃO: Garantir que valorTotal não seja NaN
             const valorTotalFinal = isNaN(valorTotal) ? 0 : valorTotal;
-            console.log(`💰 VALOR TOTAL FINAL DO MOVIMENTO: ${valorTotalFinal}`);
 
-            const numeroDocumentoUnico = documentoReferencia || `SAIDA-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+            // ✅ PREPARA O CAMPO OBSERVAÇÃO
+            const observacaoFinal = justificativaValida 
+                ? (observacaoValida ? `${justificativa} | ${observacao}` : justificativa)
+                : observacao;
 
-            console.log(`📄 Número documento único: ${numeroDocumentoUnico}`);
-
-            // ... continue com o resto do código original ...
-            // 3. CRIA O MOVIMENTO COM VALOR TOTAL CALCULADO
-            const movimentoData: any = {
+            // 4. CRIA O MOVIMENTO - CONVERTE dataMovimento para Date CORRETAMENTE
+            const movimentoData = {
                 tipoMovimentacao,
                 documentoTipo: 'SAIDA_DIVERSA',
-                numeroDocumento: numeroDocumentoUnico,
-                dataDocumento: new Date(dataMovimento),
-                dataRecebimento: new Date(dataMovimento),
-                observacao: justificativa + (observacao ? ` | ${observacao}` : ''),
+                numeroDocumento: numeroDocumentoUnico, // Já definido acima
+                dataDocumento: new Date(dataMovimento + 'T00:00:00'),
+                dataRecebimento: new Date(dataMovimento + 'T00:00:00'),
+                observacao: observacaoFinal,
                 fonteFinanciamento: 'RECURSOS_PRO_PRIOS',
                 valorTotal: valorTotalFinal,
                 estabelecimento: {
                     connect: { id: estabelecimentoId }
                 },
-
             };
 
             const novoMovimento = await tx.movimento.create({
                 data: movimentoData
             });
 
-            console.log(`✅ Movimento criado: ${novoMovimento.id}`);
+            console.log('✅ Movimento criado com sucesso:', novoMovimento.id);
 
-            // 4. PROCESSAR AS OPERAÇÕES (AGORA COM ITENS JÁ AGRUPADOS)
+            // 5. PROCESSAR AS OPERAÇÕES
             for (const item of itensParaProcessar) {
                 const { medicamentoId, quantidadeSaidaNumerica, lotesInfo, estoqueGeralId } = item;
 
-                console.log(`🔄 Processando item final: ${medicamentoId}, quantidade: ${quantidadeSaidaNumerica}`);
-
-                // Baixa de estoque por lote e criação dos itens de movimento
                 for (const loteInfo of lotesInfo) {
                     // Atualiza o saldo do Lote
                     operacoesEmLote.push(
@@ -232,7 +265,7 @@ class CreateMovimentoSaidaService {
                         })
                     );
 
-                    // Cria o item de movimento (AGORA SEM DUPLICAÇÃO)
+                    // Cria o item de movimento
                     operacoesEmLote.push(
                         tx.itemMovimento.create({
                             data: {
@@ -249,7 +282,6 @@ class CreateMovimentoSaidaService {
                     );
                 }
 
-                // Atualiza EstoqueLocal
                 operacoesEmLote.push(
                     tx.estoqueLocal.update({
                         where: { id: estoqueGeralId },
@@ -258,10 +290,10 @@ class CreateMovimentoSaidaService {
                 );
             }
 
-            // 5. Executa todas as operações em paralelo
+            // 6. Executa todas as operações em paralelo
             await Promise.all(operacoesEmLote);
 
-            // 6. Retorna o registro completo
+            // 7. Retorna o registro completo
             return tx.movimento.findUnique({
                 where: { id: novoMovimento.id },
                 include: { itensMovimentados: true }

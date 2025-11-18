@@ -1,4 +1,3 @@
-// src/components/movimentos/SaidaMedicamentosForm.tsx
 import React, { useState, useEffect } from 'react'; // <-- Adicionado useEffect
 import { Button, Card, Form, Row, Col, Table, Alert } from 'react-bootstrap';
 import type { MovimentoSaidaFormData, ItemMovimentoSaida } from '../../types/MovimentoSaida';
@@ -21,7 +20,7 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
   onCancel,
   isLoading = false
 }) => {
-  
+
   // 🚨 DICA: Pegamos o ID e Nome do estabelecimento logo na primeira renderização
   const estabelecimentoLogado = estabelecimentos.length > 0 ? estabelecimentos[0] : null;
   const estabelecimentoIdInicial = estabelecimentoLogado ? estabelecimentoLogado.id : '';
@@ -43,33 +42,29 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
 
   const [estoqueDisponivel, setEstoqueDisponivel] = useState<number>(0);
 
-  // 🚨 NOVO: Atualiza o formData caso as props de estabelecimentos mudem
-  // Embora você tenha resolvido isso na página, é uma garantia
   useEffect(() => {
-      if (estabelecimentoLogado && formData.estabelecimentoId !== estabelecimentoLogado.id) {
-          setFormData(prev => ({ 
-              ...prev, 
-              estabelecimentoId: estabelecimentoLogado.id 
-          }));
-      }
+    if (estabelecimentoLogado && formData.estabelecimentoId !== estabelecimentoLogado.id) {
+      setFormData(prev => ({
+        ...prev,
+        estabelecimentoId: estabelecimentoLogado.id
+      }));
+    }
   }, [estabelecimentoLogado]);
 
 
-  // ❌ REMOVIDA: A função handleEstabelecimentoChange não é mais necessária
-
   // Função para quando mudar o medicamento
   const handleMedicamentoChange = async (medicamentoId: string) => {
-    setNovoItem(prev => ({ 
-      ...prev, 
+    setNovoItem(prev => ({
+      ...prev,
       medicamentoId,
       quantidadeSaida: 0
     }));
-    
+
     // Agora só usa o formData.estabelecimentoId (que está inicializado)
     if (medicamentoId && formData.estabelecimentoId) {
       try {
         const estoque = await estoqueService.getEstoqueMedicamento(
-          medicamentoId, 
+          medicamentoId,
           formData.estabelecimentoId
         );
         setEstoqueDisponivel(estoque);
@@ -83,7 +78,6 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
   };
 
   const adicionarItem = () => {
-    // ... (Lógica de adicionar item permanece a mesma)
     if (!novoItem.medicamentoId || novoItem.quantidadeSaida <= 0) {
       alert('Selecione um medicamento e informe a quantidade');
       return;
@@ -116,13 +110,11 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // ... (Validações existentes)
 
     // 🚨 NOVA VALIDAÇÃO: Garante que o estabelecimento está preenchido
     if (!formData.estabelecimentoId) {
-        alert('Erro interno: ID do estabelecimento não definido. Recarregue a página.');
-        return;
+      alert('Erro interno: ID do estabelecimento não definido. Recarregue a página.');
+      return;
     }
 
     onSubmit(formData);
@@ -131,9 +123,9 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
   // 🚨 NOVO: Se o estabelecimento não for carregado, mostra um erro claro
   if (!estabelecimentoLogado) {
     return (
-        <Alert variant="danger" className="p-4">
-            Não foi possível carregar o estabelecimento do usuário. Por favor, recarregue a página ou entre em contato com o suporte.
-        </Alert>
+      <Alert variant="danger" className="p-4">
+        Não foi possível carregar o estabelecimento do usuário. Por favor, recarregue a página ou entre em contato com o suporte.
+      </Alert>
     );
   }
 
@@ -149,7 +141,7 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
             <Col md={6}>
               <Form.Group>
                 <Form.Label>Estabelecimento *</Form.Label>
-                
+
                 {/* 🚨 NOVO: Campo não editável que mostra o nome do estabelecimento */}
                 <Form.Control
                   type="text"
@@ -161,7 +153,7 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
               </Form.Group>
             </Col>
             <Col md={6}>
-            {/* O restante dos campos do cabeçalho do formulário... */}
+              {/* O restante dos campos do cabeçalho do formulário... */}
               <Form.Group>
                 <Form.Label>Documento de Referência *</Form.Label>
                 <Form.Control
@@ -175,9 +167,7 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
             </Col>
           </Row>
 
-          {/* ... O restante do formulário (Data, Tipo de Saída, Justificativa, Adicionar Itens) permanece o mesmo. */}
-          {/* Certifique-se de que a lógica handleMedicamentoChange está usando o ID correto, o que ela está fazendo. */}
-          
+         
           <Row className="mb-3">
             <Col md={6}>
               <Form.Group>
@@ -206,17 +196,19 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
             </Col>
           </Row>
 
-          {/* Justificativa */}
           <Form.Group className="mb-4">
-            <Form.Label>Justificativa da Saída *</Form.Label>
+            <Form.Label>Justificativa da Saída  <span className="text-danger">*</span></Form.Label>
             <Form.Control
               as="textarea"
               rows={3}
               value={formData.justificativa}
               onChange={(e) => setFormData(prev => ({ ...prev, justificativa: e.target.value }))}
-              placeholder="Descreva o motivo da saída dos medicamentos..."
+              placeholder="Informe o motivo da saída dos medicamentos..."
               required
             />
+            <Form.Text className="text-muted">
+              Campo obrigatório para movimentos de saída
+            </Form.Text>
           </Form.Group>
 
           {/* Adicionar Itens */}

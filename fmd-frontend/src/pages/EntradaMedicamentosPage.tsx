@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
-import { FaBoxOpen  } from 'react-icons/fa';
+import { FaBoxOpen } from 'react-icons/fa';
 import EntradaMedicamentosForm from '../components/movimentos/EntradaMedicamentosForm';
 import type { MovimentoEntradaFormData } from '../types/MovimentoEntrada';
 import type { Medicamento } from '../types/Medicamento';
@@ -11,8 +11,10 @@ import { medicamentoService } from '../store/services/medicamentoService';
 import { estabelecimentoService } from '../store/services/estabelecimentoService';
 import { authService } from '../store/services/authService';
 import { fornecedorService } from '../store/services/fornecedorService';
+import { useNavigate } from 'react-router-dom'; 
 
 const EntradaMedicamentosPage: React.FC = () => {
+  const navigate = useNavigate(); 
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]); 
   const [estabelecimentos, setEstabelecimentos] = useState<Estabelecimento[]>([]);
@@ -28,20 +30,18 @@ const EntradaMedicamentosPage: React.FC = () => {
     try {
       setIsLoadingData(true);
       
-      // ✅ Carrega usuário logado primeiro
       const userData = await authService.getCurrentUser();
       setUsuarioLogado(userData);
       
-      // ✅ CORREÇÃO: Ordem correta do Promise.all
       const [medsData, fornecedoresData, estsData] = await Promise.all([
         medicamentoService.getAll(),
-        fornecedorService.getAll(), // ✅ AGORA ESTÁ NA POSIÇÃO CORRETA
+        fornecedorService.getAll(),
         estabelecimentoService.getAll()
       ]);
       
       setMedicamentos(medsData);
-      setFornecedores(fornecedoresData); // ✅ ATRIBUINDO PARA FORNECEDORES
-      setEstabelecimentos(estsData); // ✅ ATRIBUINDO PARA ESTABELECIMENTOS
+      setFornecedores(fornecedoresData);
+      setEstabelecimentos(estsData);
       
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -55,7 +55,7 @@ const EntradaMedicamentosPage: React.FC = () => {
     try {
       setIsLoading(true);
       
-      // ✅ VALIDAÇÃO: Verifica se o estabelecimento selecionado é o mesmo do usuário logado
+      // Validação de estabelecimento
       if (formData.estabelecimentoId !== usuarioLogado?.estabelecimentoId) {
         alert('Você só pode registrar entrada no seu próprio estabelecimento');
         return;
@@ -63,10 +63,21 @@ const EntradaMedicamentosPage: React.FC = () => {
       
       await movimentoEntradaService.create(formData);
       alert('Entrada de medicamentos registrada com sucesso!');
-      // Limpar formulário ou redirecionar se quiser
-    } catch (error) {
+            
+      navigate('/movimentacoes'); 
+      
+    } catch (error: any) {
       console.error('Erro ao registrar entrada:', error);
-      alert(error instanceof Error ? error.message : 'Erro ao registrar entrada');
+      
+      let errorMessage = 'Erro ao registrar entrada';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +100,6 @@ const EntradaMedicamentosPage: React.FC = () => {
     );
   }
 
-  // ✅ Se não tem usuário logado, mostra erro
   if (!usuarioLogado) {
     return (
       <div className="container-fluid">
@@ -109,17 +119,16 @@ const EntradaMedicamentosPage: React.FC = () => {
 
   return (
     <Container fluid>
-          <Row className="mb-4">
-            <Col>
-            <div className="d-flex align-items-center mt-3">
-              <FaBoxOpen size={32} className="text-primary me-3" />
+      <Row className="mb-4">
+        <Col>
+          <div className="d-flex align-items-center mt-3">
+            <FaBoxOpen size={32} className="text-primary me-3" />
             <div>
               <h1 className="h2 mb-0">Entrada de Medicamentos</h1>
-                           </div>
-              </div>
-            </Col>
-            
-          </Row>
+            </div>
+          </div>
+        </Col>
+      </Row>
 
       <div className="row">
         <div className="col-12">
@@ -136,7 +145,7 @@ const EntradaMedicamentosPage: React.FC = () => {
         </div>
       </div>
     </Container>
-);
+  );
 }
 
 export default EntradaMedicamentosPage;

@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 class CreateMovimentoEntradaService {
   async execute(data: ICreateMovimentoEntradaDTO) {
-
+    
     const {
       estabelecimentoId,
       itens,
@@ -23,6 +23,20 @@ class CreateMovimentoEntradaService {
 
 
     return await prisma.$transaction(async (tx) => {
+
+      const documentoExistente = await tx.movimento.findFirst({
+        where: {
+          numeroDocumento: numeroDocumento
+        },
+      });
+
+      if (documentoExistente) {
+        throw new AppError(
+          `Já existe um movimento com o número de documento: ${numeroDocumento}. Por favor, utilize um número único.`,
+          400
+        );
+      }
+
       const estabelecimento = await tx.estabelecimento.findUnique({
         where: { id: estabelecimentoId },
       });
@@ -92,7 +106,7 @@ class CreateMovimentoEntradaService {
             dataValidade: new Date(item.dataValidade),
             fabricante: item.fabricante,
             valorUnitario: item.valorUnitario,
-           
+
           },
 
           create: {
