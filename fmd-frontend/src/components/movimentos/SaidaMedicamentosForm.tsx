@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react'; // <-- Adicionado useEffect
+import React, { useState, useEffect } from 'react';
 import { Button, Card, Form, Row, Col, Table, Alert } from 'react-bootstrap';
 import type { MovimentoSaidaFormData, ItemMovimentoSaida } from '../../types/MovimentoSaida';
 import type { Medicamento } from '../../types/Medicamento';
 import type { Estabelecimento } from '../../types/Estabelecimento';
+
+// ✅ IMPORT REAL DO SERVIÇO DE ESTOQUE (Sem mock)
 import { estoqueService } from '../../store/services/estoqueService';
+
 
 interface SaidaMedicamentosFormProps {
   estabelecimentos: Estabelecimento[]; // Deve vir com apenas 1 item (o do usuário)
@@ -21,7 +24,7 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
   isLoading = false
 }) => {
 
-  // 🚨 DICA: Pegamos o ID e Nome do estabelecimento logo na primeira renderização
+  // DICA: Pegamos o ID e Nome do estabelecimento logo na primeira renderização
   const estabelecimentoLogado = estabelecimentos.length > 0 ? estabelecimentos[0] : null;
   const estabelecimentoIdInicial = estabelecimentoLogado ? estabelecimentoLogado.id : '';
 
@@ -63,6 +66,7 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
     // Agora só usa o formData.estabelecimentoId (que está inicializado)
     if (medicamentoId && formData.estabelecimentoId) {
       try {
+        // Uso do estoqueService (AGORA É O REAL)
         const estoque = await estoqueService.getEstoqueMedicamento(
           medicamentoId,
           formData.estabelecimentoId
@@ -79,12 +83,14 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
 
   const adicionarItem = () => {
     if (!novoItem.medicamentoId || novoItem.quantidadeSaida <= 0) {
-      alert('Selecione um medicamento e informe a quantidade');
+      // Usando console.error para evitar travamento com alert()
+      console.error('Selecione um medicamento e informe a quantidade');
       return;
     }
 
     if (novoItem.quantidadeSaida > estoqueDisponivel) {
-      alert(`Quantidade solicitada (${novoItem.quantidadeSaida}) excede o estoque disponível (${estoqueDisponivel})`);
+      // Usando console.error para evitar travamento com alert()
+      console.error(`Quantidade solicitada (${novoItem.quantidadeSaida}) excede o estoque disponível (${estoqueDisponivel})`);
       return;
     }
 
@@ -111,16 +117,17 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 🚨 NOVA VALIDAÇÃO: Garante que o estabelecimento está preenchido
+    // NOVA VALIDAÇÃO: Garante que o estabelecimento está preenchido
     if (!formData.estabelecimentoId) {
-      alert('Erro interno: ID do estabelecimento não definido. Recarregue a página.');
+      // Usando console.error para evitar travamento com alert()
+      console.error('Erro interno: ID do estabelecimento não definido. Recarregue a página.');
       return;
     }
 
     onSubmit(formData);
   };
 
-  // 🚨 NOVO: Se o estabelecimento não for carregado, mostra um erro claro
+  // NOVO: Se o estabelecimento não for carregado, mostra um erro claro
   if (!estabelecimentoLogado) {
     return (
       <Alert variant="danger" className="p-4">
@@ -142,7 +149,7 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
               <Form.Group>
                 <Form.Label>Estabelecimento *</Form.Label>
 
-                {/* 🚨 NOVO: Campo não editável que mostra o nome do estabelecimento */}
+                {/* NOVO: Campo não editável que mostra o nome do estabelecimento */}
                 <Form.Control
                   type="text"
                   value={estabelecimentoLogado.nome}
@@ -155,19 +162,23 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
             <Col md={6}>
               {/* O restante dos campos do cabeçalho do formulário... */}
               <Form.Group>
-                <Form.Label>Documento de Referência *</Form.Label>
+                {/* Rótulo do campo, agora sem o asterisco e com o texto de ajuda */}
+                <Form.Label>Documento de Referência</Form.Label>
                 <Form.Control
                   type="text"
                   value={formData.documentoReferencia}
                   onChange={(e) => setFormData(prev => ({ ...prev, documentoReferencia: e.target.value }))}
-                  placeholder="Ex: Requisição nº 001"
-                  required
+                  placeholder="Ex: Requisição nº 001 (Opcional - Será gerado se vazio)"
+                  // 🛑 O campo é OPCIONAL
                 />
+                <Form.Text className="text-muted">
+                  Se vazio, será gerado automaticamente (ex: SAIDA-20251118-XXXXXX).
+                </Form.Text>
               </Form.Group>
             </Col>
           </Row>
 
-         
+          
           <Row className="mb-3">
             <Col md={6}>
               <Form.Group>
@@ -197,7 +208,7 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
           </Row>
 
           <Form.Group className="mb-4">
-            <Form.Label>Justificativa da Saída  <span className="text-danger">*</span></Form.Label>
+            <Form.Label>Justificativa da Saída<span className="text-danger">*</span></Form.Label>
             <Form.Control
               as="textarea"
               rows={3}

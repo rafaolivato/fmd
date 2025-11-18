@@ -1,4 +1,3 @@
-// src/types/MovimentoSaida.ts
 export interface ItemMovimentoSaida {
   medicamentoId: string;
   quantidadeSaida: number;

@@ -6,23 +6,37 @@ export enum TipoSaidaDiversa {
   VALIDADE_VENCIDA = 'VALIDADE_VENCIDA',
 }
 
+/**
+ * Interface que representa a estrutura de um item de saída em lotes,
+ * com foco na quantidade que será baixada.
+ * Corresponde ao IItemSaidaDiversaDTO fornecido pelo usuário.
+ */
 export interface IItemSaidaDiversaDTO {
   medicamentoId: string;
-  quantidadeSaida: number; // Quantidade total a ser retirada (ex: 50)
-  // Nota: Não precisamos de 'loteId' forçado, pois a saída diversa deve priorizar o FIFO.
+  // Quantidade total a ser retirada. Deve ser um valor numérico válido.
+  quantidadeSaida: number; 
+  // Valor unitário é obrigatório no modelo do usuário para cálculo de custo ou venda.
   valorUnitario: number; 
 }
 
-// DTO principal para a requisição de Saída
+/**
+ * Interface que representa os dados recebidos do frontend (MovimentoSaidaFormData)
+ * para a criação de um novo movimento de saída no estoque.
+ * Corresponde ao ICreateMovimentoSaidaDTO fornecido pelo usuário.
+ */
 export interface ICreateMovimentoSaidaDTO {
   estabelecimentoId: string;
-  tipoMovimentacao: TipoSaidaDiversa;
+  // Usando o enum TipoSaidaDiversa para tipos aceitos.
+  tipoMovimentacao: TipoSaidaDiversa; 
   
-  // Campos de rastreabilidade (documento e justificativa)
-  documentoReferencia: string; // Ex: Número de Protocolo, Número de Ajuste
+  // Opcional, será gerado se vazio no serviço.
+  documentoReferencia?: string; 
+  // O serviço fará a conversão para Date.
   dataMovimento: Date | string; 
-  justificativa: string;
-  observacao?: string;
-
+  // Obrigatório para saídas.
+  justificativa: string; 
+  // Opcional.
+  observacao?: string; 
+  
   itens: IItemSaidaDiversaDTO[];
 }

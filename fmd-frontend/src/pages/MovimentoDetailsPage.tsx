@@ -15,7 +15,6 @@ const MovimentoDetailsPage: React.FC = () => {
     useEffect(() => {
         if (id) {
             loadMovimento(id);
-
         }
     }, [id]);
 
@@ -38,10 +37,21 @@ const MovimentoDetailsPage: React.FC = () => {
 
             console.log('📦 Estrutura completa do movimento:', JSON.stringify(data, null, 2));
 
+            // ✅ CORREÇÃO: Garantir que os valores unitários estejam presentes
             if (data.itensMovimentados && data.itensMovimentados.length > 0) {
                 console.log('🎯 Primeiro item detalhado:', data.itensMovimentados[0]);
                 console.log('💰 Valor unitário:', data.itensMovimentados[0].valorUnitario);
                 console.log('🔑 Campos do item:', Object.keys(data.itensMovimentados[0]));
+                
+                // Log para debug dos valores
+                data.itensMovimentados.forEach((item, index) => {
+                    console.log(`📊 Item ${index + 1}:`, {
+                        medicamento: item.medicamento.principioAtivo,
+                        valorUnitario: item.valorUnitario,
+                        quantidade: item.quantidade,
+                        tipoMovimento: data.tipoMovimentacao
+                    });
+                });
             } else {
                 console.log('⚠️  Nenhum item encontrado no movimento');
             }
@@ -57,38 +67,68 @@ const MovimentoDetailsPage: React.FC = () => {
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('pt-BR');
+        if (!dateString) return 'N/A';
+        try {
+            return new Date(dateString).toLocaleDateString('pt-BR');
+        } catch {
+            return dateString;
+        }
     };
 
-    const formatCurrency = (value: number) => {
+    // ✅ CORREÇÃO MELHORADA: Função para obter valor unitário seguro
+    const getValorUnitarioSeguro = (item: any) => {
+        // Se for ENTRADA, usa o valor unitário diretamente
+        if (movimento?.tipoMovimentacao === 'ENTRADA') {
+            return item.valorUnitario ?? 0;
+        }
+        
+        // Se for SAÍDA, tenta usar o valor unitário do item
+        // Se não tiver, poderia buscar do histórico (depende da sua lógica de negócio)
+        return item.valorUnitario ?? item.valorUnitarioEntrada ?? 0;
+    };
+
+    // ✅ CORREÇÃO: Função segura para formatação de moeda
+    const formatCurrency = (value: number | null | undefined) => {
+        const numericValue = value ?? 0;
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL'
-        }).format(value);
+        }).format(numericValue);
     };
 
     const getTotalItens = () => {
-        if (!movimento) return 0;
-        return movimento.itensMovimentados.reduce((total, item) => total + item.quantidade, 0);
+        if (!movimento || !movimento.itensMovimentados) return 0;
+        return movimento.itensMovimentados.reduce((total, item) => total + (item.quantidade ?? 0), 0);
     };
 
+    // ✅ CORREÇÃO MELHORADA: Função para calcular o total geral
     const calcularTotalGeral = () => {
         if (!movimento || !movimento.itensMovimentados) return 0;
 
         const total = movimento.itensMovimentados.reduce((soma, item) => {
-            const valorItem = (item.valorUnitario || 0) * (item.quantidade || 0);
-            console.log(`💰 Item ${item.medicamento.principioAtivo}: ${item.quantidade} x ${item.valorUnitario} = ${valorItem}`);
+            const valorUnitarioSeguro = getValorUnitarioSeguro(item);
+            const quantidadeSegura = item.quantidade ?? 0;
+
+            const valorItem = valorUnitarioSeguro * quantidadeSegura;
+            console.log(`💰 ${movimento?.tipoMovimentacao} - Item ${item.medicamento.principioAtivo}: ${quantidadeSegura} x ${valorUnitarioSeguro} = ${valorItem}`);
             return soma + valorItem;
         }, 0);
 
-        console.log(`🎯 Total Geral Calculado: ${total}`);
+        console.log(`🎯 Total Geral Calculado para ${movimento?.tipoMovimentacao}: ${total}`);
         return total;
+    };
+
+    // ✅ NOVA FUNÇÃO: Calcular valor total por item
+    const calcularTotalItem = (item: any) => {
+        const valorUnitarioSeguro = getValorUnitarioSeguro(item);
+        const quantidadeSegura = item.quantidade ?? 0;
+        return valorUnitarioSeguro * quantidadeSegura;
     };
 
     const getFonteFinanciamentoFormatada = (fonte: string) => {
         const fontes: { [key: string]: string } = {
+            'RECURSOS_PROPRIOS': 'Recursos Próprios',
             'RECURSOS_PRO_PRIOS': 'Recursos Próprios',
-            'RECURSOS_PRO PRIOS': 'Recursos Próprios',
             'SUS': 'SUS',
             'CONVENIO': 'Convênio',
             'DOACAO': 'Doação',
@@ -134,20 +174,20 @@ const MovimentoDetailsPage: React.FC = () => {
             <Row className="mt-4 mb-4">
                 <Col>
                     <Button variant="outline-primary" onClick={() => navigate(-1)}>
-                        <FaArrowLeft className="me-2" />
+                        <FaArrowLeft className="w-4 h-4 me-2" />
                         Voltar para Movimentos
                     </Button>
                 </Col>
                 <Col xs="auto">
                     <Button variant="outline-secondary" onClick={handlePrint} className="no-print">
-                        <FaPrint className="me-2" />
+                      <FaPrint className="w-4 h-4 me-2" />
                         Imprimir
                     </Button>
                 </Col>
             </Row>
 
             <Row>
-                <Col lg={8}>
+                <Col lg={12}>
                     <Card>
                         <Card.Header className="d-flex justify-content-between align-items-center">
                             <h5 className="card-title mb-0">
@@ -223,7 +263,7 @@ const MovimentoDetailsPage: React.FC = () => {
 
                             {/* Itens do Movimento */}
                             <h6>Itens do Movimento</h6>
-                            <Table striped bordered>
+                            <Table striped bordered responsive>
                                 <thead>
                                     <tr>
                                         <th>Medicamento</th>
@@ -252,14 +292,15 @@ const MovimentoDetailsPage: React.FC = () => {
                                             </td>
                                             <td>{item.numeroLote}</td>
                                             <td>{formatDate(item.dataValidade)}</td>
-                                            <td>{item.quantidade}</td>
+                                            <td>{item.quantidade ?? 0}</td>
+
+                                            {/* ✅ CORREÇÃO: Usando a função melhorada para valor unitário */}
                                             <td>
-                                                {item.valorUnitario.toLocaleString('pt-BR', {
-                                                    style: 'currency',
-                                                    currency: 'BRL'
-                                                })}
+                                                {formatCurrency(getValorUnitarioSeguro(item))}
                                             </td>
-                                            <td>{formatCurrency(item.valorUnitario * item.quantidade)}</td>
+
+                                            {/* ✅ CORREÇÃO: Usando função específica para cálculo do total do item */}
+                                            <td>{formatCurrency(calcularTotalItem(item))}</td>
                                         </tr>
                                     ))}
                                 </tbody>
