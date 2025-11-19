@@ -11,6 +11,7 @@ class UpdateMedicamentoController {
       concentracao,
       formaFarmaceutica,
       psicotropico,
+      estoqueMinimo
     } = request.body;
 
     try {
@@ -41,6 +42,7 @@ class UpdateMedicamentoController {
           concentracao,
           formaFarmaceutica,
           psicotropico,
+          estoqueMinimo
         },
       });
 

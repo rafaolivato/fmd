@@ -4,7 +4,7 @@ export interface Medicamento {
     concentracao: string;
     formaFarmaceutica: string;
     psicotropico: boolean;
-    quantidadeEstoque: number;
+    quantidadeEstoque?: number;
     estoqueMinimo: number;
     createdAt?: string;
     updatedAt?: string;
@@ -15,4 +15,5 @@ export interface Medicamento {
     concentracao: string;
     formaFarmaceutica: string;
     psicotropico: boolean;
+    estoqueMinimo: number;
   }

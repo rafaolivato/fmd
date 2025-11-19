@@ -21,7 +21,14 @@ export const dashboardService = {
       
       const response = await api.get('/dashboard/metrics');
       
-      console.log('✅ [FRONTEND] Resposta recebida:', response.data);
+       console.log('✅ [DASHBOARD] Métricas recebidas:', {
+        totalMedicamentos: response.data.totalMedicamentos,
+        entradasHoje: response.data.entradasHoje,
+        saidasHoje: response.data.saidasHoje,
+        dispensacoesHoje: response.data.dispensacoesHoje,
+        alertas: response.data.alertasEstoque?.length || 0
+      });
+      
       console.log('📊 [FRONTEND] Status:', response.status);
       
       return response.data;

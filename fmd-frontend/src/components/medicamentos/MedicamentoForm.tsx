@@ -6,6 +6,7 @@ interface MedicamentoFormProps {
   onSubmit: (data: MedicamentoFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  
 }
 
 const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
@@ -18,7 +19,8 @@ const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
     principioAtivo: '',
     concentracao: '',
     formaFarmaceutica: '',
-    psicotropico: false
+    psicotropico: false,
+    estoqueMinimo: 0
   });
 
   const [errors, setErrors] = useState<Partial<MedicamentoFormData>>({});
@@ -29,7 +31,8 @@ const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
         principioAtivo: medicamento.principioAtivo,
         concentracao: medicamento.concentracao,
         formaFarmaceutica: medicamento.formaFarmaceutica,
-        psicotropico: medicamento.psicotropico
+        psicotropico: medicamento.psicotropico,
+        estoqueMinimo: medicamento.estoqueMinimo
       });
     }
   }, [medicamento]);
@@ -152,6 +155,24 @@ const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
               </select>
               {errors.formaFarmaceutica && (
                 <div className="invalid-feedback">{errors.formaFarmaceutica}</div>
+              )}
+            </div>
+            <div className="col-md-6 mb-3">
+              <label htmlFor="estoqueMinimo" className="form-label">
+                Estoque Mínimo *
+              </label>
+                <input
+                type="number"
+                className={`form-control ${errors.estoqueMinimo ? 'is-invalid' : ''}`}
+                id="estoqueMinimo"
+                name="estoqueMinimo"
+                value={formData.estoqueMinimo}
+                onChange={handleChange}
+                placeholder="Ex: 10"
+                min={0}
+              />
+              {errors.estoqueMinimo && (
+                <div className="invalid-feedback">{errors.estoqueMinimo}</div>
               )}
             </div>
 

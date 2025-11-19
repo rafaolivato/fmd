@@ -1,6 +1,8 @@
+// src/store/services/api.ts
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:3333'; 
+// ✅ CORREÇÃO: Adicione /api na baseURL e use a porta 3333
+const BASE_URL = 'http://localhost:3333';  // ← ADICIONE /api AQUI
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -13,6 +15,7 @@ export const api = axios.create({
 // Interceptor para adicionar token automaticamente
 api.interceptors.request.use(
   (config) => {
+    
     const token = localStorage.getItem('@fmd:token') || localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -24,10 +27,19 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para tratar erros globalmente - CORREÇÃO AQUI
+// Interceptor para tratar erros globalmente
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ Resposta recebida de:', response.config.url, response.status); // ← DEBUG
+    return response;
+  },
   (error) => {
+    console.error('❌ Erro na requisição:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      message: error.message
+    });
+    
     // Só desloga se for especificamente erro de autenticação
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;

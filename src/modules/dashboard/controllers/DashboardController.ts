@@ -1,142 +1,164 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 
+// ✅ CORREÇÃO: Crie UMA instância do PrismaClient e reuse
 const prisma = new PrismaClient();
+
+// Interface para os alertas de estoque
+interface AlertaEstoque {
+    id: string;
+    medicamento: string;
+    quantidade: number;
+    estoqueMinimo: number;
+    tipo: 'CRITICO' | 'ALERTA' | 'ATENCAO';
+}
 
 class DashboardController {
     async getMetrics(request: Request, response: Response) {
+        console.log('\n🎯 [BACKEND] DashboardController.getMetrics CHAMADO');
+
         try {
-            await prisma.$connect();
-            console.log('✅ Conexão com o banco estabelecida');
+            // 1. Definição das datas (A CORREÇÃO ESTÁ AQUI)
+            // Pegamos a data atual do sistema
+            const now = new Date();
+            
+            // Construímos o início do dia forçando UTC 00:00:00.000
+            // Isso garante que bata com o '2025-11-19T00:00:00.000Z' do banco
+            const startOfDay = new Date(Date.UTC(
+                now.getFullYear(), 
+                now.getMonth(), 
+                now.getDate(), 
+                0, 0, 0, 0
+            ));
 
-            // 1. Definição do Período (Hoje)
-            const hoje = new Date();
-            hoje.setHours(0, 0, 0, 0);
+            // Construímos o fim do dia forçando UTC 23:59:59.999
+            const endOfDay = new Date(Date.UTC(
+                now.getFullYear(), 
+                now.getMonth(), 
+                now.getDate(), 
+                23, 59, 59, 999
+            ));
 
-            const amanha = new Date(hoje);
-            amanha.setDate(amanha.getDate() + 1);
+            console.log('📅 Período de Busca (UTC Puro):', {
+                inicio: startOfDay.toISOString(),
+                fim: endOfDay.toISOString()
+            });
 
-            // 2. Inicialização das Métricas
-            let totalMedicamentos = 0;
-            let entradasHoje = 0;
-            let saidasHoje = 0;
-            let dispensacoesHoje = 0; // <-- NOVA MÉTRICA
+            // 2. Total de medicamentos (Geral)
+            const totalMedicamentos = await prisma.medicamento.count();
 
-            type AlertaEstoque = {
-                id: string;
-                medicamento: string;
-                quantidade: number;
-                estoqueMinimo: number;
-                tipo: 'CRITICO' | 'ALERTA' | 'ATENCAO' | string;
-            };
-
-            let alertasEstoque: AlertaEstoque[] = [];
-
-            try {
-                // Total de medicamentos
-                totalMedicamentos = await prisma.medicamento.count().catch(() => 0);
-
-                // Movimentações de ENTRADA (Tipo Movimento)
-                entradasHoje = await prisma.movimento.count({
-                    where: {
-                        tipoMovimentacao: 'ENTRADA',
-                        dataDocumento: { gte: hoje, lt: amanha }
+            // 3. Entradas de hoje
+            const entradasHoje = await prisma.movimento.count({
+                where: {
+                    OR: [
+                        { tipoMovimentacao: 'ENTRADA' },
+                        { tipoMovimentacao: 'Entrada Ordinária' },
+                        { tipoMovimentacao: 'DOAÇÃO' }
+                    ],
+                    dataDocumento: {
+                        gte: startOfDay,
+                        lte: endOfDay
                     }
-                }).catch(() => 0);
-
-                // Movimentações de SAÍDA (Tipo Movimento - Não Dispensa)
-                // Se SAIDA incluir dispensação, use: tipoMovimentacao: 'SAIDA'
-                // Se SAIDA for apenas Transferência, use: tipoMovimentacao: 'SAIDA_TRANSFERENCIA' (ajuste conforme seu modelo)
-                saidasHoje = await prisma.movimento.count({
-                    where: {
-                        tipoMovimentacao: 'SAIDA',
-                        dataDocumento: { gte: hoje, lt: amanha }
-                    }
-                }).catch(() => 0);
-
-                // Movimentações de DISPENSAÇÃO (Assumindo que há uma tabela 'dispensacao' ou tipo na 'movimento')
-                // 💡 Se você usa uma tabela 'Dispensacao', use:
-                // dispensacoesHoje = await prisma.dispensacao.count({
-                //     where: { createdAt: { gte: hoje, lt: amanha } }
-                // }).catch(() => 0);
-                
-                // 💡 Se você usa o campo 'tipoMovimentacao' na tabela 'movimento':
-                dispensacoesHoje = await prisma.movimento.count({
-                    where: {
-                        tipoMovimentacao: 'DISPENSACAO', // Use o valor exato do seu enum/string
-                        dataDocumento: { gte: hoje, lt: amanha }
-                    }
-                }).catch(() => 0);
-
-
-                console.log('✅ Entradas hoje:', entradasHoje);
-                console.log('✅ Saídas hoje:', saidasHoje);
-                console.log('✅ Dispensações hoje:', dispensacoesHoje);
-
-
-                // Lógica de Alertas de Estoque (manteremos o mock por enquanto, mas com a estrutura real)
-                try {
-                    const estoquesComMedicamento = await prisma.estoqueLocal.findMany({
-                         include: { medicamento: true },
-                         where: { quantidade: { lt: 10 } } // Busca apenas estoques baixos
-                    });
-                    
-                    alertasEstoque = estoquesComMedicamento.map((estoque) => {
-                        const estoqueMinimo = estoque.medicamento.estoqueMinimo || 100;
-                        let tipo: 'CRITICO' | 'ALERTA' | 'ATENCAO' = 'ATENCAO';
-
-                        if (estoque.quantidade <= 0 || estoque.quantidade < estoqueMinimo) {
-                            tipo = 'CRITICO';
-                        } else if (estoque.quantidade < estoqueMinimo * 1.5) {
-                            tipo = 'ALERTA';
-                        }
-                        
-                        return {
-                            id: estoque.id,
-                            medicamento: `${estoque.medicamento.principioAtivo} - ${estoque.medicamento.concentracao}`,
-                            quantidade: estoque.quantidade,
-                            estoqueMinimo,
-                            tipo,
-                        };
-                    });
-
-                } catch (estoqueError) {
-                    // Fallback para alertas
-                    console.log('⚠️ Erro ao buscar estoque, usando dados mock', estoqueError);
-                    alertasEstoque = [
-                        { id: '1', medicamento: 'Paracetamol 500mg', quantidade: 2, estoqueMinimo: 10, tipo: 'CRITICO' },
-                        { id: '2', medicamento: 'Dipirona 500mg', quantidade: 8, estoqueMinimo: 10, tipo: 'ALERTA' }
-                    ];
                 }
+            });
 
-            } catch (dbError) {
-                console.log('⚠️ Erro em consultas específicas, usando valores padrão');
-                // Valores padrão se alguma consulta falhar
+            // 4. Saídas de hoje
+            const saidasHoje = await prisma.movimento.count({
+                where: {
+                    OR: [
+                        { tipoMovimentacao: 'SAIDA' },
+                        { tipoMovimentacao: 'PERDA' },
+                        { tipoMovimentacao: 'TRANSFERENCIA' }
+                    ],
+                    dataDocumento: {
+                        gte: startOfDay,
+                        lte: endOfDay
+                    }
+                }
+            });
+
+            // 5. Dispensações de hoje
+            let dispensacoesHoje = 0;
+            try {
+                // Verifica se a tabela dispensacao existe antes de tentar contar
+                dispensacoesHoje = await prisma.dispensacao.count({
+                    where: {
+                        createdAt: {
+                            gte: startOfDay,
+                            lte: endOfDay
+                        }
+                    }
+                });
+            } catch (error) {
+                console.log('⚠️ Tabela de dispensações não encontrada ou vazia, assumindo 0.');
             }
 
-            // 3. Resposta Final
-            response.json({
+            // 6. Alertas de Estoque
+            let alertasEstoque: AlertaEstoque[] = [];
+            try {
+                const medicamentosComEstoqueBaixo = await prisma.medicamento.findMany({
+                    where: {
+                        OR: [
+                            { quantidadeEstoque: { lt: prisma.medicamento.fields.estoqueMinimo } },
+                            { quantidadeEstoque: { equals: 0 } }
+                        ]
+                    },
+                    select: {
+                        id: true,
+                        principioAtivo: true,
+                        concentracao: true,
+                        formaFarmaceutica: true,
+                        quantidadeEstoque: true,
+                        estoqueMinimo: true
+                    }
+                });
+
+                alertasEstoque = medicamentosComEstoqueBaixo.map(med => {
+                    let tipo: 'CRITICO' | 'ALERTA' | 'ATENCAO';
+                    
+                    if (med.quantidadeEstoque === 0) {
+                        tipo = 'CRITICO';
+                    } else if (med.quantidadeEstoque <= (Number(med.estoqueMinimo) * 0.2)) {
+                        tipo = 'CRITICO';
+                    } else if (med.quantidadeEstoque <= (Number(med.estoqueMinimo) * 0.5)) {
+                        tipo = 'ALERTA';
+                    } else {
+                        tipo = 'ATENCAO';
+                    }
+
+                    return {
+                        id: med.id,
+                        medicamento: `${med.principioAtivo} - ${med.concentracao}`,
+                        quantidade: med.quantidadeEstoque,
+                        estoqueMinimo: med.estoqueMinimo,
+                        tipo
+                    };
+                });
+            } catch (error) {
+                console.error('⚠️ Erro ao processar alertas de estoque:', error);
+            }
+
+            // 7. Montagem e Envio da Resposta
+            const metrics = {
                 totalMedicamentos,
                 entradasHoje,
                 saidasHoje,
-                dispensacoesHoje, // <-- RETORNANDO A NOVA MÉTRICA
+                dispensacoesHoje,
                 alertasEstoque
-            });
+            };
 
-        } catch (error) {
-            console.error('❌ Erro geral no dashboard:', error);
-            // Retorna dados mock em caso de erro
-            response.json({
-                totalMedicamentos: 0,
-                entradasHoje: 0,
-                saidasHoje: 0,
-                dispensacoesHoje: 0,
-                alertasEstoque: []
+            console.log('✅ Métricas recuperadas com sucesso:', metrics);
+            return response.json(metrics);
+
+        } catch (error: any) {
+            console.error('❌ Erro FATAL no dashboard:', error);
+            return response.status(500).json({
+                error: 'Erro ao buscar métricas',
+                details: error.message
             });
-        } finally {
-            await prisma.$disconnect().catch(() => {});
         }
     }
+
 }
 
 export { DashboardController };
