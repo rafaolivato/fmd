@@ -16,6 +16,7 @@ import PerfilPage from './pages/PerfilPage';
 import FornecedoresPage from './pages/FornecedoresPage';
 import DashboardHome from './pages/DashboardHome';
 import MovimentoDetailsPage from './pages/MovimentoDetailsPage';
+import HistoricoEntradas from './pages/HistoricoEntradas';
 
 const NotFound = () => <h1>404 | Página não encontrada</h1>;
 
@@ -59,6 +60,8 @@ const App: React.FC = () => {
         <Route path="requisicoes/nova" element={<NovaRequisicaoPage />} />
 
         <Route path="requisicoes" element={<RequisicoesPage />} />
+
+        <Route path="historico" element={<HistoricoEntradas />} />
         
 
         {/* Adicione outras rotas aqui */}

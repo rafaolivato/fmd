@@ -16,12 +16,38 @@ export interface DashboardMetrics {
 
 export const dashboardService = {
   async getMetrics(): Promise<DashboardMetrics> {
-    const response = await api.get('/dashboard/metrics');
-    return response.data;
-  },
-
-  async getAlertasEstoque() {
-    const response = await api.get('/dashboard/alertas-estoque');
-    return response.data;
+    try {
+      console.log('🔄 [FRONTEND] Iniciando busca das métricas...');
+      
+      const response = await api.get('/dashboard/metrics');
+      
+      console.log('✅ [FRONTEND] Resposta recebida:', response.data);
+      console.log('📊 [FRONTEND] Status:', response.status);
+      
+      return response.data;
+      
+    } catch (error: any) {
+      console.error('❌ [FRONTEND] Erro completo:', error);
+      
+      // Log detalhado do erro
+      console.log('🔍 [FRONTEND] Detalhes do erro:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        message: error.message
+      });
+      
+      // Verifica se é erro de CORS
+      if (error.message?.includes('Network Error') || error.message?.includes('CORS')) {
+        throw new Error('Erro de conexão/CORS. Verifique se o backend está rodando e acessível.');
+      }
+      
+      throw new Error(
+        error.response?.data?.message || 
+        `Erro ${error.response?.status || 'N/A'}: ${error.message}`
+      );
+    }
   }
 };

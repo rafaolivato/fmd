@@ -211,23 +211,7 @@ const MovimentosPage: React.FC = () => {
                   </Form.Group>
                 </Col>
                 
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label>Fornecedor</Form.Label>
-                    <Form.Select
-                      value={filtroFornecedor}
-                      onChange={(e) => setFiltroFornecedor(e.target.value)}
-                    >
-                      <option value="">Todos os fornecedores</option>
-                      {fornecedoresOptions.map(fornecedor => (
-                        <option key={fornecedor} value={fornecedor}>
-                          {fornecedor}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-                
+                              
                 <Col md={4}>
                   <Form.Group>
                     <Form.Label>Medicamento</Form.Label>

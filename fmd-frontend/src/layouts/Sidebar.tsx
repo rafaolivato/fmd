@@ -17,7 +17,7 @@ import {
   FaPlus,
   FaList,
   FaTruck
-  
+
 
 } from 'react-icons/fa';
 
@@ -50,11 +50,11 @@ const navItems: NavItem[] = [
         icon: <FaCapsules size={14} />,
         path: '/medicamentos'
       },
-       {
-      name: 'Fornecedores', 
-      icon: <FaTruck size={14} />, 
-      path: '/fornecedores'
-    },
+      {
+        name: 'Fornecedores',
+        icon: <FaTruck size={14} />,
+        path: '/fornecedores'
+      },
 
       { name: 'Pacientes', icon: <FaUserPlus size={14} />, path: '/pacientes' },
     ]
@@ -62,8 +62,19 @@ const navItems: NavItem[] = [
   {
     name: 'Entrada',
     icon: <FaSignInAlt size={16} />,
-    path: '/entradas'
+    path: '#',
+    children: [
+      {
+        name: 'Entrada', icon: <FaSignInAlt size={14}/>,
+        path: '/entradas'
+      },
+      {
+        name: 'Histórico', icon:<FaHistory size={14}/>,
+        path: 'historico'
+      }
+    ]
   },
+
   {
     name: 'Movimentação',
     icon: <FaExchangeAlt size={16} />,
@@ -74,7 +85,6 @@ const navItems: NavItem[] = [
       { name: 'Histórico', icon: <FaHistory size={14} />, path: '/movimentacoes' },
 
     ]
-
   },
   {
     name: 'Dispensação',
@@ -93,7 +103,7 @@ const navItems: NavItem[] = [
     children: [
       { name: 'Nova Requisição', icon: <FaPlus size={14} />, path: '/requisicoes/nova' },
       { name: 'Minhas Requisições', icon: <FaList size={14} />, path: '/requisicoes' },
-      
+
     ]
   },
 
@@ -125,7 +135,7 @@ const Sidebar: React.FC = () => {
   return (
     <div className="sidebar bg-light border-end" style={{ width: '250px', minHeight: '100vh' }}>
       <div className="sidebar bg-light border-end" style={{ width: '250px', minHeight: '100vh' }}>
-        
+
         <Nav className="flex-column p-3">
           {navItems.map((item) => (
             <div key={item.name}>
@@ -179,9 +189,9 @@ const Sidebar: React.FC = () => {
             </div>
           ))}
         </Nav>
-        </div>
       </div>
-      );
+    </div>
+  );
 };
 
-      export default Sidebar;
+export default Sidebar;

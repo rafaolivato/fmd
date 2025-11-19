@@ -90,7 +90,7 @@ const EstabelecimentoForm: React.FC<EstabelecimentoFormProps> = ({ show, handleC
                     </Form.Group>
 
                     <Form.Group className="mb-3" controlId="formCNPJ">
-                        <Form.Label>CNPJ (Opcional)</Form.Label>
+                        <Form.Label>CNES</Form.Label>
                         <Form.Control 
                             type="text" 
                             value={cnpj} 

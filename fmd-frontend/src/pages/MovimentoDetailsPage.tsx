@@ -42,7 +42,7 @@ const MovimentoDetailsPage: React.FC = () => {
                 console.log('🎯 Primeiro item detalhado:', data.itensMovimentados[0]);
                 console.log('💰 Valor unitário:', data.itensMovimentados[0].valorUnitario);
                 console.log('🔑 Campos do item:', Object.keys(data.itensMovimentados[0]));
-                
+
                 // Log para debug dos valores
                 data.itensMovimentados.forEach((item, index) => {
                     console.log(`📊 Item ${index + 1}:`, {
@@ -69,9 +69,16 @@ const MovimentoDetailsPage: React.FC = () => {
     const formatDate = (dateString: string) => {
         if (!dateString) return 'N/A';
         try {
-            return new Date(dateString).toLocaleDateString('pt-BR');
-        } catch {
-            return dateString;
+            // ✅ SOLUÇÃO DEFINITIVA
+            const date = new Date(dateString);
+
+            // Corrige o problema do timezone adicionando o offset
+            const correctedDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+
+            return correctedDate.toLocaleDateString('pt-BR');
+
+        } catch (error) {
+            return dateString; // Retorna o original se der erro
         }
     };
 
@@ -81,7 +88,7 @@ const MovimentoDetailsPage: React.FC = () => {
         if (movimento?.tipoMovimentacao === 'ENTRADA') {
             return item.valorUnitario ?? 0;
         }
-        
+
         // Se for SAÍDA, tenta usar o valor unitário do item
         // Se não tiver, poderia buscar do histórico (depende da sua lógica de negócio)
         return item.valorUnitario ?? item.valorUnitarioEntrada ?? 0;
@@ -164,10 +171,102 @@ const MovimentoDetailsPage: React.FC = () => {
         );
     }
 
-    function handlePrint(event: React.MouseEvent<HTMLButtonElement>): void {
+    const handlePrint = (event: React.MouseEvent<HTMLButtonElement>): void => {
         event.preventDefault();
-        window.print();
-    }
+
+        // Adiciona informações antes de imprimir
+        const printContent = `
+        <div class="print-header">
+            <h1>Sistema de Gestão Farmacêutica</h1>
+            <p class="subtitle">Relatório de Movimentação - ${movimento?.numeroDocumento}</p>
+            <p class="print-date">Emitido em: ${new Date().toLocaleDateString('pt-BR')}</p>
+        </div>
+    `;
+
+        // Cria um estilo temporário para impressão
+        const printStyle = `
+        <style>
+            @media print {
+                body * {
+                    visibility: hidden;
+                }
+                .print-area, .print-area * {
+                    visibility: visible;
+                }
+                .print-area {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                }
+                .no-print {
+                    display: none !important;
+                }
+                .print-header {
+                    text-align: center;
+                    border-bottom: 2px solid #333;
+                    margin-bottom: 20px;
+                    padding-bottom: 10px;
+                    display: block !important;
+                }
+                .print-header h1 {
+                    color: #2c5aa0;
+                    font-size: 24px;
+                    margin: 0;
+                }
+                .print-header .subtitle {
+                    color: #666;
+                    font-size: 14px;
+                }
+                .print-header .print-date {
+                    color: #888;
+                    font-size: 12px;
+                }
+                table {
+                    width: 100% !important;
+                    border-collapse: collapse;
+                }
+                th {
+                    background-color: #f8f9fa !important;
+                    color: #000 !important;
+                    font-weight: bold;
+                }
+                td, th {
+                    border: 1px solid #ddd !important;
+                    padding: 8px !important;
+                }
+            }
+        </style>
+    `;
+
+        // Abre nova janela para impressão
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`
+            <html>
+                
+                <head>
+                    <title>Movimentação ${movimento?.numeroDocumento}</title>
+                    ${printStyle}
+                </head>
+                <body>
+                    ${printContent}
+                    <div class="print-area">
+                        ${document.querySelector('.card')?.outerHTML}
+                    </div>
+                </body>
+            </html>
+        `);
+            printWindow.document.close();
+            printWindow.focus();
+
+            // Espera o conteúdo carregar antes de imprimir
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 250);
+        }
+    };
 
     return (
         <Container fluid>
@@ -180,7 +279,7 @@ const MovimentoDetailsPage: React.FC = () => {
                 </Col>
                 <Col xs="auto">
                     <Button variant="outline-secondary" onClick={handlePrint} className="no-print">
-                      <FaPrint className="w-4 h-4 me-2" />
+                        <FaPrint className="w-4 h-4 me-2" />
                         Imprimir
                     </Button>
                 </Col>

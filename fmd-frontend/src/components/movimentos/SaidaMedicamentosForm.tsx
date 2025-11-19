@@ -171,10 +171,7 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
                   placeholder="Ex: Requisição nº 001 (Opcional - Será gerado se vazio)"
                   // 🛑 O campo é OPCIONAL
                 />
-                <Form.Text className="text-muted">
-                  Se vazio, será gerado automaticamente (ex: SAIDA-20251118-XXXXXX).
-                </Form.Text>
-              </Form.Group>
+                </Form.Group>
             </Col>
           </Row>
 
