@@ -11,3 +11,4 @@ export class ListMedicamentosComEstoqueAlmoxarifadoController {
     return response.json(medicamentos);
   }
 }
+

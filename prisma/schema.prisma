@@ -27,6 +27,8 @@ model Medicamento {
   concentracao      String
   formaFarmaceutica String
   psicotropico      Boolean           @default(false)
+  categoriaControladaId String?
+  categoriaControlada   CategoriaControlada? @relation(fields: [categoriaControladaId], references: [id])
   quantidadeEstoque Int               @default(0) // Estoque total, independente do lote
   estoqueMinimo     Int     @default(100)
   itensMovimentados ItemMovimento[] // Indica que um Medicamento pode ter muitos ItemMovimento
@@ -36,6 +38,21 @@ model Medicamento {
   itensRequisicao   ItemRequisicao[] // Referência inversa de ItemRequisicao
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+
+  @@index([categoriaControladaId])
+  @@index([psicotropico])
+
+}
+
+model CategoriaControlada {
+  id          String   @id @default(uuid())
+  nome        String   @unique  // "PSICOTRÓPICO", "ENTORPECENTE", "ANTIMICROBIANO"
+  tipo        String?           // "A1", "A2", "A3", "B1", "B2", "C1", etc.
+  descricao   String?
+  
+  medicamentos Medicamento[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Movimento {
@@ -109,7 +126,9 @@ model Dispensacao {
   // DADOS DA SAÍDA GERAL (Receituário)
   pacienteNome        String
   pacienteCpf         String? // Opcional, dependendo da regra
-  profissionalSaude   String? // Médico, dentista, etc.
+  profissionalSaudeId     String?  // ID do profissional cadastrado
+  profissionalSaude       ProfissionalSaude? @relation(fields: [profissionalSaudeId], references: [id])
+  profissionalSaudeNome   String? // Nome livre para quando não houver cadastro
   documentoReferencia String // Ex: Número do Receituário, Prontuário
   dataDispensacao     DateTime @default(now())
   observacao          String?
@@ -126,6 +145,8 @@ model Dispensacao {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("dispensacoes")
 }
 
 model ItemDispensacao {
@@ -145,12 +166,32 @@ model ItemDispensacao {
   dispensacaoId String
   dispensacao   Dispensacao @relation(fields: [dispensacaoId], references: [id])
 
+  isControlado Boolean @default(false)
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relação inversa no Medicamento:
   // @relation(name: "DispensacaoDeItens")
+
+  @@map("itens_dispensacao")
 }
+
+model ProfissionalSaude {
+  id        String   @id @default(uuid())
+  nome      String   @unique
+  crm       String?  // ou outro registro profissional
+  
+  // Relações
+  dispensacoes Dispensacao[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("profissionais_saude")
+}
+
+
 
 model Estabelecimento {
   id   String  @id @default(uuid())

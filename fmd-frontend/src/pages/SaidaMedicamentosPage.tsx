@@ -8,6 +8,7 @@ import { medicamentoService } from '../store/services/medicamentoService';
 import { estabelecimentoService } from '../store/services/estabelecimentoService';
 import { authService } from '../store/services/authService';
 
+
 const SaidaMedicamentosPage: React.FC = () => {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [estabelecimentos, setEstabelecimentos] = useState<Estabelecimento[]>([]);
@@ -22,29 +23,37 @@ const SaidaMedicamentosPage: React.FC = () => {
   const loadData = async () => {
     try {
       setIsLoadingData(true);
-
-      // ✅ Carrega usuário logado primeiro
+  
       const userData = await authService.getCurrentUser();
       setUsuarioLogado(userData);
-
+  
+      if (!userData?.estabelecimentoId) {
+        throw new Error('Usuário não autenticado ou sem estabelecimento definido');
+      }
+  
+      // ✅ ORDEM CORRETA - certifique-se que está nesta ordem
       const [medsData, estsData] = await Promise.all([
-        medicamentoService.getAll(),
-        estabelecimentoService.getAll()
+        medicamentoService.getComEstoquePorEstabelecimento(userData.estabelecimentoId), // ← Medicamento[]
+        estabelecimentoService.getAll(), // ← Estabelecimento[]
+             
       ]);
-      setMedicamentos(medsData);
-
+  
+      // ✅ ATRIBUIÇÃO CORRETA
+      setMedicamentos(medsData); // Medicamento[] vai para medicamentos
+      
+     
+  
+      // ✅ CORREÇÃO: Agora filtrando estsData (que é Estabelecimento[])
       let estabelecimentosFiltrados: Estabelecimento[] = [];
-
+  
       if (userData && userData.estabelecimentoId) {
-        // Filtra a lista completa (estsData) para manter apenas o estabelecimento do usuário
         estabelecimentosFiltrados = estsData.filter(
           (est) => est.id === userData.estabelecimentoId
         );
       }
-
-      // 4. Atualiza o estado apenas com a lista filtrada
+  
       setEstabelecimentos(estabelecimentosFiltrados);
-
+  
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       alert('Erro ao carregar medicamentos e estabelecimentos');
@@ -55,11 +64,7 @@ const SaidaMedicamentosPage: React.FC = () => {
 
   const handleSubmit = async (formData: MovimentoSaidaFormData) => {
     try {
-      console.log('📤 ========== ENVIANDO SAÍDA ==========');
-      console.log('📋 Dados completos do formulário:', JSON.stringify(formData, null, 2));
-      console.log('📅 Data movimento:', formData.dataMovimento, 'Tipo:', typeof formData.dataMovimento);
-      console.log('📄 Documento referência:', formData.documentoReferencia);
-      
+            
       setIsLoading(true);
 
       if (formData.estabelecimentoId !== usuarioLogado?.estabelecimentoId) {
@@ -76,8 +81,7 @@ const SaidaMedicamentosPage: React.FC = () => {
       // Recarregar medicamentos para atualizar estoque
       await loadData();
     } catch (error) {
-    console.error('❌ ========== ERRO DETALHADO ==========');
-    
+      
     
       console.error('Erro ao registrar saída:', error);
       alert(error instanceof Error ? error.message : 'Erro ao registrar saída');

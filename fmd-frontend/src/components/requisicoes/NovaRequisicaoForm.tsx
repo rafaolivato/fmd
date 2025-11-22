@@ -168,9 +168,7 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
             </Col>
           </Row>
 
-          {/* Resto do código permanece igual */}
-          {/* ... Observações, Adicionar Itens, Itens Adicionados ... */}
-          
+                 
           {/* Observações */}
           <Form.Group className="mb-4">
             <Form.Label>Observações</Form.Label>

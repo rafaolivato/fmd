@@ -17,6 +17,10 @@ import FornecedoresPage from './pages/FornecedoresPage';
 import DashboardHome from './pages/DashboardHome';
 import MovimentoDetailsPage from './pages/MovimentoDetailsPage';
 import HistoricoEntradas from './pages/HistoricoEntradas';
+import RelatoriosPage from './pages/relatorios/RelatoriosPage';
+import PosicaoEstoquePage from './pages/relatorios/PosicaoEstoquePage';
+import RelatorioDispensacoesPage from './pages/relatorios/RelatorioDispensacaoPage';
+import ProfissionaisSaudePage from './pages/ProfissionaisSaudePage';
 
 const NotFound = () => <h1>404 | Página não encontrada</h1>;
 
@@ -62,7 +66,15 @@ const App: React.FC = () => {
         <Route path="requisicoes" element={<RequisicoesPage />} />
 
         <Route path="historico" element={<HistoricoEntradas />} />
+
+        <Route path="/relatorios" element={<RelatoriosPage />} />
+
+        <Route path="/relatorios/posicao-estoque" element={<PosicaoEstoquePage />} />
+
+        <Route path="/relatorios/dispensacoes" element={<RelatorioDispensacoesPage />} />
         
+        <Route path="profissionais-saude" element={<ProfissionaisSaudePage />} />
+
 
         {/* Adicione outras rotas aqui */}
       </Route>

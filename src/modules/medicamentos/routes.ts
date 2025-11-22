@@ -6,6 +6,7 @@ import { DeleteMedicamentoController } from './controllers/DeleteMedicamentoCont
 import { GetAllMedicamentosController } from './controllers/GetAllMedicamentosController';
 import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
 import { ListMedicamentosComEstoqueAlmoxarifadoController } from './controllers/ListMedicamentosComEstoqueAlmoxarifadoController';
+import { ListMedicamentosComEstoqueController } from './controllers/ListMedicamentosComEstoqueController';
 
 const medicamentosRoutes = Router();
 const createMedicamentoController = new CreateMedicamentoController();
@@ -14,6 +15,7 @@ const updateMedicamentoController = new UpdateMedicamentoController();
 const deleteMedicamentoController = new DeleteMedicamentoController();
 const getAllMedicamentosController = new GetAllMedicamentosController();
 const listMedsComEstoqueController = new ListMedicamentosComEstoqueAlmoxarifadoController();
+const listMedicamentosComEstoqueController = new ListMedicamentosComEstoqueController();
 
 // Todas as rotas de medicamentos precisam de autenticação
 medicamentosRoutes.use(ensureAuthenticated);
@@ -33,6 +35,8 @@ medicamentosRoutes.put('/:id', updateMedicamentoController.handle);
 medicamentosRoutes.delete('/:id', deleteMedicamentoController.handle);
 
 medicamentosRoutes.get('/com-estoque-almoxarifado', listMedsComEstoqueController.handle);
+
+medicamentosRoutes.get('/com-estoque', listMedicamentosComEstoqueController.handle);
 
 
 export { medicamentosRoutes };

@@ -37,4 +37,13 @@ export const medicamentoService = {
     return response.data;
   },
 
+  async getComEstoquePorEstabelecimento(estabelecimentoId: string): Promise<Medicamento[]> {
+    try {
+      const response = await api.get(`/medicamentos/com-estoque?estabelecimentoId=${estabelecimentoId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar medicamentos com estoque:', error);
+      throw error;
+    }
+  }
 };

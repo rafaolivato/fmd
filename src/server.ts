@@ -8,6 +8,7 @@ import { pacientesRoutes } from './modules/pacientes/routes';
 import { dispensacaoRoutes } from './modules/dispensacao/routes';
 import { userRoutes } from './modules/users/routes';
 import { movimentosRoutes } from './modules/movimentos/routes';
+import { profissionaisSaudeRoutes } from './modules/profissionaisSaude/routes';
 
 
 const app: Express = express(); 
@@ -29,6 +30,8 @@ app.use('/dispensacoes', dispensacaoRoutes);
 app.use('/usuarios', userRoutes);
 
 app.use('/movimentos', movimentosRoutes);
+
+app.use('/profissionais-saude', profissionaisSaudeRoutes);
 
 
 const PORT = process.env.PORT || 3333;

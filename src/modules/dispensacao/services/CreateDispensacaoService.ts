@@ -2,6 +2,7 @@ import { prisma } from '../../../database/prismaClient';
 import { AppError } from '../../../shared/errors/AppError';
 import { ICreateDispensacaoDTO } from '../dtos/ICreateDispensacaoDTO';
 
+
 class CreateDispensacaoService {
 
   // ✅ FUNÇÃO PARA DETECTAR TIPO PELO PADRÃO DO DOCUMENTO
@@ -63,6 +64,24 @@ class CreateDispensacaoService {
     }
   }
 
+  // ✅ FUNÇÃO PARA CRIAR A RELAÇÃO COM PROFISSIONAL DE SAÚDE
+  private getProfissionalSaudeRelation(profissionalSaudeId?: string, profissionalSaudeNome?: string) {
+    // Se tem ID, conecta com o profissional cadastrado
+    if (profissionalSaudeId) {
+      return {
+        connect: { id: profissionalSaudeId }
+      };
+    }
+
+    // Se não tem ID mas tem nome, usa o campo de texto livre
+    if (profissionalSaudeNome) {
+      return undefined; // O nome será salvo no campo profissionalSaudeNome
+    }
+
+    // Se não tem nenhum dos dois, fica undefined
+    return undefined;
+  }
+
   async execute(data: ICreateDispensacaoDTO) {
     const { estabelecimentoOrigemId, itens, ...dispensacaoData } = data;
 
@@ -83,7 +102,6 @@ class CreateDispensacaoService {
         let documentoReferenciaFinal = dispensacaoData.documentoReferencia;
         const tipoDetectado = this.detectarTipoDocumento(documentoReferenciaFinal);
 
-
         if (tipoDetectado === 'COMUM') {
           // Para documentos comuns, gera automaticamente se não foi fornecido
           if (!documentoReferenciaFinal || documentoReferenciaFinal.trim() === '') {
@@ -93,9 +111,7 @@ class CreateDispensacaoService {
             console.log(`📄 Usando número fornecido: ${documentoReferenciaFinal}`);
           }
         } else if (tipoDetectado === 'PSICOTROPICO') {
-
           this.validarDocumentoPsicotropico(documentoReferenciaFinal);
-
           console.log(`✅ Receita de psicotrópico validada: ${documentoReferenciaFinal}`);
 
           // ✅ VERIFICA SE JÁ EXISTE DISPENSAÇÃO COM ESTA RECEITA
@@ -128,21 +144,28 @@ class CreateDispensacaoService {
           }
         }
 
+        // ✅ PREPARA OS DADOS DA DISPENSAÇÃO
+        const dadosDispensacao: any = {
+          pacienteNome: dispensacaoData.pacienteNome,
+          pacienteCpf: dispensacaoData.pacienteCpf || null,
+          documentoReferencia: documentoReferenciaFinal,
+          observacao: dispensacaoData.observacao || null,
+          estabelecimentoOrigemId,
+          dataDispensacao: new Date(),
+          justificativaRetiradaAntecipada: dispensacaoData.justificativaRetiradaAntecipada || null,
+          usuarioAutorizador: dispensacaoData.usuarioAutorizador || null,
+          dataAutorizacao: dispensacaoData.justificativaRetiradaAntecipada ? new Date() : null,
+          profissionalSaudeNome: dispensacaoData.profissionalSaudeNome || null,
+        };
+
+        // ✅ CORREÇÃO: Use profissionalSaudeId diretamente
+        if (dispensacaoData.profissionalSaudeId) {
+          dadosDispensacao.profissionalSaudeId = dispensacaoData.profissionalSaudeId;
+        }
+
         // 2. Cria o cabeçalho da Dispensação
         const novaDispensacao = await tx.dispensacao.create({
-          data: {
-            pacienteNome: dispensacaoData.pacienteNome,
-            pacienteCpf: dispensacaoData.pacienteCpf || null,
-            profissionalSaude: dispensacaoData.profissionalSaude || null,
-            documentoReferencia: documentoReferenciaFinal,
-            observacao: dispensacaoData.observacao || null,
-            estabelecimentoOrigemId,
-            dataDispensacao: new Date(),
-            justificativaRetiradaAntecipada: dispensacaoData.justificativaRetiradaAntecipada || null,
-            usuarioAutorizador: dispensacaoData.usuarioAutorizador || null,
-            dataAutorizacao: dispensacaoData.justificativaRetiradaAntecipada ? new Date() : null,
-
-          },
+          data: dadosDispensacao,
         });
 
         console.log(`✅ Dispensação criada: ${novaDispensacao.id} - ${documentoReferenciaFinal}`);
@@ -240,6 +263,7 @@ class CreateDispensacaoService {
         return tx.dispensacao.findUnique({
           where: { id: novaDispensacao.id },
           include: {
+            profissionalSaude: true, // ✅ INCLUI O PROFISSIONAL SE HOUVER
             itensDispensados: {
               include: {
                 medicamento: {

@@ -1,4 +1,5 @@
-// src/types/Dispensacao.ts
+import { type ProfissionalSaude } from './ProfissionalSaude';
+
 export interface ItemDispensacaoForm {
   medicamentoId: string;
   quantidadeSaida: number;
@@ -8,7 +9,9 @@ export interface ItemDispensacaoForm {
 export interface DispensacaoFormData {
   pacienteNome: string;
   pacienteCpf?: string;
-  profissionalSaude?: string;
+  pacienteId?: string; 
+  profissionalSaudeId?: string;        // ID do profissional cadastrado
+  profissionalSaudeNome?: string;     
   documentoReferencia: string;
   observacao?: string;
   itens: ItemDispensacaoForm[];
@@ -21,7 +24,9 @@ export interface Dispensacao {
   id: string;
   pacienteNome: string;
   pacienteCpf?: string;
-  profissionalSaude?: string;
+  profissionalSaudeId?: string;
+  profissionalSaude?: ProfissionalSaude;
+  profissionalSaudeNome?: string;
   documentoReferencia: string;
   dataDispensacao: string;
   observacao?: string;

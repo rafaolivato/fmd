@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { CreateMovimentoSaidaService } from '../services/CreateMovimentoSaidaService';
 
+
 class CreateMovimentoSaidaController {
     async handle(request: Request, response: Response, next: NextFunction) {
 

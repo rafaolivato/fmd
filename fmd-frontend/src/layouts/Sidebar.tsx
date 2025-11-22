@@ -16,7 +16,8 @@ import {
   FaUserPlus,
   FaPlus,
   FaList,
-  FaTruck
+  FaTruck,
+  FaUserMd
 
 
 } from 'react-icons/fa';
@@ -55,10 +56,19 @@ const navItems: NavItem[] = [
         icon: <FaTruck size={14} />,
         path: '/fornecedores'
       },
-
-      { name: 'Pacientes', icon: <FaUserPlus size={14} />, path: '/pacientes' },
+      {
+        name: 'Pacientes', 
+        icon: <FaUserPlus size={14} />, 
+        path: '/pacientes' 
+      },
+      {
+        name: 'Profissionais de Saúde',
+        icon: <FaUserMd size={14} />, // Ou <FaStethoscope /> se preferir
+        path: '/profissionais-saude'
+      }
     ]
   },
+  
   {
     name: 'Entrada',
     icon: <FaSignInAlt size={16} />,
@@ -108,10 +118,28 @@ const navItems: NavItem[] = [
   },
 
   {
+    
     name: 'Relatórios',
     icon: <FaChartBar size={16} />,
-    path: '/relatorios'
-  },
+    path: '/relatorios',
+    children: [
+      {
+        name: 'Posição de Estoque',
+        path: '/relatorios/posicao-estoque',
+        icon: <FaFileAlt size={14} />
+      },
+      {
+        name: 'Movimentações', 
+        path: '/relatorios/movimentacoes',
+        icon: <FaFileAlt size={14} />
+      },
+      {
+        name: 'Dispensações',
+        path: '/relatorios/dispensacoes',
+        icon: <FaFileAlt size={14} />
+      }
+    ]
+  }
 ];
 
 const Sidebar: React.FC = () => {

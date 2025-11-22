@@ -1,4 +1,3 @@
-// src/types/Paciente.ts
 export interface Paciente {
   id: string;
   nome: string;

@@ -1,4 +1,3 @@
-// src/modules/medicamentos/controllers/UpdateMedicamentoController.ts
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../../../database/prismaClient';
 import { AppError } from '../../../shared/errors/AppError';
@@ -42,7 +41,7 @@ class UpdateMedicamentoController {
           concentracao,
           formaFarmaceutica,
           psicotropico,
-          estoqueMinimo
+          estoqueMinimo: Number(estoqueMinimo)
         },
       });
 

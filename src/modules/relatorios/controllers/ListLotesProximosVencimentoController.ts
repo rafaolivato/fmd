@@ -1,4 +1,3 @@
-// src/modules/relatorios/controllers/ListLotesProximosVencimentoController.ts
 import { Request, Response, NextFunction } from 'express';
 import { ListLotesProximosVencimentoService } from '../services/ListLotesProximosVencimentoService';
 

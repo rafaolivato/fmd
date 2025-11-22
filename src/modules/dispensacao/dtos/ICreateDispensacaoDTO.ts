@@ -8,7 +8,8 @@ export interface IItemDispensacaoDTO {
 export interface ICreateDispensacaoDTO {
   pacienteNome: string;
   pacienteCpf?: string;
-  profissionalSaude?: string;
+  profissionalSaudeId?: string;        // ID do profissional cadastrado (opcional)
+  profissionalSaudeNome?: string;      // Nome do profissional (se não for cadastrado)
   documentoReferencia: string;
   observacao?: string;
 

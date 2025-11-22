@@ -1,4 +1,3 @@
-// src/store/services/estoqueService.ts
 import { api } from './api';
 
 export interface EstoqueResponse {

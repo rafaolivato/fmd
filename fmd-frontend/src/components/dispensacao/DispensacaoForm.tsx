@@ -4,13 +4,16 @@ import type { DispensacaoFormData, ItemDispensacaoForm } from '../../types/Dispe
 import type { Medicamento } from '../../types/Medicamento';
 import type { Estabelecimento } from '../../types/Estabelecimento';
 import type { Paciente } from '../../types/Paciente';
-import { FaPlus, FaSearch, FaExclamationTriangle } from 'react-icons/fa';
+import type { ProfissionalSaude } from '../../types/ProfissionalSaude';
+import { FaPlus, FaExclamationTriangle } from 'react-icons/fa';
 import { estoqueService } from '../../store/services/estoqueService';
 import { retiradaService } from '../../store/services/retiradaService';
+
 
 interface DispensacaoFormProps {
   estabelecimentos: Estabelecimento[];
   medicamentos: Medicamento[];
+  profissionais: ProfissionalSaude[];
   pacientes: Paciente[];
   onSubmit: (data: DispensacaoFormData) => void;
   onCancel: () => void;
@@ -21,6 +24,7 @@ interface DispensacaoFormProps {
 const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   estabelecimentos,
   medicamentos,
+  profissionais,
   pacientes,
   onSubmit,
   onCancel,
@@ -33,7 +37,8 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   const [formData, setFormData] = useState<DispensacaoFormData>({
     pacienteNome: '',
     pacienteCpf: '',
-    profissionalSaude: '',
+    profissionalSaudeId: '',     // ID do profissional cadastrado
+    profissionalSaudeNome: '',
     documentoReferencia: '',
     observacao: '',
     itens: [],
@@ -46,12 +51,9 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   });
 
   const [estoqueDisponivel, setEstoqueDisponivel] = useState<number>(0);
-  const [showPacienteModal, setShowPacienteModal] = useState(false);
-  const [searchCpf, setSearchCpf] = useState('');
 
   const [tipoDocumento, setTipoDocumento] = useState<'COMUM' | 'PSICOTROPICO'>('COMUM');
 
-  // ✅ NOVOS ESTADOS PARA CONTROLE DE RETIRADA ANTECIPADA (ADICIONE APENAS ESTES)
   const [alertasRetirada, setAlertasRetirada] = useState<{ [key: string]: string }>({});
   const [showModalJustificativa, setShowModalJustificativa] = useState(false);
   const [justificativaTemp, setJustificativaTemp] = useState('');
@@ -214,20 +216,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     setMedicamentoPendente(null);
   };
 
-  // ✅ MANTENHA TODAS AS SUAS FUNÇÕES ORIGINAIS (NÃO MUDE):
-  const handleSearchPaciente = () => {
-    const pacienteEncontrado = pacientes.find(p => p.cpf === searchCpf);
-    if (pacienteEncontrado) {
-      setFormData(prev => ({
-        ...prev,
-        pacienteNome: pacienteEncontrado.nome,
-        pacienteCpf: pacienteEncontrado.cpf
-      }));
-      setShowPacienteModal(false);
-    } else {
-      alert('Paciente não encontrado. Cadastre um novo paciente.');
-    }
-  };
 
   const removerItem = (index: number) => {
     setFormData(prev => ({
@@ -307,36 +295,77 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                 <Row className="g-3">
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label>Nome do Paciente *</Form.Label>
+                      <Form.Label>Paciente *</Form.Label>
+                      <Form.Select
+                        value={formData.pacienteId || ''}
+                        onChange={(e) => {
+                          const selectedId = e.target.value;
+                          if (selectedId) {
+                            // ✅ Paciente selecionado da lista
+                            const pacienteSelecionado = pacientes.find(p => p.id === selectedId);
+                            setFormData(prev => ({
+                              ...prev,
+                              pacienteId: selectedId,
+                              pacienteNome: pacienteSelecionado?.nome || '',
+                              pacienteCpf: pacienteSelecionado?.cpf || ''
+                            }));
+                          } else {
+                            // ✅ Limpa campos quando seleciona "Selecione..."
+                            setFormData(prev => ({
+                              ...prev,
+                              pacienteId: undefined,
+                              pacienteNome: '',
+                              pacienteCpf: ''
+                            }));
+                          }
+                        }}
+                      >
+                        <option value="">Selecione ou digite abaixo...</option>
+                        {pacientes.map(paciente => (
+                          <option key={paciente.id} value={paciente.id}>
+                            {paciente.nome} {paciente.cpf ? `(CPF: ${paciente.cpf})` : ''}
+                          </option>
+                        ))}
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>Ou digite o nome do paciente *</Form.Label>
                       <Form.Control
                         type="text"
                         value={formData.pacienteNome}
-                        onChange={(e) => setFormData(prev => ({ ...prev, pacienteNome: e.target.value }))}
-                        placeholder="Nome completo do paciente"
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          pacienteNome: e.target.value,
+                          pacienteId: undefined, // ✅ Limpa ID quando digita manualmente
+                          pacienteCpf: '' // ✅ Limpa CPF também
+                        }))}
+                        placeholder="Digite o nome completo do paciente..."
+                        disabled={!!formData.pacienteId} // ✅ Desabilita se paciente foi selecionado
                         required
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={4}>
+
+                  <Col md={6}>
                     <Form.Group>
                       <Form.Label>CPF</Form.Label>
                       <Form.Control
                         type="text"
                         value={formData.pacienteCpf}
-                        onChange={(e) => setFormData(prev => ({ ...prev, pacienteCpf: e.target.value }))}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          pacienteCpf: e.target.value
+                        }))}
                         placeholder="000.000.000-00"
+                        disabled={!!formData.pacienteId} // ✅ Desabilita se paciente foi selecionado
                       />
+                      <Form.Text className="text-muted">
+                        {formData.pacienteId ? 'CPF preenchido automaticamente' : 'Opcional para pacientes não cadastrados'}
+                      </Form.Text>
                     </Form.Group>
-                  </Col>
-                  <Col md={2} className="d-flex align-items-end">
-                    <Button
-                      variant="outline-primary"
-                      onClick={() => setShowPacienteModal(true)}
-                      className="w-100"
-                    >
-                      <FaSearch className="me-2" />
-                      Buscar
-                    </Button>
                   </Col>
                 </Row>
               </Card.Body>
@@ -389,16 +418,44 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
               <Col md={6}>
                 <Form.Group>
                   <Form.Label>Profissional de Saúde</Form.Label>
+                  <Form.Select
+                    value={formData.profissionalSaudeId || ''}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        profissionalSaudeId: selectedId || undefined,
+                        profissionalSaudeNome: selectedId ? '' : prev.profissionalSaudeNome
+                      }));
+                    }}
+                  >
+                    <option value="">Selecione ou digite abaixo...</option>
+                    {profissionais.map(profissional => (
+                      <option key={profissional.id} value={profissional.id}>
+                        {profissional.nome} {profissional.crm ? `(CRM: ${profissional.crm})` : ''}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>Nome do Profissional (se não cadastrado)</Form.Label>
                   <Form.Control
                     type="text"
-                    value={formData.profissionalSaude}
-                    onChange={(e) => setFormData(prev => ({ ...prev, profissionalSaude: e.target.value }))}
-                    placeholder="Nome do médico/dentista..."
+                    value={formData.profissionalSaudeNome || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      profissionalSaudeNome: e.target.value,
+                      profissionalSaudeId: e.target.value ? undefined : prev.profissionalSaudeId // Limpa ID se digitar nome
+                    }))}
+                    placeholder="Digite o nome do profissional..."
+                    disabled={!!formData.profissionalSaudeId}
                   />
                 </Form.Group>
               </Col>
               <Col md={6}>
-
                 <Form.Group>
                   <Form.Label>
                     Documento de Referência *
@@ -453,13 +510,35 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                     <Form.Group>
                       <Form.Label>Quantidade *</Form.Label>
                       <Form.Control
-                        type="number"
-                        min="1"
-                        max={Math.max(1, estoqueDisponivel)}
-                        value={novoItem.quantidadeSaida}
-                        onChange={(e) => setNovoItem(prev => ({ ...prev, quantidadeSaida: Number(e.target.value) }))}
+                        type="text" // ✅ Mude para text
+                        value={novoItem.quantidadeSaida === 0 ? '' : novoItem.quantidadeSaida}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          // ✅ Permite apenas números e campo vazio
+                          if (value === '' || /^\d+$/.test(value)) {
+                            const numValue = value === '' ? 0 : Number(value);
+
+                            // ✅ Validação do estoque
+                            if (numValue <= estoqueDisponivel) {
+                              setNovoItem(prev => ({ ...prev, quantidadeSaida: numValue }));
+                            } else {
+                              // ✅ Opcional: Mostrar alerta se exceder estoque
+                              alert(`Quantidade não pode exceder o estoque disponível: ${estoqueDisponivel}`);
+                            }
+                          }
+                        }}
+                        placeholder="Digite a quantidade"
                         disabled={estoqueDisponivel === 0}
+                        // ✅ Adiciona dica visual do estoque máximo
+                        title={`Estoque disponível: ${estoqueDisponivel}`}
                       />
+                      {/* ✅ Feedback visual do estoque */}
+                      {estoqueDisponivel > 0 && (
+                        <Form.Text className="text-muted">
+                          Estoque disponível: <strong>{estoqueDisponivel}</strong>
+                        </Form.Text>
+                      )}
                     </Form.Group>
                   </Col>
                   <Col md={4} className="d-flex align-items-end">
@@ -545,62 +624,13 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
             </div>
           </Form>
         </Card.Body>
-      </Card>
-
-      {/* Modal de Busca de Paciente */}
-      <Modal show={showPacienteModal} onHide={() => setShowPacienteModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Buscar Paciente</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form.Group>
-            <Form.Label>Digite o CPF do paciente</Form.Label>
-            <Form.Control
-              type="text"
-              value={searchCpf}
-              onChange={(e) => setSearchCpf(e.target.value)}
-              placeholder="000.000.000-00"
-            />
-          </Form.Group>
-          <div className="mt-3">
-            <h6>Pacientes Cadastrados:</h6>
-            {pacientes.slice(0, 5).map(paciente => (
-              <div key={paciente.id} className="border p-2 mb-2 rounded">
-                <div><strong>{paciente.nome}</strong></div>
-                <small className="text-muted">CPF: {paciente.cpf}</small>
-                <Button
-                  size="sm"
-                  variant="outline-primary"
-                  className="ms-2"
-                  onClick={() => {
-                    setFormData(prev => ({
-                      ...prev,
-                      pacienteNome: paciente.nome,
-                      pacienteCpf: paciente.cpf
-                    }));
-                    setShowPacienteModal(false);
-                  }}
-                >
-                  Selecionar
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowPacienteModal(false)}>
-            Fechar
-          </Button>
-          <Button variant="primary" onClick={handleSearchPaciente}>
-            <FaSearch className="me-2" />
-            Buscar
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      </Card >
 
 
-      {/* ✅ 7. ADICIONE ESTE NOVO MODAL PARA JUSTIFICATIVA */}
-      <Modal show={showModalJustificativa} onHide={() => setShowModalJustificativa(false)}>
+
+
+      {/* Modal para Justificativa */}
+      < Modal show={showModalJustificativa} onHide={() => setShowModalJustificativa(false)}>
         <Modal.Header closeButton>
           <Modal.Title>
             <FaExclamationTriangle className="text-warning me-2" />
@@ -634,9 +664,11 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
             Confirmar Justificativa
           </Button>
         </Modal.Footer>
-      </Modal>
+      </Modal >
     </>
   );
+
 };
+
 
 export default DispensacaoForm;
