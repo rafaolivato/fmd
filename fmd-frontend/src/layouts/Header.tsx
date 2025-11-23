@@ -2,12 +2,14 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar, Container, NavDropdown, Nav, Badge } from 'react-bootstrap';
 import { authService } from '../store/services/authService'; // ✅ Importe seu authService
+import fmdLogo from "../assets/fmdachatato.png"; 
+import pill from "../assets/pill.png";
+
 import {
   FaUserCircle,
   FaBell,
   FaSignOutAlt,
   FaUser,
-  FaHospital,
   FaStore
 } from 'react-icons/fa';
 
@@ -40,8 +42,20 @@ const Header: React.FC = () => {
     >
       <Container fluid>
         <Navbar.Brand href="#home" className="d-flex align-items-center">
-          <FaHospital className="me-2" color="#0d6efd" size={20} />
-          <span className="fw-bold">FMD</span>
+        <img
+          src={pill}
+          alt="FMD Logo"
+          width="50"
+          height="50"
+          className="me-2"
+        />
+        <img
+          src={fmdLogo}
+          alt="FMD Logo"
+          width="60"
+          height="25"
+          className="me-2"
+        />
         </Navbar.Brand>
 
         <Navbar.Toggle aria-controls="basic-navbar-nav" />

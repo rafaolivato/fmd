@@ -21,6 +21,8 @@ import RelatoriosPage from './pages/relatorios/RelatoriosPage';
 import PosicaoEstoquePage from './pages/relatorios/PosicaoEstoquePage';
 import RelatorioDispensacoesPage from './pages/relatorios/RelatorioDispensacaoPage';
 import ProfissionaisSaudePage from './pages/ProfissionaisSaudePage';
+import PsicotropicosPage from './pages/relatorios/PsicotropicosPage'; 
+
 
 const NotFound = () => <h1>404 | Página não encontrada</h1>;
 
@@ -74,6 +76,8 @@ const App: React.FC = () => {
         <Route path="/relatorios/dispensacoes" element={<RelatorioDispensacoesPage />} />
         
         <Route path="profissionais-saude" element={<ProfissionaisSaudePage />} />
+
+        <Route path="/relatorios/livro-psicotropicos" element={<PsicotropicosPage />} />
 
 
         {/* Adicione outras rotas aqui */}

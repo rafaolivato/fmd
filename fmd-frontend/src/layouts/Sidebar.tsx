@@ -128,16 +128,17 @@ const navItems: NavItem[] = [
         path: '/relatorios/posicao-estoque',
         icon: <FaFileAlt size={14} />
       },
-      {
-        name: 'Movimentações', 
-        path: '/relatorios/movimentacoes',
-        icon: <FaFileAlt size={14} />
-      },
+     
       {
         name: 'Dispensações',
         path: '/relatorios/dispensacoes',
         icon: <FaFileAlt size={14} />
-      }
+      },
+      {
+        name: 'Livro de Psicotrópicos', 
+        path: '/relatorios/livro-psicotropicos',
+        icon: <FaFileAlt size={14} />
+      },
     ]
   }
 ];

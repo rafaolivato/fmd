@@ -4,12 +4,14 @@ import { ListLotesProximosVencimentoController } from './controllers/ListLotesPr
 import { ListEstoqueLocalController } from './controllers/ListEstoqueLocalController'; 
 import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
 import { RelatoriosController } from './controllers/RelatoriosController';
+import { LivrosControladosController } from './controllers/LivrosControladosController'; 
 
 const relatoriosRoutes = Router();
 const listLotesEmEstoqueController = new ListLotesEmEstoqueController();
 const listLotesProximosVencimentoController = new ListLotesProximosVencimentoController();
 const listEstoqueLocalController = new ListEstoqueLocalController();
 const relatoriosController = new RelatoriosController();
+const livrosControladosController = new LivrosControladosController();
 
 relatoriosRoutes.use(ensureAuthenticated);
 
@@ -30,5 +32,9 @@ relatoriosRoutes.get('/posicao-estoque', relatoriosController.getPosicaoEstoque)
 relatoriosRoutes.get('/estabelecimentos', relatoriosController.getEstabelecimentos);
 
 relatoriosRoutes.get('/dispensacoes', relatoriosController.getDispensacoes);
+
+relatoriosRoutes.get('/livros-controlados', (req, res) => {
+    livrosControladosController.getLivroPorCategoria(req, res);
+});
 
 export { relatoriosRoutes };

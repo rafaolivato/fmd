@@ -87,5 +87,4 @@ export const relatorioService = {
       throw new Error('Não foi possível carregar as dispensações');
     }
   }
-  // ✅ REMOVIDO: getDispensacoesMock
 };
