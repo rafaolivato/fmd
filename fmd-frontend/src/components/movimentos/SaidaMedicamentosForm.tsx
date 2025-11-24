@@ -169,13 +169,13 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
                   value={formData.documentoReferencia}
                   onChange={(e) => setFormData(prev => ({ ...prev, documentoReferencia: e.target.value }))}
                   placeholder="Ex: Requisição nº 001 (Opcional - Será gerado se vazio)"
-                  // 🛑 O campo é OPCIONAL
+                // 🛑 O campo é OPCIONAL
                 />
-                </Form.Group>
+              </Form.Group>
             </Col>
           </Row>
 
-          
+
           <Row className="mb-3">
             <Col md={6}>
               <Form.Group>
@@ -246,14 +246,40 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
                   <Form.Group>
                     <Form.Label>Quantidade *</Form.Label>
                     <Form.Control
-                      type="number"
-                      min="1"
-                      // Mantido o max para a validação visual
-                      max={estoqueDisponivel > 0 ? estoqueDisponivel : 1}
-                      value={novoItem.quantidadeSaida}
-                      onChange={(e) => setNovoItem(prev => ({ ...prev, quantidadeSaida: Number(e.target.value) }))}
+                      type="text" // ✅ Mudei para "text"
+                      value={novoItem.quantidadeSaida === 0 ? '' : novoItem.quantidadeSaida.toString()}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        // ✅ Permite apenas números e campo vazio
+                        if (value === '' || /^\d+$/.test(value)) {
+                          const numValue = value === '' ? 0 : Number(value);
+
+                          // ✅ Validação do estoque
+                          if (numValue <= estoqueDisponivel) {
+                            setNovoItem(prev => ({ ...prev, quantidadeSaida: numValue }));
+                          } else {
+                            // ✅ Opcional: Mostrar alerta se exceder estoque
+                            alert(`Quantidade não pode exceder o estoque disponível: ${estoqueDisponivel}`);
+                          }
+                        }
+                      }}
+                      placeholder={`Digite a quantidade (máx: ${estoqueDisponivel})`}
                       disabled={estoqueDisponivel === 0}
+                      // ✅ Remove completamente as setas do número
+                      style={{
+                        appearance: 'textfield',
+                        MozAppearance: 'textfield',
+                        WebkitAppearance: 'none'
+                      }}
+                      onWheel={(e) => e.currentTarget.blur()} // ✅ Previne scroll do mouse
                     />
+                    {/* ✅ Feedback visual do estoque */}
+                    {estoqueDisponivel > 0 && (
+                      <Form.Text className="text-muted">
+                        Estoque disponível: <strong>{estoqueDisponivel}</strong>
+                      </Form.Text>
+                    )}
                   </Form.Group>
                 </Col>
                 <Col md={4} className="d-flex align-items-end">

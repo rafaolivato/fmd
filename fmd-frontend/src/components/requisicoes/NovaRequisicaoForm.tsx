@@ -91,7 +91,7 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.atendenteId) {
       alert('Selecione o almoxarifado atendente');
       return;
@@ -168,7 +168,7 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
             </Col>
           </Row>
 
-                 
+
           {/* Observações */}
           <Form.Group className="mb-4">
             <Form.Label>Observações</Form.Label>
@@ -198,7 +198,7 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
                       <option value="">Selecione...</option>
                       {medicamentos.map(med => (
                         <option key={med.id} value={med.id}>
-                          {med.principioAtivo} - {med.concentracao}
+                          {med.principioAtivo}  {med.concentracao}
                         </option>
                       ))}
                     </Form.Select>
@@ -208,13 +208,28 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
                   <Form.Group>
                     <Form.Label>Quantidade *</Form.Label>
                     <Form.Control
-                      type="number"
-                      min="1"
-                      value={novoItem.quantidadeSolicitada}
-                      onChange={(e) => setNovoItem(prev => ({ 
-                        ...prev, 
-                        quantidadeSolicitada: Math.max(1, Number(e.target.value) || 1) 
-                      }))}
+                      type="text" // ✅ Mudei para "text"
+                      value={novoItem.quantidadeSolicitada === 0 ? '' : novoItem.quantidadeSolicitada.toString()}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        // ✅ Permite apenas números e campo vazio
+                        if (value === '' || /^\d+$/.test(value)) {
+                          const numValue = value === '' ? 0 : Number(value);
+
+                          // ✅ Garante que seja pelo menos 1
+                          const quantidadeFinal = Math.max(1, numValue);
+                          setNovoItem(prev => ({ ...prev, quantidadeSolicitada: quantidadeFinal }));
+                        }
+                      }}
+                      placeholder="Digite a quantidade"
+                      // ✅ Remove completamente as setas do número
+                      style={{
+                        appearance: 'textfield',
+                        MozAppearance: 'textfield',
+                        WebkitAppearance: 'none'
+                      }}
+                      onWheel={(e) => e.currentTarget.blur()} // ✅ Previne scroll do mouse
                     />
                   </Form.Group>
                 </Col>
@@ -269,7 +284,7 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
           )}
 
           <Alert variant="info">
-            <strong>💡 Como funciona:</strong> Esta requisição será enviada para o almoxarifado 
+            <strong>💡 Como funciona:</strong> Esta requisição será enviada para o almoxarifado
             selecionado, que poderá aprovar, reprovar ou atender parcialmente os itens solicitados.
           </Alert>
 
@@ -278,9 +293,9 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
             <Button variant="secondary" onClick={onCancel} disabled={isLoading}>
               Cancelar
             </Button>
-            <Button 
-              variant="primary" 
-              type="submit" 
+            <Button
+              variant="primary"
+              type="submit"
               disabled={isLoading || formData.itens.length === 0}
             >
               {isLoading ? 'Enviando...' : 'Enviar Requisição'}

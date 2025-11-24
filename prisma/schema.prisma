@@ -192,7 +192,6 @@ model ProfissionalSaude {
 }
 
 
-
 model Estabelecimento {
   id   String  @id @default(uuid())
   nome String  @unique

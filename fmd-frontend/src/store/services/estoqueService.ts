@@ -17,5 +17,16 @@ export const estoqueService = {
       console.error('Erro ao buscar estoque:', error);
       return 0; // Retorna 0 em caso de erro (estoque vazio)
     }
+  },
+   async getLotesDisponiveis(medicamentoId: string, estabelecimentoId: string): Promise<EstoqueLote[]> {
+    try {
+      const response = await api.get(
+        `/estoque/lotes-disponiveis?medicamentoId=${medicamentoId}&estabelecimentoId=${estabelecimentoId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar lotes disponíveis:', error);
+      throw error;
+    }
   }
 };

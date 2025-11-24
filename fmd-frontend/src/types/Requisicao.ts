@@ -40,6 +40,7 @@ export interface Requisicao {
       principioAtivo: string;
       concentracao: string;
       formaFarmaceutica: string;
+      psicotropico: boolean;
     };
   }>;
 }

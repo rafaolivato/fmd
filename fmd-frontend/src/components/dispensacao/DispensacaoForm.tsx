@@ -126,7 +126,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     }
   }, []);
 
-  // ✅ 2. MODIFIQUE A handleMedicamentoChange (ADICIONE APENAS ESTA LINHA)
   const handleMedicamentoChange = async (medicamentoId: string) => {
     setNovoItem(prev => ({
       ...prev,
