@@ -6,21 +6,26 @@ import { IItemAtendidoDTO } from '../dtos/IAtendimentoRequisicaoDTO';
 type PrismaTransaction = Prisma.TransactionClient;
 
 class AtenderRequisicaoService {
-  async execute(requisicaoId: string, itensAtendidos: IItemAtendidoDTO[]) {
+  async execute(requisicaoId: string, itens: IItemAtendidoDTO[]) { // Mudei para 'itens'
 
-    if (!itensAtendidos || itensAtendidos.length === 0) {
+    console.log('🔧 AtenderRequisicaoService - Iniciando:', {
+      requisicaoId,
+      totalItens: itens?.length || 0
+    });
+
+    if (!itens || itens.length === 0) {
       throw new AppError('Nenhum item de atendimento fornecido.', 400);
     }
 
     return await prisma.$transaction(async (tx: PrismaTransaction) => {
 
-      // 1. Search a Requisição e Itens
+      // 1. Busca a Requisição e Itens
       const requisicao = await tx.requisicao.findUnique({
         where: { id: requisicaoId },
         include: {
           itens: {
             include: {
-              medicamento: true // ✅ INCLUI MEDICAMENTO PARA VALIDAR CONTROLADOS
+              medicamento: true
             }
           },
           atendente: { select: { id: true } },
@@ -38,18 +43,23 @@ class AtenderRequisicaoService {
       const atendenteId = requisicao.atendente!.id; // ID do Almoxarifado Central (Origem)
       const solicitanteId = requisicao.solicitanteId; // ID da Farmácia (Destino)
 
-      // Mapeia os itens originais do BD para fácil acesso (itemId -> ItemRequisicao)
+      console.log('🏥 IDs estabelecimento:', { atendenteId, solicitanteId });
+
+      // Mapeia os itens originais do BD para fácil acesso
       const itensOriginaisMap = new Map(
         requisicao.itens.map(item => [item.id, item])
       );
 
-      let totalItensSolicitados = requisicao.itens.length;
       let totalItensAtendidos = 0;
-
       const operacoesEmLote: Promise<any>[] = [];
 
       // 2. Processa cada Item de ATENDIMENTO enviado no BODY
-      for (const itemAtendido of itensAtendidos) {
+      for (const itemAtendido of itens) { // Agora usando 'itens'
+        console.log(`📦 Processando item: ${itemAtendido.itemId}`, {
+          quantidadeAtendida: itemAtendido.quantidadeAtendida,
+          lotesSelecionados: itemAtendido.lotes?.length || 0
+        });
+
         const itemOriginal = itensOriginaisMap.get(itemAtendido.itemId);
 
         // Validação 1: O Item ID existe na requisição?
@@ -60,19 +70,24 @@ class AtenderRequisicaoService {
         const quantidadeAtender = itemAtendido.quantidadeAtendida;
         const { quantidadeSolicitada, medicamentoId, medicamento } = itemOriginal;
 
-        // ✅ CORREÇÃO: Remove a restrição de quantidade máxima
+        console.log(`💊 Medicamento: ${medicamento.principioAtivo}`, {
+          solicitado: quantidadeSolicitada,
+          atendendo: quantidadeAtender,
+          controlado: medicamento.psicotropico
+        });
+
         // Validação 2: Quantidade atendida é válida?
         if (quantidadeAtender < 0) {
           throw new AppError(`Quantidade a atender (${quantidadeAtender}) não pode ser negativa.`, 400);
         }
 
         if (quantidadeAtender === 0) {
-          // Se for 0, simplesmente pula o movimento, mas conta como 'processado'
+          console.log(`⏭️ Pulando item ${itemAtendido.itemId} - quantidade zero`);
           continue;
         }
 
-        // ✅ NOVA VALIDAÇÃO: Para medicamentos controlados, verifica se há lotes selecionados
-        if (medicamento.psicotropico && quantidadeAtender > 0) {
+        // ✅ VALIDAÇÃO PARA MEDICAMENTOS CONTROLADOS
+        if (medicamento.psicotropico) {
           if (!itemAtendido.lotes || itemAtendido.lotes.length === 0) {
             throw new AppError(
               `Para o medicamento controlado ${medicamento.principioAtivo}, é necessário selecionar os lotes.`,
@@ -88,9 +103,11 @@ class AtenderRequisicaoService {
               400
             );
           }
+
+          console.log(`✅ Validação controlado OK: ${totalLotes} = ${quantidadeAtender}`);
         }
 
-        // Validação 3: VERIFICA SE O ESTOQUE NÃO FICARÁ NEGATIVO! (A parte mais importante)
+        // Validação 3: VERIFICA ESTOQUE GERAL
         const estoqueOrigem = await tx.estoqueLocal.findUnique({
           where: {
             medicamentoId_estabelecimentoId: {
@@ -101,27 +118,39 @@ class AtenderRequisicaoService {
         });
 
         if (!estoqueOrigem || estoqueOrigem.quantidade < quantidadeAtender) {
-          throw new AppError(`Estoque insuficiente! O Almoxarifado tem ${estoqueOrigem?.quantidade ?? 0} unidades e tentou atender ${quantidadeAtender} do item ID ${medicamentoId}.`, 400);
+          throw new AppError(
+            `Estoque insuficiente! O Almoxarifado tem ${estoqueOrigem?.quantidade ?? 0} unidades e tentou atender ${quantidadeAtender} do item ${medicamento.principioAtivo}.`,
+            400
+          );
         }
 
-        // 3. MOVIMENTAÇÃO DE ESTOQUE E ATUALIZAÇÕES
-        let quantidadeRestanteBaixar = quantidadeAtender;
-        const lotesParaTransferir: any[] = []; // Array para armazenar os lotes consumidos da Origem
+        console.log(`✅ Estoque geral disponível: ${estoqueOrigem.quantidade}`);
 
-        // ✅ CORREÇÃO: Se o usuário selecionou lotes específicos, usa eles
+        // 3. MOVIMENTAÇÃO DE ESTOQUE
+        let quantidadeRestanteBaixar = quantidadeAtender;
+        const lotesParaTransferir: any[] = [];
+
+        // ✅ SE O USUÁRIO SELECIONOU LOTES ESPECÍFICOS
         if (itemAtendido.lotes && itemAtendido.lotes.length > 0) {
           console.log(`📦 Usando lotes selecionados pelo usuário para ${medicamento.principioAtivo}`);
           
           for (const loteSelecionado of itemAtendido.lotes) {
             if (quantidadeRestanteBaixar === 0) break;
 
+            console.log(`🔍 Validando lote selecionado:`, loteSelecionado);
+
             // Valida o lote selecionado
             const loteEstoque = await tx.estoqueLote.findUnique({
-              where: { id: loteSelecionado.loteId }
+              where: { id: loteSelecionado.loteId },
+              include: { medicamento: true }
             });
 
             if (!loteEstoque) {
               throw new AppError(`Lote ${loteSelecionado.numeroLote} não encontrado`, 400);
+            }
+
+            if (loteEstoque.medicamentoId !== medicamentoId) {
+              throw new AppError(`Lote ${loteSelecionado.numeroLote} não pertence ao medicamento ${medicamento.principioAtivo}`, 400);
             }
 
             if (loteEstoque.quantidade < loteSelecionado.quantidade) {
@@ -131,9 +160,11 @@ class AtenderRequisicaoService {
               );
             }
 
-            if (loteEstoque.medicamentoId !== medicamentoId) {
-              throw new AppError(`Lote ${loteSelecionado.numeroLote} não pertence ao medicamento correto`, 400);
+            if (loteEstoque.estabelecimentoId !== atendenteId) {
+              throw new AppError(`Lote ${loteSelecionado.numeroLote} não pertence ao estabelecimento de origem`, 400);
             }
+
+            console.log(`✅ Lote validado: ${loteSelecionado.numeroLote} - Qtd: ${loteSelecionado.quantidade}`);
 
             // a) Atualiza o saldo do Lote na ORIGEM (Decrementa)
             operacoesEmLote.push(
@@ -143,7 +174,7 @@ class AtenderRequisicaoService {
               })
             );
 
-            // b) Armazena o lote e a quantidade consumida para ser criado no destino
+            // b) Armazena o lote para transferir ao destino
             lotesParaTransferir.push({
               numeroLote: loteEstoque.numeroLote,
               dataValidade: loteEstoque.dataValidade,
@@ -155,14 +186,14 @@ class AtenderRequisicaoService {
             quantidadeRestanteBaixar -= loteSelecionado.quantidade;
           }
         } else {
-          // ✅ CORREÇÃO: Se não há lotes selecionados, usa FIFO automático (para não controlados)
+          // ✅ DISTRIBUIÇÃO FIFO AUTOMÁTICA (para não controlados)
           console.log(`📦 Usando distribuição FIFO automática para ${medicamento.principioAtivo}`);
 
-          // 1. Busca os lotes FIFO na Origem
+          // Busca os lotes FIFO na Origem
           const lotesOrigem = await tx.estoqueLote.findMany({
             where: {
               medicamentoId,
-              estabelecimentoId: atendenteId, // Origem
+              estabelecimentoId: atendenteId,
               quantidade: { gt: 0 },
             },
             orderBy: {
@@ -170,17 +201,23 @@ class AtenderRequisicaoService {
             },
           });
 
+          console.log(`📊 Lotes disponíveis para FIFO: ${lotesOrigem.length}`);
+
           if (lotesOrigem.reduce((sum, l) => sum + l.quantidade, 0) < quantidadeAtender) {
-            throw new AppError(`Estoque insuficiente nos lotes da Origem (${atendenteId}). Faltam ${quantidadeRestanteBaixar} unidades.`, 400);
+            throw new AppError(
+              `Estoque insuficiente nos lotes da Origem para ${medicamento.principioAtivo}. Disponível: ${lotesOrigem.reduce((sum, l) => sum + l.quantidade, 0)}, Necessário: ${quantidadeAtender}`,
+              400
+            );
           }
 
-          // 2. Itera e baixa a quantidade de cada lote na Origem (e armazena para transferir)
+          // Itera e baixa a quantidade de cada lote na Origem
           for (const lote of lotesOrigem) {
             if (quantidadeRestanteBaixar === 0) break;
 
             const quantidadeBaixarLote = Math.min(quantidadeRestanteBaixar, lote.quantidade);
 
-            // a) Atualiza o saldo do Lote na ORIGEM (Decrementa)
+            console.log(`🔁 FIFO: Lote ${lote.numeroLote} - Baixando ${quantidadeBaixarLote} de ${lote.quantidade}`);
+
             operacoesEmLote.push(
               tx.estoqueLote.update({
                 where: { id: lote.id },
@@ -188,7 +225,6 @@ class AtenderRequisicaoService {
               })
             );
 
-            // b) Armazena o lote e a quantidade consumida para ser criado no destino
             lotesParaTransferir.push({
               numeroLote: lote.numeroLote,
               dataValidade: lote.dataValidade,
@@ -202,17 +238,19 @@ class AtenderRequisicaoService {
         }
 
         if (quantidadeRestanteBaixar > 0) {
-          throw new AppError(`Erro de lógica: Estoque insuficiente nos lotes para o medicamento ${medicamentoId}.`, 500);
+          throw new AppError(`Erro de lógica: Não foi possível baixar toda a quantidade do medicamento ${medicamento.principioAtivo}. Restante: ${quantidadeRestanteBaixar}`, 500);
         }
 
-        // 3.2 CRIA/INCREMENTA LOTES NO DESTINO (Farmácia Solicitante)
+        // 3.2 CRIA/INCREMENTA LOTES NO DESTINO
+        console.log(`🔄 Transferindo ${lotesParaTransferir.length} lotes para destino`);
+        
         for (const loteInfo of lotesParaTransferir) {
           operacoesEmLote.push(
             tx.estoqueLote.upsert({
               where: {
                 medicamentoId_estabelecimentoId_numeroLote: {
                   medicamentoId: medicamentoId,
-                  estabelecimentoId: solicitanteId, // Destino
+                  estabelecimentoId: solicitanteId,
                   numeroLote: loteInfo.numeroLote,
                 },
               },
@@ -235,8 +273,8 @@ class AtenderRequisicaoService {
           );
         }
 
-        // 3.3 ATUALIZA ESTOQUE LOCAL (Geral)
-        // Atualiza EstoqueLocal Origem (Decrementa)
+        // 3.3 ATUALIZA ESTOQUE LOCAL
+        // Origem (Decrementa)
         operacoesEmLote.push(
           tx.estoqueLocal.update({
             where: { id: estoqueOrigem.id },
@@ -246,7 +284,7 @@ class AtenderRequisicaoService {
           })
         );
 
-        // Atualiza EstoqueLocal Destino (Incrementa)
+        // Destino (Incrementa)
         operacoesEmLote.push(
           tx.estoqueLocal.upsert({
             where: {
@@ -277,14 +315,14 @@ class AtenderRequisicaoService {
         );
 
         totalItensAtendidos++;
+        console.log(`✅ Item ${itemAtendido.itemId} processado com sucesso`);
       }
 
       // 4. Determina o Status Final da Requisição
       let novoStatus: string;
       
-      // ✅ CORREÇÃO: Considera se todos os itens foram atendidos (mesmo que com quantidades diferentes)
       const todosItensAtendidos = requisicao.itens.every(item => {
-        const itemAtendido = itensAtendidos.find(ia => ia.itemId === item.id);
+        const itemAtendido = itens.find(ia => ia.itemId === item.id);
         return itemAtendido && itemAtendido.quantidadeAtendida > 0;
       });
 
@@ -293,8 +331,10 @@ class AtenderRequisicaoService {
       } else if (totalItensAtendidos > 0) {
         novoStatus = 'ATENDIDA_PARCIALMENTE';
       } else {
-        novoStatus = 'PENDENTE'; // Se nenhum item foi atendido, mantém como pendente
+        novoStatus = 'PENDENTE';
       }
+
+      console.log(`📊 Status final: ${novoStatus} (${totalItensAtendidos}/${requisicao.itens.length} itens atendidos)`);
 
       // 5. Atualiza o Status da Requisição
       operacoesEmLote.push(
@@ -309,17 +349,30 @@ class AtenderRequisicaoService {
       );
 
       // 6. Executa todas as operações
+      console.log(`⚡ Executando ${operacoesEmLote.length} operações em lote...`);
       await Promise.all(operacoesEmLote);
 
-      console.log(`✅ Requisição ${requisicaoId} atendida com status: ${novoStatus}`);
+      console.log(`🎉 Requisição ${requisicaoId} atendida com sucesso! Status: ${novoStatus}`);
 
-      // Retorna a requisição atualizada (com os itens)
+      // Retorna a requisição atualizada
       return tx.requisicao.findUnique({
         where: { id: requisicaoId },
         include: {
           itens: {
             include: {
               medicamento: true
+            }
+          },
+          solicitante: {
+            select: {
+              id: true,
+              nome: true
+            }
+          },
+          atendente: {
+            select: {
+              id: true,
+              nome: true
             }
           }
         }

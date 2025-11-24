@@ -1,27 +1,23 @@
+// src/modules/estoque/routes/estoqueRoutes.ts
 import { Router } from 'express';
+import { GetLotesDisponiveisController } from './controllers/GetLotesDisponiveisController';
 
 const estoqueRoutes = Router();
 
-// Rota simples de teste
+const getLotesDisponiveisController = new GetLotesDisponiveisController();
+
+// Rota para buscar lotes disponíveis
 estoqueRoutes.get('/lotes-disponiveis', (request, response) => {
-  console.log('📦 Recebida requisição para lotes-disponiveis');
-  
-  const { medicamentoId, estabelecimentoId } = request.query;
-  console.log('Parâmetros:', { medicamentoId, estabelecimentoId });
+  return getLotesDisponiveisController.handle(request, response);
+});
 
-  // Retorna dados mock simples
-  const lotesMock = [
-    {
-      id: 'teste-1',
-      numeroLote: 'TEST001',
-      dataValidade: '2024-12-31',
-      quantidade: 100,
-      medicamentoId,
-      estabelecimentoId
-    }
-  ];
-
-  return response.json(lotesMock);
+// Rota de teste
+estoqueRoutes.get('/test', (request, response) => {
+  console.log('✅ Rota de teste funcionando!');
+  return response.json({ 
+    message: 'Backend funcionando!', 
+    timestamp: new Date().toISOString() 
+  });
 });
 
 export { estoqueRoutes };

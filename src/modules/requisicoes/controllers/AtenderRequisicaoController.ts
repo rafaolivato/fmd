@@ -5,19 +5,27 @@ import { AppError } from '../../../shared/errors/AppError';
 class AtenderRequisicaoController {
   async handle(request: Request, response: Response) {
     const { id } = request.params;
-    const { itensAtendidos } = request.body;
+    const { itens } = request.body; // Mudei de itensAtendidos para itens
+
+    console.log('📋 AtenderRequisicaoController - Dados recebidos:', {
+      requisicaoId: id,
+      itens: itens
+    });
 
     try {
       const atenderRequisicaoService = new AtenderRequisicaoService();
       
       const requisicaoAtendida = await atenderRequisicaoService.execute(
         id, 
-        itensAtendidos
+        itens // Agora passando 'itens' em vez de 'itensAtendidos'
       );
 
+  
+
       return response.json(requisicaoAtendida);
+
     } catch (error) {
-      console.error('Erro no AtenderRequisicaoController:', error);
+      console.error('❌ Erro no AtenderRequisicaoController:', error);
       
       if (error instanceof AppError) {
         return response.status(error.statusCode).json({

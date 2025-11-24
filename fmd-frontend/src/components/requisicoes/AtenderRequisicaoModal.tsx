@@ -27,8 +27,6 @@ interface ItemComLotes extends ItemRequisicaoAtendimento {
   lotesDisponiveis?: EstoqueLote[];
 }
 
-
-
 const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
   requisicao,
   show,
@@ -112,10 +110,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
     }
   };
 
-  // Adicione um estado de loading para os lotes
-
-
-  // Atualize a função abrirModalLotes:
+  // ✅ ABRIR MODAL DE LOTES
   const abrirModalLotes = async (itemId: string) => {
     const itemOriginal = getItemOriginal(itemId);
     if (!itemOriginal) return;
@@ -140,7 +135,6 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
       setLoadingLotes(null);
     }
   };
-
 
   // ✅ FECHAR MODAL DE LOTES
   const fecharModalLotes = (itemId: string) => {
@@ -189,7 +183,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
         const novoLote: LoteSelecionado = {
           loteId: lote.id,
           numeroLote: lote.numeroLote,
-          dataValidade: lote.dataValidade, // Agora é string
+          dataValidade: lote.dataValidade,
           quantidadeDisponivel: lote.quantidade,
           quantidadeSelecionada: 0
         };
@@ -259,17 +253,31 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
     );
   };
 
+  // ✅ ATUALIZAR QUANTIDADE DO ITEM
   const atualizarQuantidade = (itemId: string, quantidade: number) => {
     setItensAtendimento(prev =>
-      prev.map(item =>
-        item.itemId === itemId
-          ? { ...item, quantidadeAtendida: Math.max(0, quantidade) }
-          : item
-      )
+      prev.map(item => {
+        if (item.itemId !== itemId) return item;
+        
+        // Se for medicamento controlado e tiver lotes selecionados, não permite alterar manualmente
+        const itemOriginal = getItemOriginal(itemId);
+        const isControlado = itemOriginal?.medicamento.psicotropico;
+        
+        if (isControlado && item.lotesSelecionados && item.lotesSelecionados.length > 0) {
+          // Para controlados, a quantidade é controlada pelos lotes
+          return item;
+        }
+        
+        return { 
+          ...item, 
+          quantidadeAtendida: Math.max(0, quantidade) 
+        };
+      })
     );
     setError('');
   };
 
+  // ✅ VALIDAR ATENDIMENTO
   const validarAtendimento = (): boolean => {
     // Verifica se todos os itens têm lotes selecionados (para controlados)
     for (const item of itensAtendimento) {
@@ -284,7 +292,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
         // Verifica se a soma dos lotes bate com a quantidade atendida
         const totalLotes = item.lotesSelecionados.reduce((sum, lote) => sum + lote.quantidadeSelecionada, 0);
         if (totalLotes !== item.quantidadeAtendida) {
-          setError(`A soma dos lotes não corresponde à quantidade atendida para ${itemOriginal.medicamento.principioAtivo}.`);
+          setError(`A soma dos lotes (${totalLotes}) não corresponde à quantidade atendida (${item.quantidadeAtendida}) para ${itemOriginal.medicamento.principioAtivo}.`);
           return false;
         }
       }
@@ -300,14 +308,15 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
     return true;
   };
 
+  // ✅ ENVIAR ATENDIMENTO
   const handleSubmit = async () => {
     if (!validarAtendimento()) return;
 
     try {
       setIsLoading(true);
 
-      // Prepara os dados com informações dos lotes
-      const atendimentoComLotes = itensAtendimento.map(item => ({
+      // Prepara os dados no formato correto para o backend
+      const itens = itensAtendimento.map(item => ({
         itemId: item.itemId,
         quantidadeAtendida: item.quantidadeAtendida,
         lotes: item.lotesSelecionados?.map(lote => ({
@@ -317,10 +326,16 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
         })) || []
       }));
 
-      await requisicaoService.atenderRequisicao(requisicao.id, atendimentoComLotes);
+      console.log('📤 Enviando dados para atendimento:', {
+        requisicaoId: requisicao.id,
+        itens
+      });
+
+      await requisicaoService.atenderRequisicao(requisicao.id, itens);
       onSuccess();
+      
     } catch (error: any) {
-      console.error('Erro ao atender requisição:', error);
+      console.error('❌ Erro ao atender requisição:', error);
       setError(error.response?.data?.message || 'Erro ao atender requisição');
     } finally {
       setIsLoading(false);
@@ -376,7 +391,8 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
                   </td>
                   <td style={{ width: '150px' }}>
                     <Form.Control
-                      type="text"
+                      type="number"
+                      min="0"
                       value={quantidadeAtendida === 0 ? '' : quantidadeAtendida.toString()}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -385,12 +401,9 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
                         }
                       }}
                       placeholder="Quantidade"
-                      style={{
-                        appearance: 'textfield',
-                        MozAppearance: 'textfield',
-                        WebkitAppearance: 'none'
-                      }}
-                      onWheel={(e) => e.currentTarget.blur()}
+                      disabled={isControlado && itemAtendido?.lotesSelecionados && itemAtendido.lotesSelecionados.length > 0}
+                      title={isControlado && itemAtendido?.lotesSelecionados && itemAtendido.lotesSelecionados.length > 0 ? 
+                        "Para medicamentos controlados, a quantidade é controlada pelos lotes selecionados" : ""}
                     />
                   </td>
                   <td style={{ width: '200px' }}>
@@ -476,6 +489,7 @@ const ModalLotes: React.FC<{
 }> = ({ item, itemAtendido, onHide, onAdicionarLote, onRemoverLote, onAtualizarQuantidade, onDistribuirAutomaticamente }) => {
 
   const totalSelecionado = itemAtendido.lotesSelecionados?.reduce((sum, lote) => sum + lote.quantidadeSelecionada, 0) || 0;
+  const hasLotesDisponiveis = itemAtendido.lotesDisponiveis && itemAtendido.lotesDisponiveis.length > 0;
 
   return (
     <Modal show={true} onHide={onHide} size="lg">
@@ -494,82 +508,87 @@ const ModalLotes: React.FC<{
           )}
         </Alert>
 
-        <div className="mb-3">
-          <Button variant="outline-success" size="sm" onClick={onDistribuirAutomaticamente}>
-            Distribuir Automaticamente (FIFO)
-          </Button>
-        </div>
+        {!hasLotesDisponiveis ? (
+          <Alert variant="warning">
+            <strong>⚠️ Nenhum lote disponível</strong>
+            <br />
+            Não foram encontrados lotes disponíveis para este medicamento.
+          </Alert>
+        ) : (
+          <>
+            <div className="mb-3">
+              <Button variant="outline-success" size="sm" onClick={onDistribuirAutomaticamente}>
+                Distribuir Automaticamente (FIFO)
+              </Button>
+            </div>
 
-        <Table striped bordered size="sm">
-          <thead>
-            <tr>
-              <th>Selecionar</th>
-              <th>Lote</th>
-              <th>Validade</th>
-              <th>Disponível</th>
-              <th>Quantidade</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {itemAtendido.lotesDisponiveis?.map(lote => {
-              const loteSelecionado = itemAtendido.lotesSelecionados?.find(l => l.loteId === lote.id);
-              const isSelecionado = !!loteSelecionado;
-
-              return (
-                <tr key={lote.id}>
-                  <td>
-                    {!isSelecionado ? (
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => onAdicionarLote(lote)}
-                      >
-                        Adicionar
-                      </Button>
-                    ) : (
-                      <Badge bg="success">Selecionado</Badge>
-                    )}
-                  </td>
-                  <td>{lote.numeroLote}</td>
-                  <td>{new Date(lote.dataValidade).toLocaleDateString()}</td>
-                  <td>{lote.quantidade}</td>
-                  <td style={{ width: '120px' }}>
-                    {isSelecionado && (
-                      <Form.Control
-                        type="text"
-                        value={loteSelecionado.quantidadeSelecionada}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === '' || /^\d+$/.test(value)) {
-                            onAtualizarQuantidade(lote.id, Number(value));
-                          }
-                        }}
-                        style={{
-                          appearance: 'textfield',
-                          MozAppearance: 'textfield',
-                          WebkitAppearance: 'none'
-                        }}
-                        onWheel={(e) => e.currentTarget.blur()}
-                      />
-                    )}
-                  </td>
-                  <td>
-                    {isSelecionado && (
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        onClick={() => onRemoverLote(lote.id)}
-                      >
-                        Remover
-                      </Button>
-                    )}
-                  </td>
+            <Table striped bordered size="sm">
+              <thead>
+                <tr>
+                  <th>Selecionar</th>
+                  <th>Lote</th>
+                  <th>Validade</th>
+                  <th>Disponível</th>
+                  <th>Quantidade</th>
+                  <th>Ações</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </Table>
+              </thead>
+              <tbody>
+                {itemAtendido.lotesDisponiveis?.map(lote => {
+                  const loteSelecionado = itemAtendido.lotesSelecionados?.find(l => l.loteId === lote.id);
+                  const isSelecionado = !!loteSelecionado;
+
+                  return (
+                    <tr key={lote.id}>
+                      <td>
+                        {!isSelecionado ? (
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => onAdicionarLote(lote)}
+                            disabled={lote.quantidade <= 0}
+                          >
+                            {lote.quantidade <= 0 ? 'Indisponível' : 'Adicionar'}
+                          </Button>
+                        ) : (
+                          <Badge bg="success">Selecionado</Badge>
+                        )}
+                      </td>
+                      <td>{lote.numeroLote}</td>
+                      <td>{new Date(lote.dataValidade).toLocaleDateString()}</td>
+                      <td>{lote.quantidade}</td>
+                      <td style={{ width: '120px' }}>
+                        {isSelecionado && (
+                          <Form.Control
+                            type="number"
+                            min="0"
+                            max={lote.quantidade}
+                            value={loteSelecionado.quantidadeSelecionada}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 0;
+                              onAtualizarQuantidade(lote.id, value);
+                            }}
+                          />
+                        )}
+                      </td>
+                      <td>
+                        {isSelecionado && (
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={() => onRemoverLote(lote.id)}
+                          >
+                            Remover
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          </>
+        )}
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={onHide}>
