@@ -248,6 +248,7 @@ model Requisicao {
 
   status          String   @default("PENDENTE") // Ex: 'PENDENTE', 'EM_SEPARACAO', 'ATENDIDA', 'CANCELADA'
   dataSolicitacao DateTime @default(now())
+  dataAtendimento DateTime?
   observacoes     String?
 
   itens ItemRequisicao[]

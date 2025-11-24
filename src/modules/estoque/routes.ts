@@ -1,18 +1,27 @@
 import { Router } from 'express';
-import { GetEstoqueMedicamentoController } from './controllers/GetEstoqueMedicamentoController';
-import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
-import { GetLotesDisponiveisController } from './controllers/GetLotesDisponiveisController';
 
 const estoqueRoutes = Router();
 
-const getEstoqueMedicamentoController = new GetEstoqueMedicamentoController();
+// Rota simples de teste
+estoqueRoutes.get('/lotes-disponiveis', (request, response) => {
+  console.log('📦 Recebida requisição para lotes-disponiveis');
+  
+  const { medicamentoId, estabelecimentoId } = request.query;
+  console.log('Parâmetros:', { medicamentoId, estabelecimentoId });
 
-const getLotesDisponiveisController = new GetLotesDisponiveisController();
+  // Retorna dados mock simples
+  const lotesMock = [
+    {
+      id: 'teste-1',
+      numeroLote: 'TEST001',
+      dataValidade: '2024-12-31',
+      quantidade: 100,
+      medicamentoId,
+      estabelecimentoId
+    }
+  ];
 
-estoqueRoutes.use(ensureAuthenticated);
-
-estoqueRoutes.get('/:medicamentoId/:estabelecimentoId', getEstoqueMedicamentoController.handle);
-
-estoqueRoutes.get('/lotes/disponiveis', getLotesDisponiveisController.handle);
+  return response.json(lotesMock);
+});
 
 export { estoqueRoutes };

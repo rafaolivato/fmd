@@ -14,7 +14,7 @@ class AtenderRequisicaoService {
 
     return await prisma.$transaction(async (tx: PrismaTransaction) => {
 
-      // 1. Busca a Requisição e Itens
+      // 1. Search a Requisição e Itens
       const requisicao = await tx.requisicao.findUnique({
         where: { id: requisicaoId },
         include: {

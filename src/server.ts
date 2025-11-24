@@ -9,6 +9,9 @@ import { dispensacaoRoutes } from './modules/dispensacao/routes';
 import { userRoutes } from './modules/users/routes';
 import { movimentosRoutes } from './modules/movimentos/routes';
 import { profissionaisSaudeRoutes } from './modules/profissionaisSaude/routes';
+import { requisicoesRoutes } from './modules/requisicoes/routes';
+
+
 
 
 const app: Express = express(); 
@@ -32,6 +35,8 @@ app.use('/usuarios', userRoutes);
 app.use('/movimentos', movimentosRoutes);
 
 app.use('/profissionais-saude', profissionaisSaudeRoutes);
+
+app.use('/requisicoes', requisicoesRoutes);
 
 
 const PORT = process.env.PORT || 3333;

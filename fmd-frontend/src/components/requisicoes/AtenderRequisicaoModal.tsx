@@ -16,7 +16,7 @@ interface AtenderRequisicaoModalProps {
 interface LoteSelecionado {
   loteId: string;
   numeroLote: string;
-  dataValidade: Date;
+  dataValidade: string;
   quantidadeDisponivel: number;
   quantidadeSelecionada: number;
 }
@@ -27,6 +27,8 @@ interface ItemComLotes extends ItemRequisicaoAtendimento {
   lotesDisponiveis?: EstoqueLote[];
 }
 
+
+
 const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
   requisicao,
   show,
@@ -36,8 +38,28 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
   const [itensAtendimento, setItensAtendimento] = useState<ItemComLotes[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [loadingLotes, setLoadingLotes] = useState<string | null>(null);
 
-  // Inicializa os itens de atendimento
+  // ✅ FUNÇÃO CALCULAR DIFERENÇA
+  const calcularDiferenca = (itemId: string): number => {
+    const itemOriginal = getItemOriginal(itemId);
+    const itemAtendido = itensAtendimento.find(ia => ia.itemId === itemId);
+
+    if (!itemOriginal || !itemAtendido) return 0;
+
+    return itemAtendido.quantidadeAtendida - itemOriginal.quantidadeSolicitada;
+  };
+
+  // ✅ FUNÇÃO GET STATUS ITEM
+  const getStatusItem = (itemId: string): 'exato' | 'maior' | 'menor' => {
+    const diferenca = calcularDiferenca(itemId);
+
+    if (diferenca === 0) return 'exato';
+    if (diferenca > 0) return 'maior';
+    return 'menor';
+  };
+
+  // Start os itens de atendimento
   useEffect(() => {
     if (requisicao) {
       const itensIniciais: ItemComLotes[] = requisicao.itens.map(item => ({
@@ -59,8 +81,16 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
   // ✅ CARREGAR LOTES DISPONÍVEIS
   const carregarLotesDisponiveis = async (itemId: string, medicamentoId: string, estabelecimentoId: string) => {
     try {
+      console.log('📦 Carregando lotes para:', {
+        itemId,
+        medicamentoId,
+        estabelecimentoId
+      });
+
       const lotes = await estoqueService.getLotesDisponiveis(medicamentoId, estabelecimentoId);
-      
+
+      console.log('✅ Lotes carregados:', lotes);
+
       setItensAtendimento(prev =>
         prev.map(item =>
           item.itemId === itemId
@@ -69,30 +99,48 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
         )
       );
     } catch (error) {
-      console.error('Erro ao carregar lotes:', error);
+      console.error('❌ Erro ao carregar lotes:', error);
+
+      // Mesmo em caso de erro, usa dados vazios
+      setItensAtendimento(prev =>
+        prev.map(item =>
+          item.itemId === itemId
+            ? { ...item, lotesDisponiveis: [] }
+            : item
+        )
+      );
     }
   };
 
-  // ✅ ABRIR MODAL DE LOTES
+  // Adicione um estado de loading para os lotes
+
+
+  // Atualize a função abrirModalLotes:
   const abrirModalLotes = async (itemId: string) => {
     const itemOriginal = getItemOriginal(itemId);
     if (!itemOriginal) return;
 
-    // Carrega lotes disponíveis
-    await carregarLotesDisponiveis(
-      itemId, 
-      itemOriginal.medicamento.id, 
-      requisicao.solicitanteId
-    );
+    setLoadingLotes(itemId);
 
-    setItensAtendimento(prev =>
-      prev.map(item =>
-        item.itemId === itemId
-          ? { ...item, showLotesModal: true }
-          : item
-      )
-    );
+    try {
+      await carregarLotesDisponiveis(
+        itemId,
+        itemOriginal.medicamento.id,
+        requisicao.solicitanteId
+      );
+
+      setItensAtendimento(prev =>
+        prev.map(item =>
+          item.itemId === itemId
+            ? { ...item, showLotesModal: true }
+            : item
+        )
+      );
+    } finally {
+      setLoadingLotes(null);
+    }
   };
+
 
   // ✅ FECHAR MODAL DE LOTES
   const fecharModalLotes = (itemId: string) => {
@@ -141,7 +189,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
         const novoLote: LoteSelecionado = {
           loteId: lote.id,
           numeroLote: lote.numeroLote,
-          dataValidade: lote.dataValidade,
+          dataValidade: lote.dataValidade, // Agora é string
           quantidadeDisponivel: lote.quantidade,
           quantidadeSelecionada: 0
         };
@@ -226,7 +274,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
     // Verifica se todos os itens têm lotes selecionados (para controlados)
     for (const item of itensAtendimento) {
       const itemOriginal = getItemOriginal(item.itemId);
-      
+
       if (itemOriginal?.medicamento.psicotropico && item.quantidadeAtendida > 0) {
         if (!item.lotesSelecionados || item.lotesSelecionados.length === 0) {
           setError(`Para o medicamento controlado ${itemOriginal.medicamento.principioAtivo}, é necessário selecionar os lotes.`);
@@ -257,7 +305,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
 
     try {
       setIsLoading(true);
-      
+
       // Prepara os dados com informações dos lotes
       const atendimentoComLotes = itensAtendimento.map(item => ({
         itemId: item.itemId,
@@ -279,8 +327,6 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
     }
   };
 
-  // ... (mantém as funções calcularDiferenca e getStatusItem)
-
   return (
     <Modal show={show} onHide={onHide} size="xl">
       <Modal.Header closeButton>
@@ -288,7 +334,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
           Atender Requisição #{requisicao.id.substring(0, 8)}
         </Modal.Title>
       </Modal.Header>
-     
+
       <Modal.Body>
         <Alert variant="info">
           <strong>💡 Informação:</strong> Para medicamentos controlados, é obrigatório selecionar os lotes específicos.
@@ -339,7 +385,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
                         }
                       }}
                       placeholder="Quantidade"
-                      style={{ 
+                      style={{
                         appearance: 'textfield',
                         MozAppearance: 'textfield',
                         WebkitAppearance: 'none'
@@ -349,20 +395,21 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
                   </td>
                   <td style={{ width: '200px' }}>
                     <div className="d-flex flex-column gap-1">
-                      <Button 
+                      <Button
                         variant={isControlado ? "primary" : "outline-primary"}
                         size="sm"
                         onClick={() => abrirModalLotes(item.id)}
+                        disabled={loadingLotes === item.id}
                       >
                         <FaBoxOpen className="me-1" />
-                        Selecionar Lotes
+                        {loadingLotes === item.id ? 'Carregando...' : 'Selecionar Lotes'}
                         {itemAtendido?.lotesSelecionados && itemAtendido.lotesSelecionados.length > 0 && (
                           <Badge bg="light" text="dark" className="ms-1">
                             {itemAtendido.lotesSelecionados.length}
                           </Badge>
                         )}
                       </Button>
-                      
+
                       {/* Resumo dos lotes selecionados */}
                       {itemAtendido?.lotesSelecionados && itemAtendido.lotesSelecionados.map(lote => (
                         <div key={lote.loteId} className="small text-muted">
@@ -379,7 +426,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
                         onHide={() => fecharModalLotes(item.id)}
                         onAdicionarLote={(lote) => adicionarLoteSelecao(item.id, lote)}
                         onRemoverLote={(loteId) => removerLoteSelecao(item.id, loteId)}
-                        onAtualizarQuantidade={(loteId, quantidade) => 
+                        onAtualizarQuantidade={(loteId, quantidade) =>
                           atualizarQuantidadeLote(item.id, loteId, quantidade)
                         }
                         onDistribuirAutomaticamente={() => distribuirAutomaticamente(item.id)}
@@ -403,10 +450,8 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
             })}
           </tbody>
         </Table>
-
-        {/* ... mantém o resumo */}
       </Modal.Body>
-     
+
       <Modal.Footer>
         <Button variant="secondary" onClick={onHide} disabled={isLoading}>
           Cancelar
@@ -419,7 +464,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
   );
 };
 
-// Componente Modal de Lotes (vou criar separado)
+// Componente Modal de Lotes
 const ModalLotes: React.FC<{
   item: any;
   itemAtendido: ItemComLotes;
@@ -429,7 +474,7 @@ const ModalLotes: React.FC<{
   onAtualizarQuantidade: (loteId: string, quantidade: number) => void;
   onDistribuirAutomaticamente: () => void;
 }> = ({ item, itemAtendido, onHide, onAdicionarLote, onRemoverLote, onAtualizarQuantidade, onDistribuirAutomaticamente }) => {
-  
+
   const totalSelecionado = itemAtendido.lotesSelecionados?.reduce((sum, lote) => sum + lote.quantidadeSelecionada, 0) || 0;
 
   return (
@@ -500,7 +545,7 @@ const ModalLotes: React.FC<{
                             onAtualizarQuantidade(lote.id, Number(value));
                           }
                         }}
-                        style={{ 
+                        style={{
                           appearance: 'textfield',
                           MozAppearance: 'textfield',
                           WebkitAppearance: 'none'

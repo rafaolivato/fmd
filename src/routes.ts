@@ -9,6 +9,7 @@ import { estabelecimentosRoutes } from './modules/estabelecimentos/routes'
 import { requisicoesRoutes } from './modules/requisicoes/routes';
 import { fornecedoresRoutes } from './modules/fornecedores/routes';
 import { dashboardRoutes } from './modules/dashboard/routes';
+import { estoqueRoutes } from './modules/estoque/routes';
 
 const routes = Router();
 
@@ -22,5 +23,6 @@ routes.use('/estabelecimentos', estabelecimentosRoutes);
 routes.use('/requisicoes', requisicoesRoutes);
 routes.use('/fornecedores', fornecedoresRoutes);
 routes.use('/dashboard', dashboardRoutes);
+routes.use('/estoque', estoqueRoutes);
 
 export { routes };

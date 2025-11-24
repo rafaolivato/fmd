@@ -3,7 +3,6 @@ import { CreateRequisicaoController } from './controllers/CreateRequisicaoContro
 import { AtenderRequisicaoController } from './controllers/AtenderRequisicaoController';
 import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
 
-// Importando os novos controllers
 import { ListAllRequisicoesController } from './controllers/ListAllRequisicoesController';
 import { ListMinhasRequisicoesController } from './controllers/ListMinhasRequisicoesController';
 import { ListParaAtenderRequisicoesController } from './controllers/ListParaAtenderRequisicoesController';
