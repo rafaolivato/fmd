@@ -35,11 +35,12 @@ export const requisicaoService = {
 
   async atenderRequisicao(
     id: string,
-    itensAtendidos: ItemRequisicaoAtendimentoComLotes[]
+    itens: ItemRequisicaoAtendimentoComLotes[]
   ): Promise<Requisicao> {
     const response = await api.put(`/requisicoes/${id}/atender`, {
-      itensAtendidos
+      itens
     });
+    console.log('✅ Requisição atendida com sucesso');
     return response.data;
   },
 

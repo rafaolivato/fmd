@@ -96,7 +96,7 @@ class AuthService {
     };
   }
 
-  // Método auxiliar para verificar se é almoxarifado
+  // Método auxiliar para verificar se é almoxarifad
   isUserAlmoxarifado(user: User): boolean {
     return user.estabelecimento?.tipo === 'ALMOXARIFADO';
   }

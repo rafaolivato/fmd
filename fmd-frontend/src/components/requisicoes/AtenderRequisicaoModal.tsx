@@ -4,6 +4,7 @@ import type { Requisicao, ItemRequisicaoAtendimento } from '../../types/Requisic
 import type { EstoqueLote } from '../../types/Estoque';
 import { requisicaoService } from '../../store/services/requisicaoService';
 import { estoqueService } from '../../store/services/estoqueService';
+import { authService } from '../../store/services/authService'; 
 import { FaCheck, FaTimes, FaBoxOpen } from 'react-icons/fa';
 
 interface AtenderRequisicaoModalProps {
@@ -37,6 +38,49 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [loadingLotes, setLoadingLotes] = useState<string | null>(null);
+  const [estabelecimentoAtendenteId, setEstabelecimentoAtendenteId] = useState<string | null>(null);
+  const [usuarioLogado, setUsuarioLogado] = useState<any>(null); // ← Novo estado para usuário
+
+  // ✅ CARREGAR USUÁRIO LOGADO E ESTABELECIMENTO
+  useEffect(() => {
+    const carregarUsuarioLogado = async () => {
+      try {
+        console.log('🔍 Buscando usuário logado...');
+        
+        // Tenta buscar da API primeiro (mais atualizado)
+        const user = await authService.getCurrentUser();
+        
+        if (user) {
+          console.log('✅ Usuário logado encontrado:', {
+            id: user.id,
+            estabelecimentoId: user.estabelecimentoId,
+            estabelecimentoTipo: user.estabelecimento?.tipo
+          });
+          
+          setUsuarioLogado(user);
+          setEstabelecimentoAtendenteId(user.estabelecimentoId);
+        } else {
+          // Fallback: tenta do storage
+          const userFromStorage = authService.getUserFromStorage();
+          if (userFromStorage) {
+            console.log('✅ Usuário do storage:', userFromStorage);
+            setUsuarioLogado(userFromStorage);
+            setEstabelecimentoAtendenteId(userFromStorage.estabelecimentoId);
+          } else {
+            console.error('❌ Nenhum usuário logado encontrado');
+            setError('Não foi possível identificar o usuário logado');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar usuário:', error);
+        setError('Erro ao carregar informações do usuário');
+      }
+    };
+
+    if (show) {
+      carregarUsuarioLogado();
+    }
+  }, [show]);
 
   // ✅ FUNÇÃO CALCULAR DIFERENÇA
   const calcularDiferenca = (itemId: string): number => {
@@ -110,10 +154,23 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
     }
   };
 
-  // ✅ ABRIR MODAL DE LOTES
+  // ✅ ABRIR MODAL DE LOTES (CORRIGIDO)
   const abrirModalLotes = async (itemId: string) => {
     const itemOriginal = getItemOriginal(itemId);
-    if (!itemOriginal) return;
+    
+    if (!itemOriginal || !estabelecimentoAtendenteId) {
+      console.error('❌ Não é possível abrir modal: item ou estabelecimento não encontrado');
+      setError('Erro ao carregar informações necessárias');
+      return;
+    }
+
+    console.log('🏥 IDs para carregar lotes:', {
+      itemId,
+      medicamentoId: itemOriginal.medicamento.id,
+      estabelecimentoAtendenteId, // ← Almoxarifado (usuário logado)
+      estabelecimentoSolicitanteId: requisicao.solicitanteId, // ← Farmácia
+      usuarioTipo: usuarioLogado?.estabelecimento?.tipo
+    });
 
     setLoadingLotes(itemId);
 
@@ -121,7 +178,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
       await carregarLotesDisponiveis(
         itemId,
         itemOriginal.medicamento.id,
-        requisicao.solicitanteId
+        estabelecimentoAtendenteId // ← CORRIGIDO: usa o ID do almoxarifado
       );
 
       setItensAtendimento(prev =>
@@ -277,7 +334,6 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
     setError('');
   };
 
-  // ✅ VALIDAR ATENDIMENTO
   const validarAtendimento = (): boolean => {
     // Verifica se todos os itens têm lotes selecionados (para controlados)
     for (const item of itensAtendimento) {
@@ -312,6 +368,18 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
   const handleSubmit = async () => {
     if (!validarAtendimento()) return;
 
+    // Verifica se temos o estabelecimento atendente
+    if (!estabelecimentoAtendenteId) {
+      setError('Não foi possível identificar o estabelecimento atendente');
+      return;
+    }
+
+    // Verifica se o usuário é almoxarifado
+    if (usuarioLogado && !authService.isUserAlmoxarifado(usuarioLogado)) {
+      setError('Apenas usuários do almoxarifado podem atender requisições');
+      return;
+    }
+
     try {
       setIsLoading(true);
 
@@ -328,6 +396,8 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
 
       console.log('📤 Enviando dados para atendimento:', {
         requisicaoId: requisicao.id,
+        estabelecimentoAtendenteId,
+        usuarioTipo: usuarioLogado?.estabelecimento?.tipo,
         itens
       });
 
@@ -347,12 +417,18 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
       <Modal.Header closeButton>
         <Modal.Title>
           Atender Requisição #{requisicao.id.substring(0, 8)}
+          {usuarioLogado && (
+            <Badge bg="info" className="ms-2">
+              {usuarioLogado.estabelecimento?.tipo === 'ALMOXARIFADO' ? 'Almoxarifado' : 'Farmácia'}
+            </Badge>
+          )}
         </Modal.Title>
       </Modal.Header>
 
       <Modal.Body>
         <Alert variant="info">
           <strong>💡 Informação:</strong> Para medicamentos controlados, é obrigatório selecionar os lotes específicos.
+          {estabelecimentoAtendenteId}
         </Alert>
 
         {error && <Alert variant="danger">{error}</Alert>}
@@ -412,7 +488,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
                         variant={isControlado ? "primary" : "outline-primary"}
                         size="sm"
                         onClick={() => abrirModalLotes(item.id)}
-                        disabled={loadingLotes === item.id}
+                        disabled={loadingLotes === item.id || !estabelecimentoAtendenteId}
                       >
                         <FaBoxOpen className="me-1" />
                         {loadingLotes === item.id ? 'Carregando...' : 'Selecionar Lotes'}
@@ -469,7 +545,12 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
         <Button variant="secondary" onClick={onHide} disabled={isLoading}>
           Cancelar
         </Button>
-        <Button variant="primary" onClick={handleSubmit} disabled={isLoading}>
+        <Button 
+          variant="primary" 
+          onClick={handleSubmit} 
+          disabled={isLoading || !estabelecimentoAtendenteId}
+          title={!estabelecimentoAtendenteId ? 'Aguardando carregamento do estabelecimento...' : ''}
+        >
           {isLoading ? 'Atendendo...' : 'Confirmar Atendimento'}
         </Button>
       </Modal.Footer>
@@ -477,7 +558,7 @@ const AtenderRequisicaoModal: React.FC<AtenderRequisicaoModalProps> = ({
   );
 };
 
-// Componente Modal de Lotes
+// Componente Modal de Lotes (mantido igual)
 const ModalLotes: React.FC<{
   item: any;
   itemAtendido: ItemComLotes;

@@ -2,8 +2,49 @@
 import { api } from './api';
 import type { EstoqueLote } from '../../types/Estoque';
 
-// store/services/estoqueService.ts
+// Adicione esta interface
+export interface EstoqueResponse {
+  quantidade: number;
+  medicamento: {
+    principioAtivo: string;
+    concentracao: string;
+    formaFarmaceutica: string;
+  };
+}
+
 export const estoqueService = {
+  // ✅ FUNÇÃO QUE A DISPENSAÇÃO PRECISA (RESTAURADA)
+  async getEstoqueMedicamento(medicamentoId: string, estabelecimentoId: string): Promise<number> {
+    try {
+      console.log('🔍 Buscando estoque do medicamento:', {
+        medicamentoId,
+        estabelecimentoId
+      });
+
+      // PRIMEIRO: Tenta a rota original
+      try {
+        const response = await api.get<EstoqueResponse>(`/estoque/${medicamentoId}/${estabelecimentoId}`);
+        console.log('✅ Estoque encontrado (rota original):', response.data.quantidade);
+        return response.data.quantidade;
+      } catch (error: any) {
+        // Se a rota original não existir, tenta a nova rota
+        if (error.response?.status === 404) {
+          console.log('🔄 Tentando rota alternativa...');
+          const response = await api.get('/estoque/quantidade', {
+            params: { medicamentoId, estabelecimentoId }
+          });
+          console.log('✅ Estoque encontrado (rota alternativa):', response.data.quantidade);
+          return response.data.quantidade || 0;
+        }
+        throw error;
+      }
+    } catch (error) {
+      console.error('❌ Erro ao buscar estoque:', error);
+      return 0; // Retorna 0 em caso de erro
+    }
+  },
+
+  // ✅ FUNÇÕES EXISTENTES (mantenha essas)
   async getLotesDisponiveis(medicamentoId: string, estabelecimentoId: string): Promise<EstoqueLote[]> {
     try {
       console.log('🚀 Buscando lotes reais do backend...');
@@ -32,5 +73,4 @@ export const estoqueService = {
       throw error;
     }
   }
-
 };
