@@ -56,24 +56,26 @@ function corrigirDataParaUTC(dataString: string, fimDoDia: boolean = false): Dat
 
     return data;
 }
-
 export class RelatoriosController {
 
     async getPosicaoEstoque(request: Request, response: Response) {
         try {
             const { estabelecimento } = request.query;
 
-            let whereCondition = {};
-            if (estabelecimento) {
-                whereCondition = {
-                    estabelecimento: {
-                        nome: estabelecimento as string
-                    }
-                };
-            }
+            console.log('📊 Gerando relatório de posição de estoque por LOTES...', { estabelecimento });
 
-            const itensEstoque = await prisma.estoqueLocal.findMany({
-                where: whereCondition,
+            // ✅ CORREÇÃO: Busca diretamente da tabela EstoqueLote
+            const lotesEstoque = await prisma.estoqueLote.findMany({
+                where: {
+                    quantidade: {
+                        gt: 0 // Apenas lotes com quantidade positiva
+                    },
+                    ...(estabelecimento && {
+                        estabelecimento: {
+                            nome: estabelecimento as string
+                        }
+                    })
+                },
                 include: {
                     medicamento: {
                         select: {
@@ -81,7 +83,8 @@ export class RelatoriosController {
                             principioAtivo: true,
                             concentracao: true,
                             formaFarmaceutica: true,
-                            estoqueMinimo: true
+                            estoqueMinimo: true,
+                            psicotropico: true
                         }
                     },
                     estabelecimento: {
@@ -93,68 +96,92 @@ export class RelatoriosController {
                         }
                     }
                 },
-                orderBy: {
-                    medicamento: {
-                        principioAtivo: 'asc'
+                orderBy: [
+                    {
+                        medicamento: {
+                            principioAtivo: 'asc'
+                        }
+                    },
+                    {
+                        numeroLote: 'asc'
+                    },
+                    {
+                        dataValidade: 'asc'
                     }
-                }
+                ]
             });
 
-            const medicamentoIds = itensEstoque.map(item => item.medicamentoId);
+            console.log(`✅ Encontrados ${lotesEstoque.length} lotes no estoque`);
 
-            const ultimosLotes = await prisma.itemMovimento.findMany({
+            // ✅ CORREÇÃO: Busca a localização dos lotes da tabela ItemMovimento
+            const medicamentoIds = lotesEstoque.map(lote => lote.medicamentoId);
+
+            const localizacoesLotes = await prisma.itemMovimento.findMany({
                 where: {
                     medicamentoId: {
                         in: medicamentoIds
+                    },
+                    numeroLote: {
+                        in: lotesEstoque.map(lote => lote.numeroLote)
                     }
                 },
                 select: {
                     medicamentoId: true,
                     numeroLote: true,
-                    dataValidade: true,
-                    valorUnitario: true,
-                    localizacaoFisica: true,
+                    localizacaoFisica: true
                 },
-                orderBy: {
-                    movimento: {
-                        dataDocumento: 'desc'
-                    }
-                },
-                distinct: ['medicamentoId']
+                distinct: ['medicamentoId', 'numeroLote']
             });
 
-            const dadosRelatorio = itensEstoque.map(itemEstoque => {
-                const loteRecente = ultimosLotes.find(
-                    lote => lote.medicamentoId === itemEstoque.medicamentoId
+            // ✅ Formata a resposta - UM REGISTRO POR LOTE
+            const dadosRelatorio = lotesEstoque.map(lote => {
+                // Encontra a localização para este lote específico
+                const localizacaoLote = localizacoesLotes.find(
+                    loc => loc.medicamentoId === lote.medicamentoId && loc.numeroLote === lote.numeroLote
                 );
 
                 return {
-                    id: itemEstoque.id,
+                    id: lote.id, // ID único do lote
+                    numeroLote: lote.numeroLote,
+                    dataValidade: lote.dataValidade,
+                    quantidade: lote.quantidade,
+                    valorUnitario: lote.valorUnitario.toNumber(), // Converte Decimal para number
+                    localizacao: localizacaoLote?.localizacaoFisica || 'Não informada', // ✅ CORRIGIDO
                     medicamento: {
-                        principioAtivo: itemEstoque.medicamento.principioAtivo,
-                        concentracao: itemEstoque.medicamento.concentracao,
-                        formaFarmaceutica: itemEstoque.medicamento.formaFarmaceutica,
-                        estoqueMinimo: itemEstoque.medicamento.estoqueMinimo
+                        id: lote.medicamento.id,
+                        principioAtivo: lote.medicamento.principioAtivo,
+                        concentracao: lote.medicamento.concentracao,
+                        formaFarmaceutica: lote.medicamento.formaFarmaceutica,
+                        estoqueMinimo: lote.medicamento.estoqueMinimo,
+                        psicotropico: lote.medicamento.psicotropico
                     },
-                    numeroLote: loteRecente?.numeroLote || 'N/A',
-                    dataValidade: loteRecente?.dataValidade || new Date(),
-                    quantidade: itemEstoque.quantidade,
-                    valorUnitario: loteRecente?.valorUnitario || 0,
-                    localizacao: loteRecente?.localizacaoFisica || 'Não informada',
                     estabelecimento: {
-                        nome: itemEstoque.estabelecimento.nome,
-                        tipo: itemEstoque.estabelecimento.tipo,
-                        cnes: itemEstoque.estabelecimento.cnes
+                        id: lote.estabelecimento.id,
+                        nome: lote.estabelecimento.nome,
+                        tipo: lote.estabelecimento.tipo,
+                        cnes: lote.estabelecimento.cnes
                     }
                 };
             });
 
+            console.log(`📋 Relatório gerado com ${dadosRelatorio.length} itens (lotes individuais)`);
+
+            // ✅ DEBUG: Verifica se há medicamentos com múltiplos lotes
+            const medicamentosComMultiplosLotes = dadosRelatorio.reduce((acc, item) => {
+                const key = item.medicamento.principioAtivo;
+                acc[key] = (acc[key] || 0) + 1;
+                return acc;
+            }, {} as { [key: string]: number });
+
+            const multiplos = Object.entries(medicamentosComMultiplosLotes).filter(([_, count]) => count > 1);
+            console.log('🔍 Medicamentos com múltiplos lotes:', multiplos);
+
             response.json(dadosRelatorio);
 
         } catch (error: unknown) {
-            console.error('Erro no relatório de estoque:', error);
-            response.status(500).json({
-                error: 'Erro ao gerar relatório',
+            console.error('❌ Erro ao gerar relatório de posição de estoque:', error);
+            return response.status(500).json({
+                error: 'Erro interno do servidor ao gerar relatório',
                 details: error instanceof Error ? error.message : 'Erro desconhecido'
             });
         }
@@ -183,6 +210,7 @@ export class RelatoriosController {
             });
         }
     }
+
 
     async getDispensacoes(request: Request, response: Response) {
         try {
@@ -248,55 +276,55 @@ export class RelatoriosController {
                         }
                     }
                 },
-               
-            
+
+
                 orderBy: {
-                dataDispensacao: 'desc'
-            }
-        },);
+                    dataDispensacao: 'desc'
+                }
+            },);
 
-        const valoresUnitarios = await buscarValoresUnitarios(dispensacoes);
+            const valoresUnitarios = await buscarValoresUnitarios(dispensacoes);
 
-        const dadosRelatorio: any[] = [];
+            const dadosRelatorio: any[] = [];
 
-        dispensacoes.forEach(dispensacao => {
-            dispensacao.itensDispensados.forEach(item => {
-                const valorUnitario = valoresUnitarios[item.medicamento.id] || 0;
+            dispensacoes.forEach(dispensacao => {
+                dispensacao.itensDispensados.forEach(item => {
+                    const valorUnitario = valoresUnitarios[item.medicamento.id] || 0;
 
-                const profissionalNome = dispensacao.profissionalSaude?.nome ||
-                    dispensacao.profissionalSaudeNome ||
-                    'N/A';
+                    const profissionalNome = dispensacao.profissionalSaude?.nome ||
+                        dispensacao.profissionalSaudeNome ||
+                        'N/A';
 
-                dadosRelatorio.push({
-                    id: `${dispensacao.id}-${item.id}`,
-                    dataDispensacao: dispensacao.dataDispensacao.toISOString(),
-                    medicamento: {
-                        principioAtivo: item.medicamento.principioAtivo,
-                        concentracao: item.medicamento.concentracao,
-                        formaFarmaceutica: item.medicamento.formaFarmaceutica
-                    },
-                    pacienteId: dispensacao.id,
-                    pacienteNome: dispensacao.pacienteNome,
-                    pacienteCpf: dispensacao.pacienteCpf || undefined,
-                    estabelecimentoNome: dispensacao.estabelecimentoOrigem.nome,
-                    profissionalNome: profissionalNome,
-                    quantidade: item.quantidadeSaida,
-                    valorUnitario: valorUnitario,
-                    valorTotal: item.quantidadeSaida * valorUnitario,
-                    loteNumero: item.loteNumero,
-                    documentoReferencia: dispensacao.documentoReferencia
+                    dadosRelatorio.push({
+                        id: `${dispensacao.id}-${item.id}`,
+                        dataDispensacao: dispensacao.dataDispensacao.toISOString(),
+                        medicamento: {
+                            principioAtivo: item.medicamento.principioAtivo,
+                            concentracao: item.medicamento.concentracao,
+                            formaFarmaceutica: item.medicamento.formaFarmaceutica
+                        },
+                        pacienteId: dispensacao.id,
+                        pacienteNome: dispensacao.pacienteNome,
+                        pacienteCpf: dispensacao.pacienteCpf || undefined,
+                        estabelecimentoNome: dispensacao.estabelecimentoOrigem.nome,
+                        profissionalNome: profissionalNome,
+                        quantidade: item.quantidadeSaida,
+                        valorUnitario: valorUnitario,
+                        valorTotal: item.quantidadeSaida * valorUnitario,
+                        loteNumero: item.loteNumero,
+                        documentoReferencia: dispensacao.documentoReferencia
+                    });
                 });
             });
-        });
 
-        response.json(dadosRelatorio);
+            response.json(dadosRelatorio);
 
-    } catch(error: any) {
-        console.error('Erro no relatório de dispensações:', error);
-        response.status(500).json({
-            error: 'Erro ao gerar relatório de dispensações',
-            details: error.message
-        });
+        } catch (error: any) {
+            console.error('Erro no relatório de dispensações:', error);
+            response.status(500).json({
+                error: 'Erro ao gerar relatório de dispensações',
+                details: error.message
+            });
+        }
     }
-}
 }

@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Form, Row, Col, Table, Alert, Modal } from 'react-bootstrap';
+import { Button, Card, Form, Row, Col, Table, Alert, Modal, Badge } from 'react-bootstrap';
 import type { DispensacaoFormData, ItemDispensacaoForm } from '../../types/Dispensacao';
 import type { Medicamento } from '../../types/Medicamento';
 import type { Estabelecimento } from '../../types/Estabelecimento';
 import type { Paciente } from '../../types/Paciente';
 import type { ProfissionalSaude } from '../../types/ProfissionalSaude';
-import { FaPlus, FaExclamationTriangle } from 'react-icons/fa';
+import type { EstoqueLote } from '../../types/Estoque';
+import { FaPlus, FaExclamationTriangle, FaBoxOpen } from 'react-icons/fa';
 import { estoqueService } from '../../store/services/estoqueService';
 import { retiradaService } from '../../store/services/retiradaService';
 
+
+interface LoteDispensacao {
+  loteId: string;
+  numeroLote: string;
+  dataValidade: string;
+  quantidadeDisponivel: number;
+  quantidadeSelecionada: number;
+}
 
 interface DispensacaoFormProps {
   estabelecimentos: Estabelecimento[];
@@ -20,7 +29,6 @@ interface DispensacaoFormProps {
   isLoading?: boolean;
 }
 
-
 const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   estabelecimentos,
   medicamentos,
@@ -30,14 +38,13 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   onCancel,
   isLoading = false
 }) => {
-
   const estabelecimentoLogado = estabelecimentos.length > 0 ? estabelecimentos[0] : null;
   const estabelecimentoIdInicial = estabelecimentoLogado ? estabelecimentoLogado.id : '';
 
   const [formData, setFormData] = useState<DispensacaoFormData>({
     pacienteNome: '',
     pacienteCpf: '',
-    profissionalSaudeId: '',     // ID do profissional cadastrado
+    profissionalSaudeId: '',
     profissionalSaudeNome: '',
     documentoReferencia: '',
     observacao: '',
@@ -51,13 +58,18 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
   });
 
   const [estoqueDisponivel, setEstoqueDisponivel] = useState<number>(0);
-
   const [tipoDocumento, setTipoDocumento] = useState<'COMUM' | 'PSICOTROPICO'>('COMUM');
 
   const [alertasRetirada, setAlertasRetirada] = useState<{ [key: string]: string }>({});
   const [showModalJustificativa, setShowModalJustificativa] = useState(false);
   const [justificativaTemp, setJustificativaTemp] = useState('');
   const [medicamentoPendente, setMedicamentoPendente] = useState<string | null>(null);
+
+  // ✅ NOVOS ESTADOS PARA SELEÇÃO DE LOTES
+  const [showModalLotes, setShowModalLotes] = useState(false);
+  const [itemSelecionadoParaLotes, setItemSelecionadoParaLotes] = useState<ItemDispensacaoForm | null>(null);
+  const [lotesDisponiveis, setLotesDisponiveis] = useState<EstoqueLote[]>([]);
+  const [loadingLotes, setLoadingLotes] = useState(false);
 
   useEffect(() => {
     if (estabelecimentoLogado && formData.estabelecimentoOrigemId !== estabelecimentoLogado.id) {
@@ -68,6 +80,155 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     }
   }, [estabelecimentoLogado]);
 
+  // ✅ FUNÇÃO PARA CARREGAR LOTES
+  const carregarLotesDispensacao = async (medicamentoId: string, estabelecimentoId: string) => {
+    try {
+      setLoadingLotes(true);
+      console.log('📦 Carregando lotes para dispensação:', { medicamentoId, estabelecimentoId });
+
+      const lotes = await estoqueService.getLotesDisponiveis(medicamentoId, estabelecimentoId);
+      console.log('✅ Lotes carregados:', lotes);
+
+      setLotesDisponiveis(lotes);
+      return lotes;
+    } catch (error) {
+      console.error('❌ Erro ao carregar lotes:', error);
+      setLotesDisponiveis([]);
+      return [];
+    } finally {
+      setLoadingLotes(false);
+    }
+  };
+
+  // ✅ FUNÇÃO PARA ABRIR MODAL DE LOTES
+  const abrirModalLotes = async (item: ItemDispensacaoForm) => {
+    if (!formData.estabelecimentoOrigemId) {
+      alert('Estabelecimento não definido');
+      return;
+    }
+
+    setItemSelecionadoParaLotes(item);
+
+    try {
+      await carregarLotesDispensacao(item.medicamentoId, formData.estabelecimentoOrigemId);
+      setShowModalLotes(true);
+    } catch (error) {
+      alert('Erro ao carregar lotes disponíveis');
+    }
+  };
+
+  // ✅ FUNÇÃO PARA FECHAR MODAL DE LOTES
+  const fecharModalLotes = () => {
+    setShowModalLotes(false);
+    setItemSelecionadoParaLotes(null);
+    setLotesDisponiveis([]);
+  };
+
+  // ✅ FUNÇÕES PARA MANIPULAR LOTES NO MODAL
+  const atualizarQuantidadeLoteDispensacao = (loteId: string, quantidade: number) => {
+    if (!itemSelecionadoParaLotes) return;
+
+    const lotesAtualizados = itemSelecionadoParaLotes.lotesSelecionados?.map(lote =>
+      lote.loteId === loteId
+        ? { ...lote, quantidadeSelecionada: Math.max(0, Math.min(quantidade, lote.quantidadeDisponivel)) }
+        : lote
+    ) || [];
+
+    setItemSelecionadoParaLotes({
+      ...itemSelecionadoParaLotes,
+      lotesSelecionados: lotesAtualizados
+    } as any);
+  };
+
+  const adicionarLoteDispensacao = (lote: EstoqueLote) => {
+    if (!itemSelecionadoParaLotes) return;
+
+    const loteJaSelecionado = (itemSelecionadoParaLotes as any).lotesSelecionados?.some((l: LoteDispensacao) => l.loteId === lote.id);
+    if (loteJaSelecionado) return;
+
+    const novoLote: LoteDispensacao = {
+      loteId: lote.id,
+      numeroLote: lote.numeroLote,
+      dataValidade: lote.dataValidade,
+      quantidadeDisponivel: lote.quantidade,
+      quantidadeSelecionada: 0
+    };
+
+    const lotesAtualizados = [...((itemSelecionadoParaLotes as any).lotesSelecionados || []), novoLote];
+
+    setItemSelecionadoParaLotes({
+      ...itemSelecionadoParaLotes,
+      lotesSelecionados: lotesAtualizados
+    } as any);
+  };
+
+  const removerLoteDispensacao = (loteId: string) => {
+    if (!itemSelecionadoParaLotes) return;
+
+    const lotesAtualizados = (itemSelecionadoParaLotes as any).lotesSelecionados?.filter((lote: LoteDispensacao) => lote.loteId !== loteId) || [];
+
+    setItemSelecionadoParaLotes({
+      ...itemSelecionadoParaLotes,
+      lotesSelecionados: lotesAtualizados
+    } as any);
+  };
+
+  // ✅ FUNÇÃO PARA DISTRIBUIÇÃO AUTOMÁTICA FIFO
+  const distribuirAutomaticamenteDispensacao = () => {
+    if (!itemSelecionadoParaLotes) return;
+
+    const quantidadeTotal = itemSelecionadoParaLotes.quantidadeSaida;
+    const lotesOrdenados = [...lotesDisponiveis]
+      .sort((a, b) => new Date(a.dataValidade).getTime() - new Date(b.dataValidade).getTime());
+
+    let quantidadeRestante = quantidadeTotal;
+    const lotesSelecionados: LoteDispensacao[] = [];
+
+    for (const lote of lotesOrdenados) {
+      if (quantidadeRestante <= 0) break;
+
+      const quantidadeLote = Math.min(quantidadeRestante, lote.quantidade);
+      lotesSelecionados.push({
+        loteId: lote.id,
+        numeroLote: lote.numeroLote,
+        dataValidade: lote.dataValidade,
+        quantidadeDisponivel: lote.quantidade,
+        quantidadeSelecionada: quantidadeLote
+      });
+
+      quantidadeRestante -= quantidadeLote;
+    }
+
+    setItemSelecionadoParaLotes({
+      ...itemSelecionadoParaLotes,
+      lotesSelecionados
+    } as any);
+  };
+
+  // ✅ FUNÇÃO PARA CONFIRMAR SELEÇÃO DE LOTES
+  const confirmarSelecaoLotes = () => {
+    if (!itemSelecionadoParaLotes) return;
+
+    const totalLotes = (itemSelecionadoParaLotes as any).lotesSelecionados?.reduce((sum: number, lote: LoteDispensacao) =>
+      sum + lote.quantidadeSelecionada, 0) || 0;
+
+    if (totalLotes !== itemSelecionadoParaLotes.quantidadeSaida) {
+      alert(`A soma dos lotes (${totalLotes}) não corresponde à quantidade da dispensação (${itemSelecionadoParaLotes.quantidadeSaida})`);
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      itens: prev.itens.map(item =>
+        item.medicamentoId === itemSelecionadoParaLotes!.medicamentoId
+          ? { ...itemSelecionadoParaLotes! }
+          : item
+      )
+    }));
+
+    fecharModalLotes();
+  };
+
   const verificarRetiradaRecente = async (medicamentoId: string) => {
     console.log('🔍 Iniciando verificação de retirada recente...');
     console.log('📋 Dados para verificação:', {
@@ -76,7 +237,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
       estabelecimentoId: formData.estabelecimentoOrigemId
     });
     if (!formData.pacienteCpf || !formData.estabelecimentoOrigemId) return;
-    console.log('❌ Dados insuficientes para verificação');
 
     try {
       console.log('🔍 Verificando retirada recente para:', medicamentoId);
@@ -102,19 +262,17 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 6).toUpperCase();
 
-    // Pega as primeiras 4 letras do nome, remove espaços
     let prefixo = 'DISP';
     if (estabelecimentoLogado?.nome) {
       prefixo = estabelecimentoLogado.nome
         .substring(0, 4)
         .toUpperCase()
-        .replace(/\s/g, ''); // Remove espaços
+        .replace(/\s/g, '');
     }
 
     return `${prefixo}-${timestamp}-${random}`;
   };
 
-  // ✅ GERA AUTOMATICAMENTE AO CARREGAR
   useEffect(() => {
     if (!formData.documentoReferencia || formData.documentoReferencia.trim() === '') {
       const numeroAutomatico = gerarNumeroAutomatico();
@@ -141,7 +299,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
         );
         setEstoqueDisponivel(estoque);
 
-        // ✅ APENAS ESTA LINHA NOVA - Verifica retirada recente
         if (formData.pacienteCpf) {
           verificarRetiradaRecente(medicamentoId);
         }
@@ -154,7 +311,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     }
   };
 
-  // ✅ 3. MODIFIQUE A adicionarItem (ADICIONE ESTE BLOCO)
+  // ✅ FUNÇÃO ADICIONAR ITEM ATUALIZADA (OPCIONAL)
   const adicionarItem = async () => {
     if (!novoItem.medicamentoId || novoItem.quantidadeSaida <= 0) {
       alert('Selecione um medicamento e informe a quantidade');
@@ -166,34 +323,44 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
       return;
     }
 
-    // ✅ BLOCO NOVO - Verifica se há alerta antes de adicionar
     if (alertasRetirada[novoItem.medicamentoId]) {
       setMedicamentoPendente(novoItem.medicamentoId);
       setShowModalJustificativa(true);
-      return; // Não adiciona até justificar
+      return;
     }
 
+    // ✅ PERGUNTA SE QUER SELECIONAR LOTES
+    const medicamento = medicamentos.find(m => m.id === novoItem.medicamentoId);
+    const querSelecionarLotes = window.confirm(
+      `Deseja selecionar lotes específicos para ${medicamento?.principioAtivo}?\n\n` +
+      `• SIM: Você escolhe os lotes manualmente\n` +
+      `• NÃO: Sistema usa distribuição FIFO automática`
+    );
 
-    setFormData(prev => ({
-      ...prev,
-      itens: [...prev.itens, { ...novoItem }]
-    }));
+    if (querSelecionarLotes) {
+      setItemSelecionadoParaLotes({ ...novoItem });
+      await carregarLotesDispensacao(novoItem.medicamentoId, formData.estabelecimentoOrigemId);
+      setShowModalLotes(true);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        itens: [...prev.itens, { ...novoItem }]
+      }));
 
-    setNovoItem({
-      medicamentoId: '',
-      quantidadeSaida: 0
-    });
-    setEstoqueDisponivel(0);
+      setNovoItem({
+        medicamentoId: '',
+        quantidadeSaida: 0
+      });
+      setEstoqueDisponivel(0);
+    }
   };
 
-  // ✅ 4. ADICIONE ESTA FUNÇÃO (CONFIRMAÇÃO DE JUSTIFICATIVA)
   const handleConfirmarJustificativa = () => {
     if (!justificativaTemp.trim()) {
       alert('Por favor, informe uma justificativa para a retirada antecipada.');
       return;
     }
 
-    // Adiciona o item com a justificativa
     if (medicamentoPendente && novoItem.medicamentoId === medicamentoPendente) {
       setFormData(prev => ({
         ...prev,
@@ -202,7 +369,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
         usuarioAutorizador: 'Sistema'
       }));
 
-      // Limpa estados
       setNovoItem({
         medicamentoId: '',
         quantidadeSaida: 0
@@ -215,7 +381,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     setMedicamentoPendente(null);
   };
 
-
   const removerItem = (index: number) => {
     setFormData(prev => ({
       ...prev,
@@ -223,6 +388,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     }));
   };
 
+  // No handleSubmit, ajuste o formato dos dados enviados:
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -246,10 +412,35 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
       return;
     }
 
-    onSubmit(formData);
+    // ✅ PREPARA OS DADOS NO FORMATO CORRETO PARA O BACKEND
+    const dadosParaEnviar: DispensacaoCreateData = {
+      pacienteNome: formData.pacienteNome,
+      pacienteCpf: formData.pacienteCpf,
+      pacienteId: formData.pacienteId,
+      profissionalSaudeId: formData.profissionalSaudeId,
+      profissionalSaudeNome: formData.profissionalSaudeNome,
+      documentoReferencia: formData.documentoReferencia,
+      observacao: formData.observacao,
+      estabelecimentoOrigemId: formData.estabelecimentoOrigemId,
+      justificativaRetiradaAntecipada: formData.justificativaRetiradaAntecipada,
+      usuarioAutorizador: formData.usuarioAutorizador,
+      itens: formData.itens.map(item => ({
+        medicamentoId: item.medicamentoId,
+        quantidadeSaida: item.quantidadeSaida,
+        // ✅ CONVERTE OS LOTES SELECIONADOS PARA O FORMATO DO BACKEND
+        lotes: item.lotesSelecionados?.map(lote => ({
+          loteId: lote.loteId,
+          numeroLote: lote.numeroLote,
+          quantidade: lote.quantidadeSelecionada
+        })) || []
+      }))
+    };
+
+    console.log('📤 Enviando dados para dispensação:', dadosParaEnviar);
+
+    onSubmit(dadosParaEnviar);
   };
 
-  // ✅ 5. ADICIONE ESTE useEffect PARA VERIFICAR ITENS EXISTENTES
   useEffect(() => {
     if (formData.pacienteCpf && formData.itens.length > 0) {
       formData.itens.forEach(item => {
@@ -275,17 +466,15 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
     );
   }
 
-
   return (
     <>
       <Card>
         <Card.Header>
-          {/* 🚨 CORREÇÃO: Aplica negrito (fw-bold) no título */}
           <h5 className="card-title mb-0 fw-bold">Dispensação de Medicamentos</h5>
         </Card.Header>
         <Card.Body>
           <Form onSubmit={handleSubmit}>
-            {/* Dados do Paciente (permanece o mesmo) */}
+            {/* Dados do Paciente (mantido igual) */}
             <Card className="mb-4">
               <Card.Header>
                 <h6 className="mb-0">Dados do Paciente</h6>
@@ -300,7 +489,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                         onChange={(e) => {
                           const selectedId = e.target.value;
                           if (selectedId) {
-                            // ✅ Paciente selecionado da lista
                             const pacienteSelecionado = pacientes.find(p => p.id === selectedId);
                             setFormData(prev => ({
                               ...prev,
@@ -309,7 +497,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                               pacienteCpf: pacienteSelecionado?.cpf || ''
                             }));
                           } else {
-                            // ✅ Limpa campos quando seleciona "Selecione..."
                             setFormData(prev => ({
                               ...prev,
                               pacienteId: undefined,
@@ -338,11 +525,11 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                         onChange={(e) => setFormData(prev => ({
                           ...prev,
                           pacienteNome: e.target.value,
-                          pacienteId: undefined, // ✅ Limpa ID quando digita manualmente
-                          pacienteCpf: '' // ✅ Limpa CPF também
+                          pacienteId: undefined,
+                          pacienteCpf: ''
                         }))}
                         placeholder="Digite o nome completo do paciente..."
-                        disabled={!!formData.pacienteId} // ✅ Desabilita se paciente foi selecionado
+                        disabled={!!formData.pacienteId}
                         required
                       />
                     </Form.Group>
@@ -359,7 +546,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                           pacienteCpf: e.target.value
                         }))}
                         placeholder="000.000.000-00"
-                        disabled={!!formData.pacienteId} // ✅ Desabilita se paciente foi selecionado
+                        disabled={!!formData.pacienteId}
                       />
                       <Form.Text className="text-muted">
                         {formData.pacienteId ? 'CPF preenchido automaticamente' : 'Opcional para pacientes não cadastrados'}
@@ -375,14 +562,12 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
               <Col md={6}>
                 <Form.Group>
                   <Form.Label>Estabelecimento *</Form.Label>
-                  {/* 🚨 CORREÇÃO: Substituído o Form.Select por um Form.Control desabilitado */}
                   <Form.Control
                     type="text"
                     value={estabelecimentoLogado.nome}
                     disabled
                     readOnly
                   />
-                  {/* O ID está no estado formData.estabelecimentoOrigemId */}
                 </Form.Group>
               </Col>
               <Col md={6}>
@@ -392,14 +577,12 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                     value={tipoDocumento}
                     onChange={(e) => {
                       setTipoDocumento(e.target.value as 'COMUM' | 'PSICOTROPICO');
-                      // Se mudar para comum, gera número automático
                       if (e.target.value === 'COMUM') {
                         setFormData(prev => ({
                           ...prev,
                           documentoReferencia: `DISP-${Date.now()}`
                         }));
                       } else {
-                        // Se mudar para psicotrópico, limpa para digitar
                         setFormData(prev => ({
                           ...prev,
                           documentoReferencia: ''
@@ -447,7 +630,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
                       profissionalSaudeNome: e.target.value,
-                      profissionalSaudeId: e.target.value ? undefined : prev.profissionalSaudeId // Limpa ID se digitar nome
+                      profissionalSaudeId: e.target.value ? undefined : prev.profissionalSaudeId
                     }))}
                     placeholder="Digite o nome do profissional..."
                     disabled={!!formData.profissionalSaudeId}
@@ -458,8 +641,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                 <Form.Group>
                   <Form.Label>
                     Documento de Referência *
-                    <small className="text-muted ms-2">
-                    </small>
                   </Form.Label>
                   <Form.Control
                     type="text"
@@ -485,7 +666,12 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
             {/* Medicamentos */}
             <Card className="mb-4">
               <Card.Header>
-                <h6 className="mb-0">Medicamentos para Dispensação</h6>
+                <div className="d-flex justify-content-between align-items-center">
+                  <h6 className="mb-0">Medicamentos para Dispensação</h6>
+                  <Badge bg="info" className="fs-6">
+                    ⓘ Seleção de lotes opcional
+                  </Badge>
+                </div>
               </Card.Header>
               <Card.Body>
                 <Row className="g-2">
@@ -509,30 +695,23 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                     <Form.Group>
                       <Form.Label>Quantidade *</Form.Label>
                       <Form.Control
-                        type="text" // ✅ Mude para text
+                        type="text"
                         value={novoItem.quantidadeSaida === 0 ? '' : novoItem.quantidadeSaida}
                         onChange={(e) => {
                           const value = e.target.value;
-
-                          // ✅ Permite apenas números e campo vazio
                           if (value === '' || /^\d+$/.test(value)) {
                             const numValue = value === '' ? 0 : Number(value);
-
-                            // ✅ Validação do estoque
                             if (numValue <= estoqueDisponivel) {
                               setNovoItem(prev => ({ ...prev, quantidadeSaida: numValue }));
                             } else {
-                              // ✅ Opcional: Mostrar alerta se exceder estoque
                               alert(`Quantidade não pode exceder o estoque disponível: ${estoqueDisponivel}`);
                             }
                           }
                         }}
                         placeholder="Digite a quantidade"
                         disabled={estoqueDisponivel === 0}
-                        // ✅ Adiciona dica visual do estoque máximo
                         title={`Estoque disponível: ${estoqueDisponivel}`}
                       />
-                      {/* ✅ Feedback visual do estoque */}
                       {estoqueDisponivel > 0 && (
                         <Form.Text className="text-muted">
                           Estoque disponível: <strong>{estoqueDisponivel}</strong>
@@ -558,6 +737,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                         onClick={adicionarItem}
                         className="w-100"
                         disabled={estoqueDisponivel === 0 || novoItem.quantidadeSaida === 0}
+                        title="Clique para adicionar - Você poderá escolher os lotes depois"
                       >
                         <FaPlus className="me-2" />
                         Adicionar
@@ -586,18 +766,48 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                     <tbody>
                       {formData.itens.map((item, index) => {
                         const medicamento = medicamentos.find(m => m.id === item.medicamentoId);
+                        const temLotesSelecionados = item.lotesSelecionados && item.lotesSelecionados.length > 0;
+
                         return (
                           <tr key={index}>
-                            <td>{medicamento?.principioAtivo} {medicamento?.concentracao}</td>
+                            <td>
+                              {medicamento?.principioAtivo} {medicamento?.concentracao}
+                              {temLotesSelecionados && (
+                                <Badge bg="success" className="ms-1" title="Lotes selecionados manualmente">
+                                  ✓
+                                </Badge>
+                              )}
+                            </td>
                             <td>{item.quantidadeSaida}</td>
                             <td>
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                onClick={() => removerItem(index)}
-                              >
-                                Remover
-                              </Button>
+                              <div className="d-flex gap-1">
+                                <Button
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => abrirModalLotes(item)}
+                                  title="Selecionar lotes específicos"
+                                >
+                                  <FaBoxOpen />
+                                </Button>
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => removerItem(index)}
+                                >
+                                  Remover
+                                </Button>
+                              </div>
+
+                              {/* Mostra resumo dos lotes se houver seleção */}
+                              {temLotesSelecionados && (
+                                <div className="mt-1">
+                                  <small className="text-muted">
+                                    <strong>Lotes:</strong> {item.lotesSelecionados!.map(lote =>
+                                      `${lote.numeroLote} (${lote.quantidadeSelecionada})`
+                                    ).join(', ')}
+                                  </small>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );
@@ -623,13 +833,10 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
             </div>
           </Form>
         </Card.Body>
-      </Card >
-
-
-
+      </Card>
 
       {/* Modal para Justificativa */}
-      < Modal show={showModalJustificativa} onHide={() => setShowModalJustificativa(false)}>
+      <Modal show={showModalJustificativa} onHide={() => setShowModalJustificativa(false)}>
         <Modal.Header closeButton>
           <Modal.Title>
             <FaExclamationTriangle className="text-warning me-2" />
@@ -663,11 +870,128 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
             Confirmar Justificativa
           </Button>
         </Modal.Footer>
-      </Modal >
+      </Modal>
+
+      {/* ✅ NOVO MODAL PARA SELEÇÃO DE LOTES */}
+      <Modal show={showModalLotes} onHide={fecharModalLotes} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Selecionar Lotes - {itemSelecionadoParaLotes && medicamentos.find(m => m.id === itemSelecionadoParaLotes.medicamentoId)?.principioAtivo}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {itemSelecionadoParaLotes && (
+            <Alert variant="info">
+              <div className="d-flex justify-content-between align-items-start">
+                <div>
+                  <strong>Medicamento:</strong> {itemSelecionadoParaLotes && medicamentos.find(m => m.id === itemSelecionadoParaLotes.medicamentoId)?.principioAtivo}
+                  <br />
+                  <strong>Quantidade total:</strong> {itemSelecionadoParaLotes?.quantidadeSaida} unidades
+                  <br />
+                  <strong>Total selecionado:</strong> {(itemSelecionadoParaLotes as any).lotesSelecionados?.reduce((sum: number, lote: LoteDispensacao) => sum + lote.quantidadeSelecionada, 0) || 0} unidades
+                </div>
+                <Button
+                  variant="outline-success"
+                  size="sm"
+                  onClick={distribuirAutomaticamenteDispensacao}
+                  title="Distribuir automaticamente por validade (FIFO)"
+                >
+                  🚀 FIFO Automático
+                </Button>
+              </div>
+
+              {(itemSelecionadoParaLotes as any).lotesSelecionados &&
+                (itemSelecionadoParaLotes as any).lotesSelecionados.reduce((sum: number, lote: LoteDispensacao) => sum + lote.quantidadeSelecionada, 0) !== itemSelecionadoParaLotes.quantidadeSaida && (
+                  <Alert variant="warning" className="mt-2 mb-0 py-2">
+                    ⚠️ A soma dos lotes não coincide com a quantidade total
+                  </Alert>
+                )}
+            </Alert>
+          )}
+
+          <div className="mb-3">
+            <Button variant="outline-success" size="sm" onClick={distribuirAutomaticamenteDispensacao}>
+              Distribuir Automaticamente (FIFO)
+            </Button>
+          </div>
+
+          <Table striped bordered size="sm">
+            <thead>
+              <tr>
+                <th>Selecionar</th>
+                <th>Lote</th>
+                <th>Validade</th>
+                <th>Disponível</th>
+                <th>Quantidade</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lotesDisponiveis.map(lote => {
+                const loteSelecionado = (itemSelecionadoParaLotes as any)?.lotesSelecionados?.find((l: LoteDispensacao) => l.loteId === lote.id);
+                const isSelecionado = !!loteSelecionado;
+
+                return (
+                  <tr key={lote.id}>
+                    <td>
+                      {!isSelecionado ? (
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => adicionarLoteDispensacao(lote)}
+                          disabled={lote.quantidade <= 0}
+                        >
+                          {lote.quantidade <= 0 ? 'Indisponível' : 'Adicionar'}
+                        </Button>
+                      ) : (
+                        <Badge bg="success">Selecionado</Badge>
+                      )}
+                    </td>
+                    <td>{lote.numeroLote}</td>
+                    <td>{new Date(lote.dataValidade).toLocaleDateString()}</td>
+                    <td>{lote.quantidade}</td>
+                    <td style={{ width: '120px' }}>
+                      {isSelecionado && (
+                        <Form.Control
+                          type="number"
+                          min="0"
+                          max={lote.quantidade}
+                          value={loteSelecionado.quantidadeSelecionada}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 0;
+                            atualizarQuantidadeLoteDispensacao(lote.id, value);
+                          }}
+                        />
+                      )}
+                    </td>
+                    <td>
+                      {isSelecionado && (
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => removerLoteDispensacao(lote.id)}
+                        >
+                          Remover
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Table>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={fecharModalLotes}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={confirmarSelecaoLotes}>
+            Confirmar Lotes
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
-
 };
-
 
 export default DispensacaoForm;

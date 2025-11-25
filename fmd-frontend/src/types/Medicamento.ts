@@ -6,6 +6,7 @@ export interface Medicamento {
     psicotropico: boolean;
     quantidadeEstoque?: number;
     estoqueMinimo: number;
+    localizacao?: string;
     createdAt?: string;
     updatedAt?: string;
   }

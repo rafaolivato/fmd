@@ -46,7 +46,7 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
 
   const [novoItem, setNovoItem] = useState<ItemRequisicaoForm>({
     medicamentoId: '',
-    quantidadeSolicitada: 1
+    quantidadeSolicitada: 0
   });
 
   // Atualiza formData quando usuarioLogado carregar
@@ -66,7 +66,7 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
   });
 
   const adicionarItem = () => {
-    if (!novoItem.medicamentoId || novoItem.quantidadeSolicitada < 1) {
+    if (!novoItem.medicamentoId || novoItem.quantidadeSolicitada < 0) {
       alert('Selecione um medicamento e informe a quantidade');
       return;
     }
@@ -78,7 +78,7 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
 
     setNovoItem({
       medicamentoId: '',
-      quantidadeSolicitada: 1
+      quantidadeSolicitada: 0
     });
   };
 
@@ -208,29 +208,29 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
                   <Form.Group>
                     <Form.Label>Quantidade *</Form.Label>
                     <Form.Control
-                      type="text" // ✅ Mudei para "text"
-                      value={novoItem.quantidadeSolicitada === 0 ? '' : novoItem.quantidadeSolicitada.toString()}
+                      type="number"
+                      min="1"
+                      value={novoItem.quantidadeSolicitada || ''}
                       onChange={(e) => {
                         const value = e.target.value;
 
-                        // ✅ Permite apenas números e campo vazio
-                        if (value === '' || /^\d+$/.test(value)) {
-                          const numValue = value === '' ? 0 : Number(value);
-
-                          // ✅ Garante que seja pelo menos 1
-                          const quantidadeFinal = Math.max(1, numValue);
-                          setNovoItem(prev => ({ ...prev, quantidadeSolicitada: quantidadeFinal }));
+                        // Permite campo vazio ou números
+                        if (value === '') {
+                          setNovoItem(prev => ({ ...prev, quantidadeSolicitada: 0 }));
+                        } else if (/^\d+$/.test(value)) {
+                          const numValue = parseInt(value, 10);
+                          // Aceita qualquer número maior que 0, sem forçar mínimo
+                          setNovoItem(prev => ({ ...prev, quantidadeSolicitada: numValue }));
                         }
                       }}
                       placeholder="Digite a quantidade"
-                      // ✅ Remove completamente as setas do número
-                      style={{
-                        appearance: 'textfield',
-                        MozAppearance: 'textfield',
-                        WebkitAppearance: 'none'
-                      }}
-                      onWheel={(e) => e.currentTarget.blur()} // ✅ Previne scroll do mouse
+                      required
                     />
+                    {novoItem.quantidadeSolicitada <= 0 && (
+                      <Form.Text className="text-danger">
+                        A quantidade deve ser maior que zero
+                      </Form.Text>
+                    )}
                   </Form.Group>
                 </Col>
                 <Col md={2} className="d-flex align-items-end">

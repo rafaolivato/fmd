@@ -1,20 +1,51 @@
+// types/Dispensacao.ts
 import { type ProfissionalSaude } from './ProfissionalSaude';
+
+// ✅ NOVO: Interface para lotes selecionados
+export interface LoteDispensacaoForm {
+  loteId: string;
+  numeroLote: string;
+  quantidadeSelecionada: number;
+}
 
 export interface ItemDispensacaoForm {
   medicamentoId: string;
   quantidadeSaida: number;
-  loteId?: string; // Opcional - para seleção específica de lote
+  lotesSelecionados?: LoteDispensacaoForm[]; // ✅ AGORA É UM ARRAY DE LOTES
 }
 
 export interface DispensacaoFormData {
   pacienteNome: string;
   pacienteCpf?: string;
   pacienteId?: string; 
-  profissionalSaudeId?: string;        // ID do profissional cadastrado
+  profissionalSaudeId?: string;       
   profissionalSaudeNome?: string;     
   documentoReferencia: string;
   observacao?: string;
   itens: ItemDispensacaoForm[];
+  estabelecimentoOrigemId: string;
+  justificativaRetiradaAntecipada?: string;
+  usuarioAutorizador?: string;
+}
+
+// ✅ NOVO: Interface para enviar ao backend
+export interface DispensacaoCreateData {
+  pacienteNome: string;
+  pacienteCpf?: string;
+  pacienteId?: string;
+  profissionalSaudeId?: string;
+  profissionalSaudeNome?: string;
+  documentoReferencia: string;
+  observacao?: string;
+  itens: Array<{
+    medicamentoId: string;
+    quantidadeSaida: number;
+    lotes?: Array<{
+      loteId: string;
+      numeroLote: string;
+      quantidade: number;
+    }>;
+  }>;
   estabelecimentoOrigemId: string;
   justificativaRetiradaAntecipada?: string;
   usuarioAutorizador?: string;
