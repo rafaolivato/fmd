@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useFornecedores } from '../hooks/useFornecedores';
 import {
   Container,
   Row,
@@ -35,6 +36,8 @@ const HistoricoEntradas: React.FC = () => {
   const [fornecedoresOptions, setFornecedoresOptions] = useState<string[]>([]);
   const [medicamentosOptions, setMedicamentosOptions] = useState<string[]>([]);
 
+  const { fornecedores, isLoading: isLoadingFornecedores } = useFornecedores(filteredMovimentos);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,6 +47,12 @@ const HistoricoEntradas: React.FC = () => {
   useEffect(() => {
     filterEntradas();
   }, [movimentos, filtroFornecedor, filtroMedicamento, filtroDataInicio, filtroDataFim]);
+
+  useEffect(() => {
+  if (movimentos.length > 0 && Object.keys(fornecedores).length > 0) {
+    carregarOpcoesFiltro(movimentos);
+  }
+}, [fornecedores, movimentos]);
 
   const loadEntradas = async () => {
     try {
@@ -59,6 +68,14 @@ const HistoricoEntradas: React.FC = () => {
         : [];
 
       console.log(`✅ ${entradas.length} entradas carregadas`);
+
+      // ✅ DEBUG: Verifique a estrutura real dos dados
+      if (entradas.length > 0) {
+        console.log('📋 Estrutura do primeiro movimento:', entradas[0]);
+        console.log('🔍 Campos do movimento:', Object.keys(entradas[0]));
+        console.log('🏷️ FornecedorId do primeiro movimento:', entradas[0].fornecedorId);
+      }
+
       setMovimentos(entradas);
       carregarOpcoesFiltro(entradas);
 
@@ -72,10 +89,13 @@ const HistoricoEntradas: React.FC = () => {
   };
 
   const carregarOpcoesFiltro = (entradas: Movimento[]) => {
-    // Fornecedores únicos
+    // Fornecedores únicos - ✅ CORREÇÃO: Agora usando os nomes dos fornecedores carregados
     const fornecedoresUnicos = [...new Set(entradas
-      .filter(m => m.fornecedor && m.fornecedor.trim() !== '')
-      .map(m => m.fornecedor)
+      .filter(m => m.fornecedorId) // Filtra por fornecedorId
+      .map(m => {
+        // Se já temos o nome carregado, usa ele, senão usa o ID temporariamente
+        return fornecedores[m.fornecedorId!] || m.fornecedorId!;
+      })
     )].sort();
 
     // Medicamentos únicos
@@ -92,12 +112,21 @@ const HistoricoEntradas: React.FC = () => {
   const filterEntradas = () => {
     let filtered = movimentos;
 
-    // Filtro por fornecedor
-    if (filtroFornecedor) {
-      filtered = filtered.filter(m =>
-        m.fornecedor?.toLowerCase().includes(filtroFornecedor.toLowerCase())
-      );
-    }
+    // Filtro por fornecedor - ✅ CORREÇÃO: Agora filtra por ID
+     if (filtroFornecedor) {
+    filtered = filtered.filter(m => {
+      if (!m.fornecedorId) return false;
+      
+      const nomeFornecedor = fornecedores[m.fornecedorId];
+      // Se o nome já foi carregado, filtra por nome, senão por ID
+      if (nomeFornecedor && nomeFornecedor !== 'Fornecedor não encontrado') {
+        return nomeFornecedor.toLowerCase().includes(filtroFornecedor.toLowerCase());
+      } else {
+        // Fallback: filtra por ID enquanto o nome não carrega
+        return m.fornecedorId.toLowerCase().includes(filtroFornecedor.toLowerCase());
+      }
+    });
+  }
 
     // Filtro por medicamento
     if (filtroMedicamento) {
@@ -117,7 +146,7 @@ const HistoricoEntradas: React.FC = () => {
 
     if (filtroDataFim) {
       const dataFim = new Date(filtroDataFim);
-      dataFim.setHours(23, 59, 59, 999); // Fim do dia
+      dataFim.setHours(23, 59, 59, 999);
       filtered = filtered.filter(m =>
         new Date(m.dataDocumento) <= dataFim
       );
@@ -356,12 +385,20 @@ const HistoricoEntradas: React.FC = () => {
                             <small className="text-muted">{movimento.documentoTipo}</small>
                           </td>
                           <td>
-                            {/* Tentativas em ordem de prioridade */}
-                            {
-                              
-                              movimento.fornecedor
-                              
-                            }
+                            {movimento.fornecedorId ? (
+                              isLoadingFornecedores ? (
+                                <span className="text-muted">
+                                  <div className="spinner-border spinner-border-sm me-2" role="status">
+                                    <span className="visually-hidden">Carregando...</span>
+                                  </div>
+                                  Carregando...
+                                </span>
+                              ) : (
+                                fornecedores[movimento.fornecedorId] || 'Fornecedor não encontrado'
+                              )
+                            ) : (
+                              'Fornecedor não informado'
+                            )}
                           </td>
                           <td>{formatDate(movimento.dataDocumento)}</td>
                           <td>{formatDate(movimento.dataRecebimento)}</td>

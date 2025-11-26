@@ -20,7 +20,7 @@ export interface Movimento {
   tipoMovimentacao: string;
   fonteFinanciamento: string;
   fornecedor: string;
-  fornecedorId: string; // ← Mantém o ID
+  fornecedorId: string;
   fornecedorNome?: string;
   documentoTipo: string;
   numeroDocumento: string;

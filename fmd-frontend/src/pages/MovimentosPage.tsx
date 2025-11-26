@@ -5,6 +5,7 @@ import type { Movimento } from '../types/Movimento';
 import { movimentoService } from '../store/services/movimentoService';
 import { FaSync, FaExchangeAlt, FaExclamationTriangle, FaFilter } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { useFornecedores } from '../hooks/useFornecedores'; // ✅ Import novo
 
 const MovimentosPage: React.FC = () => {
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
@@ -18,26 +19,32 @@ const MovimentosPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  // ✅ NOVO: Hook para carregar nomes dos fornecedores
+  const { fornecedores, isLoading: isLoadingFornecedores } = useFornecedores(filteredMovimentos);
+
   useEffect(() => {
     loadMovimentos();
   }, []);
 
   useEffect(() => {
     filterMovimentos();
-  }, [movimentos, filtroTipo, filtroFornecedor, filtroMedicamento]);
+  }, [movimentos, filtroTipo, filtroFornecedor, filtroMedicamento, fornecedores]);
 
-  // Efeito para carregar opções de filtro quando movimentos mudam
+  // ✅ ATUALIZADO: Carrega opções quando movimentos ou fornecedores mudam
   useEffect(() => {
     if (movimentos.length > 0) {
       carregarOpcoesFiltro();
     }
-  }, [movimentos]);
+  }, [movimentos, fornecedores]);
 
   const carregarOpcoesFiltro = () => {
-    // Extrai fornecedores únicos (não vazios e não nulos)
+    // ✅ CORREÇÃO: Usa nomes dos fornecedores em vez de IDs
     const fornecedoresUnicos = [...new Set(movimentos
-      .filter(m => m.fornecedor && m.fornecedor.trim() !== '')
-      .map(m => m.fornecedor)
+      .filter(m => m.fornecedorId) // Filtra por fornecedorId
+      .map(m => {
+        // Se já temos o nome carregado, usa ele, senão usa o ID temporariamente
+        return fornecedores[m.fornecedorId!] || m.fornecedorId!;
+      })
     )].sort();
 
     // Extrai medicamentos únicos dos itens
@@ -95,11 +102,17 @@ const MovimentosPage: React.FC = () => {
       filtered = filtered.filter(m => m.tipoMovimentacao === filtroTipo);
     }
     
-    // Filtro por fornecedor
+    // ✅ CORREÇÃO: Filtro por nome do fornecedor
     if (filtroFornecedor) {
-      filtered = filtered.filter(m => 
-        m.fornecedor?.toLowerCase().includes(filtroFornecedor.toLowerCase())
-      );
+      filtered = filtered.filter(m => {
+        if (!m.fornecedorId) return false;
+        
+        const nomeFornecedor = fornecedores[m.fornecedorId];
+        if (nomeFornecedor && nomeFornecedor !== 'Fornecedor não encontrado') {
+          return nomeFornecedor.toLowerCase().includes(filtroFornecedor.toLowerCase());
+        }
+        return m.fornecedorId.toLowerCase().includes(filtroFornecedor.toLowerCase());
+      });
     }
     
     // Filtro por medicamento
@@ -137,6 +150,7 @@ const MovimentosPage: React.FC = () => {
     console.log('🔄 Recarregando dados...');
     setFiltroFornecedor('');
     setFiltroMedicamento('');
+    setFiltroTipo('TODOS');
     loadMovimentos();
   };
 
@@ -211,8 +225,25 @@ const MovimentosPage: React.FC = () => {
                   </Form.Group>
                 </Col>
                 
-                              
-                <Col md={4}>
+                {/* ✅ CORREÇÃO: Adiciona filtro de fornecedor que estava faltando */}
+                <Col md={3}>
+                  <Form.Group>
+                    <Form.Label>Fornecedor</Form.Label>
+                    <Form.Select
+                      value={filtroFornecedor}
+                      onChange={(e) => setFiltroFornecedor(e.target.value)}
+                    >
+                      <option value="">Todos os fornecedores</option>
+                      {fornecedoresOptions.map(fornecedor => (
+                        <option key={fornecedor} value={fornecedor}>
+                          {fornecedor}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                
+                <Col md={3}>
                   <Form.Group>
                     <Form.Label>Medicamento</Form.Label>
                     <Form.Select
@@ -229,7 +260,7 @@ const MovimentosPage: React.FC = () => {
                   </Form.Group>
                 </Col>
                 
-                <Col md={1} className="d-flex align-items-end">
+                <Col md={3} className="d-flex align-items-end">
                   {hasActiveFilters && (
                     <div className="text-muted small">
                       {filteredMovimentos.length} resultado(s)

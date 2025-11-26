@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, Table, Badge, Button } from 'react-bootstrap';
 import type { Movimento } from '../../types/Movimento';
 import { FaEye, FaFileAlt } from 'react-icons/fa';
+import { useFornecedores } from '../../hooks/useFornecedores'; // ✅ Import novo
 
 interface MovimentosListProps {
   movimentos: Movimento[];
@@ -14,15 +15,18 @@ const MovimentosList: React.FC<MovimentosListProps> = ({
   onViewDetails,
   isLoading = false
 }) => {
+  // ✅ NOVO: Hook para carregar nomes dos fornecedores
+  const { fornecedores } = useFornecedores(movimentos);
+
   // Debug
   React.useEffect(() => {
     console.log('🔍 MovimentosList - Debug:', {
       movimentosCount: movimentos.length,
       isLoading,
-      sample: movimentos[0]
+      sample: movimentos[0],
+      fornecedoresCount: Object.keys(fornecedores).length
     });
-
-  }, [movimentos, isLoading]);
+  }, [movimentos, isLoading, fornecedores]);
 
   const formatDate = (dateString: string) => {
     try {
@@ -53,20 +57,16 @@ const MovimentosList: React.FC<MovimentosListProps> = ({
     return movimento.itensMovimentados?.reduce((total, item) => total + (item.quantidade || 0), 0) || 0;
   };
 
-  // ✅ FUNÇÃO CORRIGIDA PARA CALCULAR VALOR TOTAL
   const calcularValorTotal = (movimento: Movimento): number => {
-    // Para entradas, geralmente o valorTotal já vem preenchido
     if (movimento.tipoMovimentacao === 'ENTRADA' && movimento.valorTotal && movimento.valorTotal > 0) {
       return movimento.valorTotal;
     }
     
-    // Para saídas, calcula baseado nos itens
     if (movimento.itensMovimentados && movimento.itensMovimentados.length > 0) {
       const total = movimento.itensMovimentados.reduce((sum, item) => {
         const quantidade = item.quantidade || 0;
         const valorUnitario = item.valorUnitario || movimento.valorTotal || 0;
         
-        // Se não tem valorUnitario, tenta usar o valorTotal do movimento dividido pela quantidade
         if (!valorUnitario && movimento.valorTotal && quantidade > 0) {
           return movimento.valorTotal;
         }
@@ -80,11 +80,19 @@ const MovimentosList: React.FC<MovimentosListProps> = ({
     return movimento.valorTotal || 0;
   };
 
+  // ✅ CORREÇÃO: Função para obter nome do fornecedor
+  const getNomeFornecedor = (movimento: Movimento): string => {
+    if (movimento.fornecedorId && fornecedores[movimento.fornecedorId]) {
+      return fornecedores[movimento.fornecedorId];
+    }
+    return movimento.fornecedor || 'Fornecedor não informado';
+  };
+
   const getReferenciaSaida = (movimento: Movimento) => {
     if (movimento.tipoMovimentacao === 'SAIDA') {
       return movimento.observacao || 'Saída diversa';
     }
-    return movimento.fornecedor || 'Fornecedor não informado';
+    return getNomeFornecedor(movimento); // ✅ Usa a função corrigida
   };
 
   const getFonteFinanciamentoFormatada = (fonte: string) => {
@@ -171,7 +179,8 @@ const MovimentosList: React.FC<MovimentosListProps> = ({
                   <td>
                     {movimento.tipoMovimentacao === 'ENTRADA' ? (
                       <div>
-                        <div className="fw-semibold">{movimento.fornecedor}</div>
+                        {/* ✅ CORREÇÃO: Usa função para obter nome do fornecedor */}
+                        <div className="fw-semibold">{getNomeFornecedor(movimento)}</div>
                         <small className="text-muted">
                           {getFonteFinanciamentoFormatada(movimento.fonteFinanciamento)}
                         </small>
@@ -196,7 +205,6 @@ const MovimentosList: React.FC<MovimentosListProps> = ({
                     </small>
                   </td>
                   <td className="fw-semibold">
-                    {/* ✅ USA A FUNÇÃO CALCULAR VALOR TOTAL */}
                     {formatCurrency(calcularValorTotal(movimento))}
                   </td>
                   <td>
