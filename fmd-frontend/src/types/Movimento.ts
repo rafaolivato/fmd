@@ -19,7 +19,9 @@ export interface Movimento {
   id: string;
   tipoMovimentacao: string;
   fonteFinanciamento: string;
-  fornecedor: string; // ✅ String direta (não objeto)
+  fornecedor: string;
+  fornecedorId: string; // ← Mantém o ID
+  fornecedorNome?: string;
   documentoTipo: string;
   numeroDocumento: string;
   dataDocumento: string;

@@ -161,66 +161,73 @@ const Sidebar: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  return (
-    <div className="sidebar bg-light border-end" style={{ width: '250px', minHeight: '100vh' }}>
-      <div className="sidebar bg-light border-end" style={{ width: '250px', minHeight: '100vh' }}>
+ return (
+  <div className="sidebar bg-light border-end" style={{ 
+    width: '250px', 
+    height: '100vh',
+    position: 'fixed',
+    left: 0,
+    top: 0,
+    overflowY: 'auto'
+  }}>
+    <Nav className="flex-column p-3">
+      {navItems.map((item) => (
+        <div key={item.name}>
+          {item.children ? (
+            <div className="mb-2">
+              <Nav.Link
+                as="button"
+                className={`w-100 text-start border-0 bg-transparent d-flex justify-content-between align-items-center ${
+                  item.children.some(child => isActive(child.path)) ? 'text-primary' : 'text-dark'
+                }`}
+                onClick={() => toggleExpand(item.name)}
+              >
+                <span className="d-flex align-items-center">
+                  <span className="me-2">{item.icon}</span>
+                  {item.name}
+                </span>
+                <span>{expandedItems.has(item.name) ? '▼' : '►'}</span>
+              </Nav.Link>
 
-        <Nav className="flex-column p-3">
-          {navItems.map((item) => (
-            <div key={item.name}>
-              {item.children ? (
-                <div className="mb-2">
-                  <Nav.Link
-                    as="button"
-                    className={`w-100 text-start border-0 bg-transparent d-flex justify-content-between align-items-center ${item.children.some(child => isActive(child.path)) ? 'text-primary' : 'text-dark'
+              {expandedItems.has(item.name) && (
+                <div className="ms-3">
+                  {item.children.map((child) => (
+                    <Nav.Link
+                      key={child.name}
+                      as={Link}
+                      to={child.path}
+                      className={`d-block text-decoration-none py-1 ps-3 ${
+                        isActive(child.path) ? 'text-primary fw-bold' : 'text-dark'
                       }`}
-                    onClick={() => toggleExpand(item.name)}
-                  >
-                    <span className="d-flex align-items-center">
-                      <span className="me-2">{item.icon}</span>
-                      {item.name}
-                    </span>
-                    <span>{expandedItems.has(item.name) ? '▼' : '►'}</span>
-                  </Nav.Link>
-
-                  {expandedItems.has(item.name) && (
-                    <div className="ms-3">
-                      {item.children.map((child) => (
-                        <Nav.Link
-                          key={child.name}
-                          as={Link}
-                          to={child.path}
-                          className={`d-block text-decoration-none py-1 ps-3 ${isActive(child.path) ? 'text-primary fw-bold' : 'text-dark'
-                            }`}
-                        >
-                          <span className="d-flex align-items-center">
-                            <span className="me-2">{child.icon}</span>
-                            {child.name}
-                          </span>
-                        </Nav.Link>
-                      ))}
-                    </div>
-                  )}
+                    >
+                      <span className="d-flex align-items-center">
+                        <span className="me-2">{child.icon}</span>
+                        {child.name}
+                      </span>
+                    </Nav.Link>
+                  ))}
                 </div>
-              ) : (
-                <Nav.Link
-                  as={Link}
-                  to={item.path}
-                  className={`mb-2 text-decoration-none ${isActive(item.path) ? 'text-primary fw-bold' : 'text-dark'
-                    }`}
-                >
-                  <span className="d-flex align-items-center">
-                    <span className="me-2">{item.icon}</span>
-                    {item.name}
-                  </span>
-                </Nav.Link>
               )}
             </div>
-          ))}
-        </Nav>
-      </div>
-    </div>
-  );
-};
+          ) : (
+            <Nav.Link
+              as={Link}
+              to={item.path}
+              className={`mb-2 text-decoration-none ${
+                isActive(item.path) ? 'text-primary fw-bold' : 'text-dark'
+              }`}
+            >
+              <span className="d-flex align-items-center">
+                <span className="me-2">{item.icon}</span>
+                {item.name}
+              </span>
+            </Nav.Link>
+          )}
+        </div>
+      ))}
+    </Nav>
+  </div>
+);
+}
 
 export default Sidebar;

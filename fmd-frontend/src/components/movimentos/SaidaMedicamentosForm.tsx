@@ -1,19 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Form, Row, Col, Table, Alert } from 'react-bootstrap';
+import { Button, Card, Form, Row, Col, Table, Alert, Modal } from 'react-bootstrap';
 import type { MovimentoSaidaFormData, ItemMovimentoSaida } from '../../types/MovimentoSaida';
 import type { Medicamento } from '../../types/Medicamento';
 import type { Estabelecimento } from '../../types/Estabelecimento';
+import type { EstoqueLote } from '../../types/Estoque';
 
-// ✅ IMPORT REAL DO SERVIÇO DE ESTOQUE (Sem mock)
+// ✅ IMPORT REAL DO SERVIÇO DE ESTOQUE
+
 import { estoqueService } from '../../store/services/estoqueService';
 
-
 interface SaidaMedicamentosFormProps {
-  estabelecimentos: Estabelecimento[]; // Deve vir com apenas 1 item (o do usuário)
+  estabelecimentos: Estabelecimento[];
   medicamentos: Medicamento[];
   onSubmit: (data: MovimentoSaidaFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
+}
+
+// Interface para os lotes no item
+interface ItemComLotes extends ItemMovimentoSaida {
+  lotes: Array<{
+    loteId: string;
+    quantidade: number;
+    numeroLote?: string;
+    dataValidade?: string;
+  }>;
 }
 
 const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
@@ -23,13 +34,11 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
   onCancel,
   isLoading = false
 }) => {
-
-  // DICA: Pegamos o ID e Nome do estabelecimento logo na primeira renderização
   const estabelecimentoLogado = estabelecimentos.length > 0 ? estabelecimentos[0] : null;
   const estabelecimentoIdInicial = estabelecimentoLogado ? estabelecimentoLogado.id : '';
 
   const [formData, setFormData] = useState<MovimentoSaidaFormData>({
-    estabelecimentoId: estabelecimentoIdInicial, // <-- Inicializado com o ID do estabelecimento
+    estabelecimentoId: estabelecimentoIdInicial,
     tipoMovimentacao: 'SAIDA',
     documentoReferencia: '',
     dataMovimento: new Date().toISOString().split('T')[0],
@@ -44,6 +53,17 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
   });
 
   const [estoqueDisponivel, setEstoqueDisponivel] = useState<number>(0);
+  const [lotesDisponiveis, setLotesDisponiveis] = useState<Lote[]>([]);
+  
+  // Estado para o modal de seleção de lotes
+  const [showModalLotes, setShowModalLotes] = useState(false);
+  const [lotesSelecionados, setLotesSelecionados] = useState<Array<{
+    loteId: string;
+    quantidade: number;
+    numeroLote: string;
+    dataValidade: string;
+    quantidadeMaxima: number;
+  }>>([]);
 
   useEffect(() => {
     if (estabelecimentoLogado && formData.estabelecimentoId !== estabelecimentoLogado.id) {
@@ -54,8 +74,7 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
     }
   }, [estabelecimentoLogado]);
 
-
-  // Função para quando mudar o medicamento
+  // Função para buscar estoque e lotes quando medicamento muda
   const handleMedicamentoChange = async (medicamentoId: string) => {
     setNovoItem(prev => ({
       ...prev,
@@ -63,48 +82,104 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
       quantidadeSaida: 0
     }));
 
-    // Agora só usa o formData.estabelecimentoId (que está inicializado)
     if (medicamentoId && formData.estabelecimentoId) {
       try {
-        // Uso do estoqueService (AGORA É O REAL)
+        // Busca estoque total
         const estoque = await estoqueService.getEstoqueMedicamento(
           medicamentoId,
           formData.estabelecimentoId
         );
         setEstoqueDisponivel(estoque);
+
+        // Busca lotes disponíveis
+        const lotes = await estoqueService.getLotesDisponiveis(
+          medicamentoId,
+          formData.estabelecimentoId
+        );
+        setLotesDisponiveis(lotes);
       } catch (error) {
         console.error('Erro ao buscar estoque:', error);
         setEstoqueDisponivel(0);
+        setLotesDisponiveis([]);
       }
     } else {
       setEstoqueDisponivel(0);
+      setLotesDisponiveis([]);
     }
   };
 
-  const adicionarItem = () => {
+  // Abrir modal para seleção de lotes
+  const abrirSelecaoLotes = () => {
     if (!novoItem.medicamentoId || novoItem.quantidadeSaida <= 0) {
-      // Usando console.error para evitar travamento com alert()
-      console.error('Selecione um medicamento e informe a quantidade');
+      alert('Selecione um medicamento e informe a quantidade antes de selecionar lotes');
       return;
     }
 
     if (novoItem.quantidadeSaida > estoqueDisponivel) {
-      // Usando console.error para evitar travamento com alert()
-      console.error(`Quantidade solicitada (${novoItem.quantidadeSaida}) excede o estoque disponível (${estoqueDisponivel})`);
+      alert(`Quantidade solicitada excede o estoque disponível: ${estoqueDisponivel}`);
       return;
     }
 
-    setFormData(prev => ({
-      ...prev,
-      itens: [...prev.itens, { ...novoItem }]
+    // Inicializa lotes selecionados
+    const lotesIniciais = lotesDisponiveis.map(lote => ({
+      loteId: lote.id,
+      quantidade: 0,
+      numeroLote: lote.numeroLote,
+      dataValidade: lote.dataValidade,
+      quantidadeMaxima: lote.quantidade
     }));
 
-    // Reset novo item
+    setLotesSelecionados(lotesIniciais);
+    setShowModalLotes(true);
+  };
+
+  // Atualizar quantidade de um lote específico
+  const atualizarQuantidadeLote = (loteId: string, quantidade: number) => {
+    setLotesSelecionados(prev => 
+      prev.map(lote => 
+        lote.loteId === loteId 
+          ? { ...lote, quantidade: Math.min(Math.max(0, quantidade), lote.quantidadeMaxima) }
+          : lote
+      )
+    );
+  };
+
+  // Confirmar seleção de lotes e adicionar item
+  const confirmarLotes = () => {
+    const totalSelecionado = lotesSelecionados.reduce((sum, lote) => sum + lote.quantidade, 0);
+    
+    if (totalSelecionado !== novoItem.quantidadeSaida) {
+      alert(`A soma das quantidades dos lotes (${totalSelecionado}) deve ser igual à quantidade total (${novoItem.quantidadeSaida})`);
+      return;
+    }
+
+    // Filtra apenas os lotes com quantidade > 0
+    const lotesComQuantidade = lotesSelecionados.filter(lote => lote.quantidade > 0);
+
+    // Adiciona item com os lotes selecionados
+    const itemComLotes = {
+      ...novoItem,
+      lotes: lotesComQuantidade.map(lote => ({
+        loteId: lote.loteId,
+        quantidade: lote.quantidade,
+        numeroLote: lote.numeroLote,
+        dataValidade: lote.dataValidade
+      }))
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      itens: [...prev.itens, itemComLotes]
+    }));
+
+    // Reset estados
     setNovoItem({
       medicamentoId: '',
       quantidadeSaida: 0
     });
     setEstoqueDisponivel(0);
+    setLotesDisponiveis([]);
+    setShowModalLotes(false);
   };
 
   const removerItem = (index: number) => {
@@ -117,21 +192,18 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // NOVA VALIDAÇÃO: Garante que o estabelecimento está preenchido
     if (!formData.estabelecimentoId) {
-      // Usando console.error para evitar travamento com alert()
-      console.error('Erro interno: ID do estabelecimento não definido. Recarregue a página.');
+      console.error('Erro interno: ID do estabelecimento não definido.');
       return;
     }
 
     onSubmit(formData);
   };
 
-  // NOVO: Se o estabelecimento não for carregado, mostra um erro claro
   if (!estabelecimentoLogado) {
     return (
       <Alert variant="danger" className="p-4">
-        Não foi possível carregar o estabelecimento do usuário. Por favor, recarregue a página ou entre em contato com o suporte.
+        Não foi possível carregar o estabelecimento do usuário.
       </Alert>
     );
   }
@@ -143,38 +215,31 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
       </Card.Header>
       <Card.Body>
         <Form onSubmit={handleSubmit}>
-          {/* Dados do Movimento */}
+          {/* Dados do Movimento (mantido igual) */}
           <Row className="mb-3">
             <Col md={6}>
               <Form.Group>
                 <Form.Label>Estabelecimento *</Form.Label>
-
-                {/* NOVO: Campo não editável que mostra o nome do estabelecimento */}
                 <Form.Control
                   type="text"
                   value={estabelecimentoLogado.nome}
                   disabled
                   readOnly
                 />
-                {/* O ID do estabelecimento já está no formData.estabelecimentoId */}
               </Form.Group>
             </Col>
             <Col md={6}>
-              {/* O restante dos campos do cabeçalho do formulário... */}
               <Form.Group>
-                {/* Rótulo do campo, agora sem o asterisco e com o texto de ajuda */}
                 <Form.Label>Documento de Referência</Form.Label>
                 <Form.Control
                   type="text"
                   value={formData.documentoReferencia}
                   onChange={(e) => setFormData(prev => ({ ...prev, documentoReferencia: e.target.value }))}
                   placeholder="Ex: Requisição nº 001 (Opcional - Será gerado se vazio)"
-                // 🛑 O campo é OPCIONAL
                 />
               </Form.Group>
             </Col>
           </Row>
-
 
           <Row className="mb-3">
             <Col md={6}>
@@ -214,12 +279,9 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
               placeholder="Informe o motivo da saída dos medicamentos..."
               required
             />
-            <Form.Text className="text-muted">
-              Campo obrigatório para movimentos de saída
-            </Form.Text>
           </Form.Group>
 
-          {/* Adicionar Itens */}
+          {/* Adicionar Itens - ATUALIZADO COM BOTÃO DE LOTES */}
           <Card className="mb-4">
             <Card.Header>
               <h6 className="mb-0">Medicamentos para Saída</h6>
@@ -246,35 +308,28 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
                   <Form.Group>
                     <Form.Label>Quantidade *</Form.Label>
                     <Form.Control
-                      type="text" // ✅ Mudei para "text"
+                      type="text"
                       value={novoItem.quantidadeSaida === 0 ? '' : novoItem.quantidadeSaida.toString()}
                       onChange={(e) => {
                         const value = e.target.value;
-
-                        // ✅ Permite apenas números e campo vazio
                         if (value === '' || /^\d+$/.test(value)) {
                           const numValue = value === '' ? 0 : Number(value);
-
-                          // ✅ Validação do estoque
                           if (numValue <= estoqueDisponivel) {
                             setNovoItem(prev => ({ ...prev, quantidadeSaida: numValue }));
                           } else {
-                            // ✅ Opcional: Mostrar alerta se exceder estoque
                             alert(`Quantidade não pode exceder o estoque disponível: ${estoqueDisponivel}`);
                           }
                         }
                       }}
-                      placeholder={`Digite a quantidade (máx: ${estoqueDisponivel})`}
+                      placeholder={`Máx: ${estoqueDisponivel}`}
                       disabled={estoqueDisponivel === 0}
-                      // ✅ Remove completamente as setas do número
                       style={{
                         appearance: 'textfield',
                         MozAppearance: 'textfield',
                         WebkitAppearance: 'none'
                       }}
-                      onWheel={(e) => e.currentTarget.blur()} // ✅ Previne scroll do mouse
+                      onWheel={(e) => e.currentTarget.blur()}
                     />
-                    {/* ✅ Feedback visual do estoque */}
                     {estoqueDisponivel > 0 && (
                       <Form.Text className="text-muted">
                         Estoque disponível: <strong>{estoqueDisponivel}</strong>
@@ -287,18 +342,26 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
                     {novoItem.medicamentoId && (
                       <Alert variant="info" className="py-2 mb-2">
                         <small>Estoque disponível: <strong>{estoqueDisponivel}</strong></small>
+                        <br />
+                        <small>Lotes disponíveis: <strong>{lotesDisponiveis.length}</strong></small>
                       </Alert>
                     )}
-                    <Button variant="primary" onClick={adicionarItem} className="w-100">
-                      Adicionar Item
-                    </Button>
+                    <div className="d-grid gap-2">
+                      <Button 
+                        variant="outline-primary" 
+                        onClick={abrirSelecaoLotes}
+                        disabled={!novoItem.medicamentoId || novoItem.quantidadeSaida <= 0}
+                      >
+                        Selecionar Lotes
+                      </Button>
+                    </div>
                   </div>
                 </Col>
               </Row>
             </Card.Body>
           </Card>
 
-          {/* Itens Adicionados (Continua o mesmo) */}
+          {/* Itens Adicionados - ATUALIZADO PARA MOSTRAR LOTES */}
           {formData.itens.length > 0 && (
             <Card className="mb-4">
               <Card.Header>
@@ -309,17 +372,34 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
                   <thead>
                     <tr>
                       <th>Medicamento</th>
-                      <th>Quantidade</th>
+                      <th>Quantidade Total</th>
+                      <th>Lotes</th>
                       <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {formData.itens.map((item, index) => {
                       const medicamento = medicamentos.find(m => m.id === item.medicamentoId);
+                      const itemComLotes = item as ItemComLotes;
+                      
                       return (
                         <tr key={index}>
                           <td>{medicamento?.principioAtivo} {medicamento?.concentracao}</td>
                           <td>{item.quantidadeSaida}</td>
+                          <td>
+                            {itemComLotes.lotes && itemComLotes.lotes.length > 0 ? (
+                              <div>
+                                {itemComLotes.lotes.map((lote, loteIndex) => (
+                                  <div key={loteIndex} className="small">
+                                    <strong>Lote {lote.numeroLote}:</strong> {lote.quantidade} un.
+                                    {lote.dataValidade && ` (Val: ${new Date(lote.dataValidade).toLocaleDateString()})`}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-muted">Lote não especificado</span>
+                            )}
+                          </td>
                           <td>
                             <Button
                               variant="outline-danger"
@@ -352,6 +432,61 @@ const SaidaMedicamentosForm: React.FC<SaidaMedicamentosFormProps> = ({
             </Button>
           </div>
         </Form>
+
+        {/* Modal de Seleção de Lotes */}
+        <Modal show={showModalLotes} onHide={() => setShowModalLotes(false)} size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>Selecionar Lotes</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p>
+              Distribua a quantidade <strong>{novoItem.quantidadeSaida}</strong> entre os lotes disponíveis:
+            </p>
+            
+            <Table striped bordered>
+              <thead>
+                <tr>
+                  <th>Lote</th>
+                  <th>Data Validade</th>
+                  <th>Estoque Disponível</th>
+                  <th>Quantidade a Usar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lotesSelecionados.map((lote) => (
+                  <tr key={lote.loteId}>
+                    <td>{lote.numeroLote}</td>
+                    <td>{new Date(lote.dataValidade).toLocaleDateString()}</td>
+                    <td>{lote.quantidadeMaxima}</td>
+                    <td>
+                      <Form.Control
+                        type="number"
+                        min="0"
+                        max={lote.quantidadeMaxima}
+                        value={lote.quantidade}
+                        onChange={(e) => atualizarQuantidadeLote(lote.loteId, parseInt(e.target.value) || 0)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+
+            <Alert variant="info">
+              Total selecionado: <strong>
+                {lotesSelecionados.reduce((sum, lote) => sum + lote.quantidade, 0)}
+              </strong> / {novoItem.quantidadeSaida}
+            </Alert>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowModalLotes(false)}>
+              Cancelar
+            </Button>
+            <Button variant="primary" onClick={confirmarLotes}>
+              Confirmar Lotes
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </Card.Body>
     </Card>
   );

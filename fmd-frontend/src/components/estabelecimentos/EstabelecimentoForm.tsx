@@ -1,6 +1,3 @@
-// fmd-frontend/src/components/estabelecimentos/EstabelecimentoForm.tsx
-
-// Importar useEffect com 'e' minúsculo
 import React, { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { Modal, Button, Form, Alert } from 'react-bootstrap';
@@ -25,7 +22,7 @@ const EstabelecimentoForm: React.FC<EstabelecimentoFormProps> = ({ show, handleC
 
     // Estado local para o formulário
     const [nome, setNome] = useState('');
-    const [cnpj, setCnpj] = useState('');
+    const [cnes, setCnes] = useState('');
     const [tipo, setTipo] = useState('ALMOXARIFADO'); // Valor inicial
 
     // Lógica para pré-popular os campos (useEffect)
@@ -33,12 +30,12 @@ const EstabelecimentoForm: React.FC<EstabelecimentoFormProps> = ({ show, handleC
         if (estabelecimentoToEdit) {
             // Edição: Preenche os campos
             setNome(estabelecimentoToEdit.nome);
-            setCnpj(estabelecimentoToEdit.cnpj || '');
+            setCnes(estabelecimentoToEdit.cnes || '');
             setTipo(estabelecimentoToEdit.tipo);
         } else {
             // Criação: Limpa os campos
             setNome('');
-            setCnpj('');
+            setCnes('');
             setTipo('ALMOXARIFADO');
         }
     }, [estabelecimentoToEdit, show]);
@@ -46,7 +43,7 @@ const EstabelecimentoForm: React.FC<EstabelecimentoFormProps> = ({ show, handleC
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
 
-        const data: CreateEstabelecimentoData = { nome, cnpj, tipo }; // Tipagem de base
+        const data: CreateEstabelecimentoData = { nome, cnes, tipo }; // Tipagem de base
 
         const actionPromise = estabelecimentoToEdit
             // Para edição, precisamos do ID no payload
@@ -89,12 +86,12 @@ const EstabelecimentoForm: React.FC<EstabelecimentoFormProps> = ({ show, handleC
                         />
                     </Form.Group>
 
-                    <Form.Group className="mb-3" controlId="formCNPJ">
+                    <Form.Group className="mb-3" controlId="formCnes">
                         <Form.Label>CNES</Form.Label>
                         <Form.Control 
                             type="text" 
-                            value={cnpj} 
-                            onChange={(e) => setCnpj(e.target.value)} 
+                            value={cnes} 
+                            onChange={(e) => setCnes(e.target.value)} 
                         />
                     </Form.Group>
 

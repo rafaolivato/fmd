@@ -1,4 +1,3 @@
-// fmd-backend/src/modules/estabelecimentos/controllers/UpdateEstabelecimentoController.ts
 import { Request, Response, NextFunction } from 'express';
 import { UpdateEstabelecimentoService } from '../services/UpdateEstabelecimentoService';
 import { AppError } from '../../../shared/errors/AppError';

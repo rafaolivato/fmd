@@ -1,8 +1,8 @@
 export interface Estabelecimento {
   id: string;
   nome: string;
-  cnpj?: string;
-  tipo: 'ALMOXARIFADO' | 'FARMACIA_UNIDADE' | string; // Adicione esta linha
+  cnes?: string;
+  tipo: 'ALMOXARIFADO' | 'FARMACIA UNIDADE' | string; 
   createdAt: string;
   updatedAt: string;
 }

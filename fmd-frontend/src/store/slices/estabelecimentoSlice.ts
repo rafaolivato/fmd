@@ -1,26 +1,22 @@
-// fmd-frontend/src/store/slices/estabelecimentoSlice.ts
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { api } from '../services/api';
 
-// 1. INTERFACE PRINCIPAL (PRECISA SER EXPORTADA)
 export interface Estabelecimento {
     id: string;
     nome: string;
-    cnpj: string | null;
+    cnes: string | null;
     tipo: string;
 }
 
-// 2. INTERFACE DE CRIAÇÃO (PRECISA SER EXPORTADA)
 export interface CreateEstabelecimentoData {
     nome: string;
-    cnpj: string;
+    cnes: string;
     tipo: string;
 }
 
-// 3. INTERFACE DE ATUALIZAÇÃO (PRECISA SER EXPORTADA)
 export interface UpdateEstabelecimentoData extends CreateEstabelecimentoData {
-    id: string; // ID é obrigatório para atualização
+    id: string; 
 }
 
 // TIPAGEM INTERNA DO ESTADO (Não precisa de export)

@@ -62,14 +62,12 @@ class CreateMovimentoSaidaService {
      */
     private gerarDocumentoReferencia(): string {
         const now = new Date();
-        // Padrão de Data (Ex: 20251118)
         const dataFormatada = [
             now.getFullYear(),
             String(now.getMonth() + 1).padStart(2, '0'),
             String(now.getDate()).padStart(2, '0')
         ].join('');
 
-        // Código aleatório de 6 caracteres (para unicidade)
         const random = Math.random().toString(36).substring(2, 8).toUpperCase();
 
         return `SAIDA-${dataFormatada}-${random}`;
@@ -83,11 +81,9 @@ class CreateMovimentoSaidaService {
         const dataString = typeof dataMovimento === 'string' ? dataMovimento : dataMovimento.toISOString().split('T')[0];
 
         const [ano, mes, dia] = dataString.split('-').map(Number);
-        // Cria a data informada às 00:00:00 local para comparação
         const dataInformadaSemHora = new Date(ano, mes - 1, dia);
 
         const dataAtual = new Date();
-        // Cria a data atual às 00:00:00 local para comparação
         const dataAtualSemHora = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate());
 
         if (dataInformadaSemHora.getTime() < dataAtualSemHora.getTime()) {
@@ -96,6 +92,137 @@ class CreateMovimentoSaidaService {
                 400
             );
         }
+    }
+
+    /**
+     * Processa os lotes selecionados pelo usuário (NOVA FUNÇÃO)
+     * @param lotesSelecionados Lotes selecionados no frontend
+     * @param medicamentoId ID do medicamento
+     * @param estabelecimentoId ID do estabelecimento
+     * @param quantidadeTotal Quantidade total a baixar
+     * @param tx Transação do Prisma
+     * @returns Array de LoteInfo processados
+     */
+    private async processarLotesSelecionados(
+        lotesSelecionados: any[],
+        medicamentoId: string,
+        estabelecimentoId: string,
+        quantidadeTotal: number,
+        tx: any
+    ): Promise<LoteInfo[]> {
+        const lotesInfo: LoteInfo[] = [];
+        let quantidadeProcessada = 0;
+
+        // Valida se há lotes selecionados
+        if (!lotesSelecionados || lotesSelecionados.length === 0) {
+            throw new AppError(
+                `Nenhum lote selecionado para o medicamento ${medicamentoId}.`,
+                400
+            );
+        }
+
+        // Processa cada lote selecionado
+        for (const loteSelecionado of lotesSelecionados) {
+            if (quantidadeProcessada >= quantidadeTotal) break;
+
+            const { loteId, quantidade } = loteSelecionado;
+
+            // Busca informações completas do lote
+            const lote = await tx.estoqueLote.findUnique({
+                where: { id: loteId }
+            });
+
+            if (!lote) {
+                throw new AppError(`Lote ${loteId} não encontrado.`, 404);
+            }
+
+            // Valida se o lote pertence ao medicamento e estabelecimento
+            if (lote.medicamentoId !== medicamentoId || lote.estabelecimentoId !== estabelecimentoId) {
+                throw new AppError(`Lote ${loteId} não pertence ao medicamento/estabelecimento.`, 400);
+            }
+
+            // Valida estoque disponível no lote
+            if (lote.quantidade < quantidade) {
+                throw new AppError(
+                    `Estoque insuficiente no lote ${lote.numeroLote}. Disponível: ${lote.quantidade}, Solicitado: ${quantidade}`,
+                    400
+                );
+            }
+
+            // Adiciona ao array de lotes processados
+            lotesInfo.push({
+                loteId: lote.id,
+                numeroLote: lote.numeroLote,
+                dataValidade: lote.dataValidade,
+                fabricante: lote.fabricante || '',
+                quantidadeBaixar: quantidade,
+                valorUnitarioFinal: Number(lote.valorUnitario)
+            });
+
+            quantidadeProcessada += quantidade;
+        }
+
+        // Valida se a soma dos lotes é igual à quantidade total
+        if (quantidadeProcessada !== quantidadeTotal) {
+            throw new AppError(
+                `A soma das quantidades dos lotes (${quantidadeProcessada}) não corresponde à quantidade total (${quantidadeTotal}) para o medicamento ${medicamentoId}.`,
+                400
+            );
+        }
+
+        return lotesInfo;
+    }
+
+    /**
+     * Processa lotes usando FIFO (fallback quando não há lotes selecionados)
+     */
+    private async processarLotesFIFO(
+        medicamentoId: string,
+        estabelecimentoId: string,
+        quantidadeTotal: number,
+        tx: any
+    ): Promise<LoteInfo[]> {
+        let quantidadeRestante = quantidadeTotal;
+        const lotesInfo: LoteInfo[] = [];
+
+        // Busca lotes disponíveis ordenados por validade (FIFO)
+        const lotesDisponiveis = await tx.estoqueLote.findMany({
+            where: {
+                medicamentoId,
+                estabelecimentoId,
+                quantidade: { gt: 0 },
+            },
+            orderBy: {
+                dataValidade: 'asc',
+            }
+        });
+
+        // Processa lotes FIFO
+        for (const lote of lotesDisponiveis) {
+            if (quantidadeRestante === 0) break;
+
+            const quantidadeBaixar = Math.min(quantidadeRestante, lote.quantidade);
+
+            lotesInfo.push({
+                loteId: lote.id,
+                numeroLote: lote.numeroLote,
+                dataValidade: lote.dataValidade,
+                fabricante: lote.fabricante || '',
+                quantidadeBaixar,
+                valorUnitarioFinal: Number(lote.valorUnitario)
+            });
+
+            quantidadeRestante -= quantidadeBaixar;
+        }
+
+        if (quantidadeRestante > 0) {
+            throw new AppError(
+                `Estoque insuficiente nos lotes para o medicamento ${medicamentoId}. Faltam ${quantidadeRestante} unidades.`,
+                400
+            );
+        }
+
+        return lotesInfo;
     }
 
     async execute(data: ICreateMovimentoSaidaDTO) {
@@ -126,12 +253,12 @@ class CreateMovimentoSaidaService {
         // Inicia a transação
         return await prisma.$transaction(async (tx) => {
             
-            // 3. Define o número do documento: usa o fornecido ou gera um único (SAIDA-...)
+            // 3. Define o número do documento
             const numeroDocumentoUnico = documentoReferencia && documentoReferencia.trim().length > 0 
                 ? documentoReferencia.trim().toUpperCase()
                 : this.gerarDocumentoReferencia();
 
-            // 4. Validação do Estabelecimento (dentro da transação)
+            // 4. Validação do Estabelecimento
             const estabelecimento = await tx.estabelecimento.findUnique({
                 where: { id: estabelecimentoId }
             });
@@ -147,9 +274,9 @@ class CreateMovimentoSaidaService {
             const operacoesEmLote: Promise<any>[] = [];
             const itensParaProcessar: ItemProcessado[] = [];
 
-            // 6. Processa cada Item AGRUPADO, checa estoque e define lotes (FIFO)
+            // 6. Processa cada Item AGRUPADO
             for (const item of itensAgrupados) {
-                const { medicamentoId, quantidadeSaida, valorUnitario } = item;
+                const { medicamentoId, quantidadeSaida, valorUnitario, lotes } = item;
                 const quantidadeSaidaNumerica = Number(quantidadeSaida);
 
                 // Checagem de Estoque Local
@@ -166,50 +293,31 @@ class CreateMovimentoSaidaService {
                     );
                 }
 
-                // Calcula valor total (se valor unitário for fornecido)
+                // Calcula valor total
                 const valorItem = quantidadeSaidaNumerica * (valorUnitario || 0);
                 valorTotal += valorItem;
 
-                // Busca de Lotes (FIFO)
-                let quantidadeRestante = quantidadeSaidaNumerica;
-                const lotesDisponiveis = await tx.estoqueLote.findMany({
-                    where: {
+                let lotesInfo: LoteInfo[];
+
+                // ✅ DECISÃO CRÍTICA: Usa lotes selecionados ou FIFO?
+                if (lotes && lotes.length > 0) {
+                    // ✅ USA OS LOTES SELECIONADOS PELO USUÁRIO
+                    console.log(`Usando lotes selecionados para medicamento ${medicamentoId}:`, lotes);
+                    lotesInfo = await this.processarLotesSelecionados(
+                        lotes,
                         medicamentoId,
                         estabelecimentoId,
-                        quantidade: { gt: 0 },
-                    },
-                    orderBy: {
-                        dataValidade: 'asc',
-                    }
-                });
-
-                const lotesInfo: LoteInfo[] = [];
-
-                // Prepara informações dos lotes para baixa
-                for (const lote of lotesDisponiveis) {
-                    if (quantidadeRestante === 0) break;
-
-                    const quantidadeBaixar = Math.min(quantidadeRestante, lote.quantidade);
-                    const valorUnitarioLote = Number(lote.valorUnitario);
-                    // Prioriza o valorUnitario da saída, senão usa o valor do lote
-                    const valorUnitarioFinal = valorUnitario || valorUnitarioLote || 0;
-
-                    lotesInfo.push({
-                        loteId: lote.id,
-                        numeroLote: lote.numeroLote,
-                        dataValidade: lote.dataValidade,
-                        fabricante: lote.fabricante || '',
-                        quantidadeBaixar,
-                        valorUnitarioFinal
-                    });
-
-                    quantidadeRestante -= quantidadeBaixar;
-                }
-
-                if (quantidadeRestante > 0) {
-                    throw new AppError(
-                        `Estoque insuficiente nos lotes para o medicamento ${medicamentoId}. Faltam ${quantidadeRestante} unidades.`,
-                        400
+                        quantidadeSaidaNumerica,
+                        tx
+                    );
+                } else {
+                    // ❌ FALLBACK: Usa FIFO (comportamento anterior)
+                    console.log(`Usando FIFO para medicamento ${medicamentoId} (nenhum lote selecionado)`);
+                    lotesInfo = await this.processarLotesFIFO(
+                        medicamentoId,
+                        estabelecimentoId,
+                        quantidadeSaidaNumerica,
+                        tx
                     );
                 }
 
@@ -232,7 +340,6 @@ class CreateMovimentoSaidaService {
             
             // 7. CRIA O MOVIMENTO PRINCIPAL
             try {
-                // Converte a data string para Date com fuso 00:00:00 para manter a consistência
                 const dataMovimentoDate = new Date(dataMovimento + 'T00:00:00Z'); 
 
                 const movimentoData = {
@@ -242,7 +349,6 @@ class CreateMovimentoSaidaService {
                     dataDocumento: dataMovimentoDate,
                     dataRecebimento: dataMovimentoDate,
                     observacao: observacaoFinal,
-                    // Valores fixos assumidos para Saída Diversa
                     fonteFinanciamento: 'RECURSOS_PRO_PRIOS',
                     valorTotal: valorTotalFinal,
                     estabelecimento: {
@@ -277,7 +383,7 @@ class CreateMovimentoSaidaService {
                                     numeroLote: loteInfo.numeroLote,
                                     dataValidade: loteInfo.dataValidade,
                                     fabricante: loteInfo.fabricante,
-                                    localizacaoFisica: '', // Pode ser preenchido se necessário
+                                    localizacaoFisica: '',
                                 }
                             })
                         );
@@ -301,14 +407,12 @@ class CreateMovimentoSaidaService {
                     include: { itensMovimentados: true }
                 });
             } catch (error: any) {
-                // 🚨 Captura o erro P2002 (violação da restrição @unique)
                 if (error.code === 'P2002') {
                     throw new AppError(
                         `O número de documento '${numeroDocumentoUnico}' já existe no sistema. Tente novamente ou forneça um número de referência diferente.`,
                         400
                     );
                 }
-                // Lança outros erros de forma normal
                 throw error;
             }
         });

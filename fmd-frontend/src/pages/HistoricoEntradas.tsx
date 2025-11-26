@@ -1,21 +1,20 @@
-// src/pages/entradas/HistoricoEntradas.tsx
 import React, { useState, useEffect } from 'react';
-import { 
-  Container, 
-  Row, 
-  Col, 
-  Card, 
-  Form, 
-  Button, 
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Form,
+  Button,
   Alert,
-  Badge 
+  Badge
 } from 'react-bootstrap';
-import { 
-  FaFilter, 
-  FaSync, 
-  FaSearch, 
+import {
+  FaFilter,
+  FaSync,
+  FaSearch,
   FaFileAlt,
-  FaBoxOpen 
+  FaBoxOpen
 } from 'react-icons/fa';
 import type { Movimento } from '../types/Movimento';
 import { movimentoService } from '../store/services/movimentoService';
@@ -26,16 +25,16 @@ const HistoricoEntradas: React.FC = () => {
   const [filteredMovimentos, setFilteredMovimentos] = useState<Movimento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Estados para filtros
   const [filtroFornecedor, setFiltroFornecedor] = useState('');
   const [filtroMedicamento, setFiltroMedicamento] = useState('');
   const [filtroDataInicio, setFiltroDataInicio] = useState('');
   const [filtroDataFim, setFiltroDataFim] = useState('');
-  
+
   const [fornecedoresOptions, setFornecedoresOptions] = useState<string[]>([]);
   const [medicamentosOptions, setMedicamentosOptions] = useState<string[]>([]);
-  
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -50,19 +49,19 @@ const HistoricoEntradas: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       console.log('🔄 Carregando histórico de entradas...');
       const data = await movimentoService.getAll();
-      
+
       // Filtra apenas entradas
-      const entradas = Array.isArray(data) 
+      const entradas = Array.isArray(data)
         ? data.filter(m => m.tipoMovimentacao === 'ENTRADA')
         : [];
-      
+
       console.log(`✅ ${entradas.length} entradas carregadas`);
       setMovimentos(entradas);
       carregarOpcoesFiltro(entradas);
-      
+
     } catch (error: any) {
       console.error('❌ Erro ao carregar entradas:', error);
       setError('Erro ao carregar histórico de entradas');
@@ -92,38 +91,38 @@ const HistoricoEntradas: React.FC = () => {
 
   const filterEntradas = () => {
     let filtered = movimentos;
-    
+
     // Filtro por fornecedor
     if (filtroFornecedor) {
-      filtered = filtered.filter(m => 
+      filtered = filtered.filter(m =>
         m.fornecedor?.toLowerCase().includes(filtroFornecedor.toLowerCase())
       );
     }
-    
+
     // Filtro por medicamento
     if (filtroMedicamento) {
-      filtered = filtered.filter(m => 
-        m.itensMovimentados?.some(item => 
+      filtered = filtered.filter(m =>
+        m.itensMovimentados?.some(item =>
           item.medicamento?.principioAtivo?.toLowerCase().includes(filtroMedicamento.toLowerCase())
         )
       );
     }
-    
+
     // Filtro por data
     if (filtroDataInicio) {
-      filtered = filtered.filter(m => 
+      filtered = filtered.filter(m =>
         new Date(m.dataDocumento) >= new Date(filtroDataInicio)
       );
     }
-    
+
     if (filtroDataFim) {
       const dataFim = new Date(filtroDataFim);
       dataFim.setHours(23, 59, 59, 999); // Fim do dia
-      filtered = filtered.filter(m => 
+      filtered = filtered.filter(m =>
         new Date(m.dataDocumento) <= dataFim
       );
     }
-    
+
     setFilteredMovimentos(filtered);
   };
 
@@ -165,6 +164,7 @@ const HistoricoEntradas: React.FC = () => {
   };
 
   const hasActiveFilters = filtroFornecedor || filtroMedicamento || filtroDataInicio || filtroDataFim;
+  console.log('Movimentos carregados:', filteredMovimentos);
 
   return (
     <Container fluid>
@@ -180,14 +180,14 @@ const HistoricoEntradas: React.FC = () => {
           </div>
         </Col>
         <Col xs="auto" className="d-flex align-items-center gap-2">
-          <Button 
-            variant="outline-success" 
+          <Button
+            variant="outline-success"
             onClick={() => navigate('/entradas')}
           >
             Nova Entrada
           </Button>
-          <Button 
-            variant="outline-primary" 
+          <Button
+            variant="outline-primary"
             onClick={handleRefresh}
             disabled={isLoading}
           >
@@ -210,8 +210,8 @@ const HistoricoEntradas: React.FC = () => {
                   <span className="text-muted small">
                     {filteredMovimentos.length} resultado(s)
                   </span>
-                  <Button 
-                    variant="outline-secondary" 
+                  <Button
+                    variant="outline-secondary"
                     size="sm"
                     onClick={handleClearFilters}
                   >
@@ -238,7 +238,7 @@ const HistoricoEntradas: React.FC = () => {
                     </Form.Select>
                   </Form.Group>
                 </Col>
-                
+
                 <Col md={3}>
                   <Form.Group>
                     <Form.Label>Medicamento</Form.Label>
@@ -255,7 +255,7 @@ const HistoricoEntradas: React.FC = () => {
                     </Form.Select>
                   </Form.Group>
                 </Col>
-                
+
                 <Col md={2}>
                   <Form.Group>
                     <Form.Label>Data Início</Form.Label>
@@ -266,7 +266,7 @@ const HistoricoEntradas: React.FC = () => {
                     />
                   </Form.Group>
                 </Col>
-                
+
                 <Col md={2}>
                   <Form.Group>
                     <Form.Label>Data Fim</Form.Label>
@@ -277,10 +277,10 @@ const HistoricoEntradas: React.FC = () => {
                     />
                   </Form.Group>
                 </Col>
-                
+
                 <Col md={2} className="d-flex align-items-end">
-                  <Button 
-                    variant="primary" 
+                  <Button
+                    variant="primary"
                     onClick={filterEntradas}
                     className="w-100"
                   >
@@ -355,7 +355,14 @@ const HistoricoEntradas: React.FC = () => {
                             <br />
                             <small className="text-muted">{movimento.documentoTipo}</small>
                           </td>
-                          <td>{movimento.fornecedor}</td>
+                          <td>
+                            {/* Tentativas em ordem de prioridade */}
+                            {
+                              
+                              movimento.fornecedor
+                              
+                            }
+                          </td>
                           <td>{formatDate(movimento.dataDocumento)}</td>
                           <td>{formatDate(movimento.dataRecebimento)}</td>
                           <td>
