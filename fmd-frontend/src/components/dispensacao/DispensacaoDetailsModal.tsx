@@ -1,4 +1,3 @@
-// src/components/dispensacao/DispensacaoDetailsModal.tsx
 import React from 'react';
 import { Modal, Table, Badge, Row, Col } from 'react-bootstrap';
 import type { Dispensacao } from '../../types/Dispensacao';
@@ -14,7 +13,7 @@ const DispensacaoDetailsModal: React.FC<DispensacaoDetailsModalProps> = ({
   show,
   onHide
 }) => {
-  const formatDateTime = (dateString: string) => {
+    const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR');
   };
 
@@ -37,7 +36,7 @@ const DispensacaoDetailsModal: React.FC<DispensacaoDetailsModalProps> = ({
             <h6>Documento</h6>
             <p className="fw-semibold">{dispensacao.documentoReferencia}</p>
             {dispensacao.profissionalSaude && (
-              <p className="text-muted">Profissional: {dispensacao.profissionalSaude}</p>
+              <p className="text-muted">Profissional: {dispensacao.profissionalSaudeNome}</p>
             )}
           </Col>
         </Row>
@@ -83,6 +82,7 @@ const DispensacaoDetailsModal: React.FC<DispensacaoDetailsModalProps> = ({
                     {item.medicamento.concentracao} - {item.medicamento.formaFarmaceutica}
                   </small>
                 </td>
+                
                 <td>
                   <Badge bg="secondary">{item.loteNumero}</Badge>
                 </td>

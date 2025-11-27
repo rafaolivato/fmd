@@ -1,7 +1,5 @@
-// types/Dispensacao.ts
 import { type ProfissionalSaude } from './ProfissionalSaude';
 
-// ✅ NOVO: Interface para lotes selecionados
 export interface LoteDispensacaoForm {
   loteId: string;
   numeroLote: string;
@@ -11,7 +9,7 @@ export interface LoteDispensacaoForm {
 export interface ItemDispensacaoForm {
   medicamentoId: string;
   quantidadeSaida: number;
-  lotesSelecionados?: LoteDispensacaoForm[]; // ✅ AGORA É UM ARRAY DE LOTES
+  lotesSelecionados?: LoteDispensacaoForm[]; 
 }
 
 export interface DispensacaoFormData {
@@ -73,6 +71,10 @@ export interface Dispensacao {
     id: string;
     quantidadeSaida: number;
     loteNumero: string;
+    lote?: { // ← NOVO: objeto lote completo
+      id: string;
+      numeroLote: string;
+    };
     medicamento: {
       principioAtivo: string;
       concentracao: string;

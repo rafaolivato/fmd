@@ -15,15 +15,10 @@ interface AlertaEstoque {
 
 class DashboardController {
     async getMetrics(request: Request, response: Response) {
-        console.log('\n🎯 [BACKEND] DashboardController.getMetrics CHAMADO');
-
         try {
-            // 1. Definição das datas (A CORREÇÃO ESTÁ AQUI)
-            // Pegamos a data atual do sistema
+            // 1. Definição das datas
             const now = new Date();
             
-            // Construímos o início do dia forçando UTC 00:00:00.000
-            // Isso garante que bata com o '2025-11-19T00:00:00.000Z' do banco
             const startOfDay = new Date(Date.UTC(
                 now.getFullYear(), 
                 now.getMonth(), 
@@ -31,18 +26,12 @@ class DashboardController {
                 0, 0, 0, 0
             ));
 
-            // Construímos o fim do dia forçando UTC 23:59:59.999
             const endOfDay = new Date(Date.UTC(
                 now.getFullYear(), 
                 now.getMonth(), 
                 now.getDate(), 
                 23, 59, 59, 999
             ));
-
-            console.log('📅 Período de Busca (UTC Puro):', {
-                inicio: startOfDay.toISOString(),
-                fim: endOfDay.toISOString()
-            });
 
             // 2. Total de medicamentos (Geral)
             const totalMedicamentos = await prisma.medicamento.count();
@@ -80,7 +69,6 @@ class DashboardController {
             // 5. Dispensações de hoje
             let dispensacoesHoje = 0;
             try {
-                // Verifica se a tabela dispensacao existe antes de tentar contar
                 dispensacoesHoje = await prisma.dispensacao.count({
                     where: {
                         createdAt: {
@@ -89,8 +77,8 @@ class DashboardController {
                         }
                     }
                 });
-            } catch (error) {
-                console.log('⚠️ Tabela de dispensações não encontrada ou vazia, assumindo 0.');
+            } catch {
+                dispensacoesHoje = 0;
             }
 
             // 6. Alertas de Estoque
@@ -134,8 +122,8 @@ class DashboardController {
                         tipo
                     };
                 });
-            } catch (error) {
-                console.error('⚠️ Erro ao processar alertas de estoque:', error);
+            } catch {
+                alertasEstoque = [];
             }
 
             // 7. Montagem e Envio da Resposta
@@ -147,18 +135,15 @@ class DashboardController {
                 alertasEstoque
             };
 
-            console.log('✅ Métricas recuperadas com sucesso:', metrics);
             return response.json(metrics);
 
         } catch (error: any) {
-            console.error('❌ Erro FATAL no dashboard:', error);
             return response.status(500).json({
                 error: 'Erro ao buscar métricas',
                 details: error.message
             });
         }
     }
-
 }
 
 export { DashboardController };

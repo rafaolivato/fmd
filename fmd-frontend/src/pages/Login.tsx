@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { loginUser } from '../store/slices/authSlice';
 import type { AppDispatch, RootState } from '../store/store';
 import { useNavigate } from 'react-router-dom';
-import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Alert from 'react-bootstrap/Alert';
@@ -32,243 +31,168 @@ const Login: React.FC = () => {
         navigate('/dashboard');
       })
       .catch(() => {
-        console.error("Login falhou. Mensagem exibida no formulário.");
+        console.error("Login falhou.");
       });
   };
+
+  // Cores da marca em constantes para fácil manutenção
+  const BRAND_BLUE = '#0fa2eb';
+  const BRAND_RED = '#fb3537';
 
   return (
     <div
       className="d-flex align-items-center justify-content-center"
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0fa2eb 0%, #fb3537 100%)',
+        // Mudança 1: Fundo neutro e sóbrio (cinza corporativo) em vez de gradiente forte
+        backgroundColor: '#f4f7f6',
         width: '100vw',
         margin: 0,
         padding: '20px',
-        fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
+        fontFamily: '"Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'
       }}
     >
       <div
-        className="p-4"
+        className="shadow rounded-4 overflow-hidden"
         style={{
           width: '100%',
-          maxWidth: '1200px'
+          maxWidth: '1000px', // Ligeiramente menor para ficar mais compacto/focado
+          backgroundColor: '#fff',
+          display: 'flex',
+          flexWrap: 'wrap'
         }}
       >
-        <div className="row g-0 shadow-lg rounded-4 overflow-hidden" style={{ 
-          backgroundColor: 'white',
-          backdropFilter: 'blur(10px)'
-        }}>
-          {/* Coluna da Esquerda - Branding/Imagens */}
-          <div 
-            className="col-md-6 d-none d-md-flex align-items-center justify-content-center p-5"
-            style={{
-              background: 'linear-gradient(135deg, rgba(15, 162, 235, 0.95) 0%, rgba(251, 53, 55, 0.85) 100%)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-          >
-            <div className="text-center text-white position-relative z-1">
-              {/* Logo Principal - fmdachatado.png */}
-              <div className="mb-4 floating">
-                <img 
-                  src="/fmdachatato.png" 
-                  alt="FMD Sistema" 
-                  style={{
-                    maxWidth: '220px',
-                    height: 'auto',
-                    filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.15))'
-                  }}
-                />
-              </div>
-              
-              {/* Logo Secundário - pill.png */}
-              <div className="mb-3">
-                <img 
-                  src="/pill.png" 
-                  alt="Medicamentos" 
-                  style={{
-                    maxWidth: '70px',
-                    height: 'auto',
-                    opacity: 0.9,
-                    filter: 'brightness(0) invert(1)'
-                  }}
-                />
-              </div>
-              
-              <h3 className="fw-bold mb-3" style={{ fontSize: '1.5rem' }}>
-                Sistema de Gestão Farmacêutica
-              </h3>
-              <p className="mb-0 opacity-90" style={{ fontSize: '0.95rem' }}>
-                Controle completo de estoque e dispensação de medicamentos
-              </p>
+        {/* Coluna da Esquerda - Branding Institucional */}
+        {/* Agora usa o Azul sólido ou gradiente sutil de azul para azul-escuro (passa confiança) */}
+        <div 
+          className="col-md-5 d-none d-md-flex flex-column align-items-center justify-content-center p-5 text-white"
+          style={{
+            background: `linear-gradient(160deg, ${BRAND_BLUE} 0%, #097ab0 100%)`,
+            position: 'relative'
+          }}
+        >
+          <div className="text-center position-relative z-1">
+            <div className="mb-4 bg-white rounded-circle p-3 d-inline-flex align-items-center justify-content-center shadow-sm" style={{ width: '120px', height: '120px' }}>
+              <img 
+                src="/fmdachatato.png" 
+                alt="FMD Sistema" 
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain'
+                  // Removida a animação 'floating' para dar estabilidade
+                }}
+              />
             </div>
             
-            {/* Elementos decorativos de fundo */}
-            <div 
-              style={{
-                position: 'absolute',
-                top: '-50%',
-                right: '-50%',
-                width: '100%',
-                height: '200%',
-                background: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
-                backgroundSize: '40px 40px',
-                transform: 'rotate(45deg)',
-                opacity: 0.2
-              }}
-            />
+            <h3 className="fw-bold mb-2 mt-3">Gestão Farmacêutica</h3>
+            <div style={{ width: '50px', height: '4px', background: BRAND_RED, margin: '15px auto', borderRadius: '2px' }}></div>
+            <p className="opacity-75 small px-4">
+              Acesso restrito a administradores e farmacêuticos autorizados.
+            </p>
           </div>
+        </div>
 
-          {/* Coluna da Direita - Formulário de Login */}
-          <div className="col-md-6 p-5">
-            <div className="d-flex flex-column justify-content-center h-100">
-              {/* Header do Formulário */}
-              <div className="text-center mb-4">
-                <h2 className="fw-bold mb-2" style={{ color: '#0fa2eb', fontSize: '2rem' }}>
-                  Bem-vindo
-                </h2>
-                <p className="text-muted" style={{ fontSize: '1rem' }}>
-                  Entre com suas credenciais para acessar o sistema
-                </p>
-              </div>
+        {/* Coluna da Direita - Formulário Limpo */}
+        <div className="col-12 col-md-7 p-5 bg-white">
+          <div className="d-flex flex-column justify-content-center h-100 px-md-4">
+            
+            <div className="mb-4">
+              <h4 className="fw-bold text-dark mb-1" style={{ fontSize: '1.75rem' }}>Login</h4>
+              <p className="text-muted small">Insira suas credenciais de acesso.</p>
+            </div>
 
-              {/* Exibir mensagem de erro */}
-              {error && (
-                <Alert variant="danger" className="text-center border-0 rounded-3" style={{
-                  background: 'rgba(251, 53, 55, 0.1)',
-                  border: '1px solid rgba(251, 53, 55, 0.2)',
-                  color: '#fb3537'
-                }}>
-                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                  {error}
-                </Alert>
-              )}
+            {error && (
+              <Alert variant="danger" className="d-flex align-items-center text-sm py-2">
+                <i className="bi bi-exclamation-circle-fill me-2"></i>
+                <small>{error}</small>
+              </Alert>
+            )}
 
-              <Form onSubmit={handleSubmit}>
-                <Form.Group className="mb-4" controlId="formUsuario">
-                  <Form.Label className="fw-semibold text-dark mb-2" style={{ fontSize: '0.95rem' }}>
-                    <i className="bi bi-person-fill me-2" style={{ color: '#0fa2eb' }}></i>
-                    Usuário
-                  </Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={usuario}
-                    onChange={(e) => setUsuario(e.target.value)}
-                    required
-                    placeholder="Digite seu email ou CPF"
-                    autoFocus
-                    className="py-3 px-3 rounded-3 border-1"
-                    style={{
-                      borderColor: '#e0e0e0',
-                      fontSize: '1rem',
-                      transition: 'all 0.3s ease'
-                    }}
-                  />
-                </Form.Group>
+            <Form onSubmit={handleSubmit}>
+              <Form.Group className="mb-3" controlId="formUsuario">
+                <Form.Label className="text-secondary small fw-bold text-uppercase" style={{ letterSpacing: '0.5px', fontSize: '0.75rem' }}>
+                  Usuário / Email
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  value={usuario}
+                  onChange={(e) => setUsuario(e.target.value)}
+                  required
+                  placeholder="ex: nome@farmacia.com"
+                  className="form-control-lg bg-light border-0 fs-6"
+                  style={{ minHeight: '50px' }}
+                />
+              </Form.Group>
 
-                <Form.Group className="mb-4" controlId="formSenha">
-                  <Form.Label className="fw-semibold text-dark mb-2" style={{ fontSize: '0.95rem' }}>
-                    <i className="bi bi-lock-fill me-2" style={{ color: '#0fa2eb' }}></i>
-                    Senha
-                  </Form.Label>
-                  <Form.Control
-                    type="password"
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                    required
-                    placeholder="Digite sua senha"
-                    className="py-3 px-3 rounded-3 border-1"
-                    style={{
-                      borderColor: '#e0e0e0',
-                      fontSize: '1rem',
-                      transition: 'all 0.3s ease'
-                    }}
-                  />
-                </Form.Group>
+              <Form.Group className="mb-4" controlId="formSenha">
+                <Form.Label className="text-secondary small fw-bold text-uppercase" style={{ letterSpacing: '0.5px', fontSize: '0.75rem' }}>
+                  Senha
+                </Form.Label>
+                <Form.Control
+                  type="password"
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  className="form-control-lg bg-light border-0 fs-6"
+                  style={{ minHeight: '50px' }}
+                />
+              </Form.Group>
 
+              <div className="d-grid gap-2">
                 <Button
                   variant="primary"
                   type="submit"
                   disabled={loading === 'pending'}
-                  className="w-100 py-3 rounded-3 fw-semibold border-0"
+                  className="py-3 fw-bold border-0"
                   style={{
-                    fontSize: '1.1rem',
-                    background: 'linear-gradient(135deg, #0fa2eb 0%, #fb3537 100%)',
-                    boxShadow: '0 4px 15px rgba(15, 162, 235, 0.3)',
-                    transition: 'all 0.3s ease'
+                    backgroundColor: BRAND_BLUE,
+                    boxShadow: `0 4px 12px rgba(15, 162, 235, 0.25)`,
+                    fontSize: '0.95rem',
+                    transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     if (loading !== 'pending') {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(15, 162, 235, 0.4)';
+                       e.currentTarget.style.backgroundColor = '#0b8ac9'; // Azul um pouco mais escuro
+                       e.currentTarget.style.transform = 'translateY(-1px)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (loading !== 'pending') {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(15, 162, 235, 0.3)';
+                       e.currentTarget.style.backgroundColor = BRAND_BLUE;
+                       e.currentTarget.style.transform = 'translateY(0)';
                     }
                   }}
                 >
-                  {loading === 'pending' ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                      Entrando...
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-box-arrow-in-right me-2"></i>
-                      Entrar no Sistema
-                    </>
-                  )}
+                  {loading === 'pending' ? 'Autenticando...' : 'Acessar Sistema'}
                 </Button>
-              </Form>
-
-              {/* Footer do Formulário */}
-              <div className="text-center mt-4 pt-3 border-top" style={{ borderColor: '#f0f0f0' }}>
-                <small className="text-muted">
-                  <i className="bi bi-shield-check me-1" style={{ color: '#0fa2eb' }}></i>
-                  Sistema seguro e criptografado
-                </small>
-                <br />
-                <small className="text-muted" style={{ fontSize: '0.85rem' }}>
-                  Em caso de problemas, entre em contato com o suporte técnico
-                </small>
               </div>
+            </Form>
+
+            <div className="mt-4 text-center">
+              <small className="text-muted" style={{ fontSize: '0.8rem' }}>
+                Esqueceu sua senha? <a href="#" style={{ color: BRAND_BLUE, textDecoration: 'none', fontWeight: 600 }}>Contate o suporte TI</a>
+              </small>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Estilos CSS adicionais */}
+      {/* CSS Global para inputs ficarem mais elegantes */}
       <style>
         {`
+          /* Foco mais sério: Borda Azul sólida, sem o brilho padrão do bootstrap */
           .form-control:focus {
-            border-color: #0fa2eb !important;
-            box-shadow: 0 0 0 0.2rem rgba(15, 162, 235, 0.15) !important;
+            background-color: #fff !important;
+            box-shadow: 0 0 0 2px rgba(15, 162, 235, 0.2) !important;
+            color: #333;
           }
           
-          .btn-primary:disabled {
-            background: linear-gradient(135deg, #8fd4f5 0%, #fd9a9c 100%) !important;
-            transform: none !important;
-            box-shadow: none !important;
-            opacity: 0.7;
-          }
-          
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
-          }
-          
-          .floating {
-            animation: float 4s ease-in-out infinite;
-          }
-          
-          /* Melhorar a legibilidade do placeholder */
+          /* Placeholder mais sutil */
           .form-control::placeholder {
-            color: #a0a0a0;
-            opacity: 0.8;
+            color: #adb5bd;
+            font-size: 0.9rem;
           }
         `}
       </style>

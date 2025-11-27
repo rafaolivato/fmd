@@ -86,5 +86,10 @@ export const relatorioService = {
       console.error('❌ Erro ao buscar dispensações:', error);
       throw new Error('Não foi possível carregar as dispensações');
     }
+  },
+  
+   async getCurrentUser() {
+    const response = await api.get('/auth/me');
+    return response.data;
   }
 };

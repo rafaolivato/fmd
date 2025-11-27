@@ -310,51 +310,43 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
       setEstoqueDisponivel(0);
     }
   };
-
-  // ✅ FUNÇÃO ADICIONAR ITEM ATUALIZADA (OPCIONAL)
+  // ✅ FUNÇÃO ADICIONAR ITEM ATUALIZADA (SEM O POP-UP CHATO)
   const adicionarItem = async () => {
+    // 1. Validações Básicas
     if (!novoItem.medicamentoId || novoItem.quantidadeSaida <= 0) {
       alert('Selecione um medicamento e informe a quantidade');
       return;
     }
 
+    // 2. Validação de Estoque
     if (novoItem.quantidadeSaida > estoqueDisponivel) {
       alert(`Quantidade solicitada (${novoItem.quantidadeSaida}) excede o estoque disponível (${estoqueDisponivel})`);
       return;
     }
 
+    // 3. Validação de Retirada Recente (Mantém o fluxo de justificativa se necessário)
     if (alertasRetirada[novoItem.medicamentoId]) {
       setMedicamentoPendente(novoItem.medicamentoId);
       setShowModalJustificativa(true);
       return;
     }
 
-    // ✅ PERGUNTA SE QUER SELECIONAR LOTES
-    const medicamento = medicamentos.find(m => m.id === novoItem.medicamentoId);
-    const querSelecionarLotes = window.confirm(
-      `Deseja selecionar lotes específicos para ${medicamento?.principioAtivo}?\n\n` +
-      `• SIM: Você escolhe os lotes manualmente\n` +
-      `• NÃO: Sistema usa distribuição FIFO automática`
-    );
+    // --- REMOVIDO O WINDOW.CONFIRM ---
+    // Agora o sistema adiciona o item diretamente. 
+    // O sistema assumirá FIFO automático a menos que o usuário edite o lote na tabela depois.
 
-    if (querSelecionarLotes) {
-      setItemSelecionadoParaLotes({ ...novoItem });
-      await carregarLotesDispensacao(novoItem.medicamentoId, formData.estabelecimentoOrigemId);
-      setShowModalLotes(true);
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        itens: [...prev.itens, { ...novoItem }]
-      }));
+    setFormData(prev => ({
+      ...prev,
+      itens: [...prev.itens, { ...novoItem }]
+    }));
 
-      setNovoItem({
-        medicamentoId: '',
-        quantidadeSaida: 0
-      });
-      setEstoqueDisponivel(0);
-    }
+    // Limpa os campos para o próximo item
+    setNovoItem({
+      medicamentoId: '',
+      quantidadeSaida: 0
+    });
+    setEstoqueDisponivel(0);
   };
-
   const handleConfirmarJustificativa = () => {
     if (!justificativaTemp.trim()) {
       alert('Por favor, informe uma justificativa para a retirada antecipada.');
@@ -412,7 +404,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
       return;
     }
 
-    // ✅ PREPARA OS DADOS NO FORMATO CORRETO PARA O BACKEND
     const dadosParaEnviar: DispensacaoCreateData = {
       pacienteNome: formData.pacienteNome,
       pacienteCpf: formData.pacienteCpf,
@@ -685,7 +676,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
                         <option value="">Selecione...</option>
                         {medicamentos.map(med => (
                           <option key={med.id} value={med.id}>
-                            {med.principioAtivo} - {med.concentracao}
+                            {med.principioAtivo} 
                           </option>
                         ))}
                       </Form.Select>

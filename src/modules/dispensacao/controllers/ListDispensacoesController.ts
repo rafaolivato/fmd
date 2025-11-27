@@ -1,4 +1,3 @@
-// src/modules/dispensacao/controllers/ListDispensacoesController.ts
 import { Request, Response, NextFunction } from 'express';
 import { ListDispensacoesService } from '../services/ListDispensacoesService';
 

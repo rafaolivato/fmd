@@ -191,7 +191,7 @@ const EntradaMedicamentosForm: React.FC<EntradaMedicamentosFormProps> = ({
                       <option value="">Selecione...</option>
                       {medicamentos.map(med => (
                         <option key={med.id} value={med.id}>
-                          {med.principioAtivo} - {med.concentracao}
+                          {med.principioAtivo}
                         </option>
                       ))}
                     </Form.Select>

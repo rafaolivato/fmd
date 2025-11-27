@@ -3,6 +3,18 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+interface AuthenticatedUser {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    estabelecimentoId: string | null;
+    estabelecimento?: { 
+        id: string; 
+        nome: string; 
+    } | null;
+}
+
 // Função auxiliar para buscar valores unitários
 async function buscarValoresUnitarios(dispensacoes: any[]): Promise<{ [key: string]: number }> {
     try {
@@ -36,8 +48,7 @@ async function buscarValoresUnitarios(dispensacoes: any[]): Promise<{ [key: stri
 
         return valores;
 
-    } catch (error) {
-        console.error('Erro ao buscar valores unitários:', error);
+    } catch {
         return {};
     }
 }
@@ -47,32 +58,32 @@ function corrigirDataParaUTC(dataString: string, fimDoDia: boolean = false): Dat
     const data = new Date(dataString);
 
     if (fimDoDia) {
-        // Para data fim: 23:59:59.999 UTC
         data.setUTCHours(23, 59, 59, 999);
     } else {
-        // Para data início: 00:00:00 UTC
         data.setUTCHours(0, 0, 0, 0);
     }
 
     return data;
 }
+
 export class RelatoriosController {
 
     async getPosicaoEstoque(request: Request, response: Response) {
         try {
             const { estabelecimento } = request.query;
+            const user = (request as any).user as AuthenticatedUser;
+            const userEstabelecimento = user?.estabelecimentoId;
+            const estabelecimentoFiltro = userEstabelecimento ? userEstabelecimento : estabelecimento;
 
-            console.log('📊 Gerando relatório de posição de estoque por LOTES...', { estabelecimento });
-
-            // ✅ CORREÇÃO: Busca diretamente da tabela EstoqueLote
             const lotesEstoque = await prisma.estoqueLote.findMany({
                 where: {
-                    quantidade: {
-                        gt: 0 // Apenas lotes com quantidade positiva
-                    },
-                    ...(estabelecimento && {
+                    quantidade: { gt: 0 },
+                    ...(estabelecimentoFiltro && {
                         estabelecimento: {
-                            nome: estabelecimento as string
+                            OR: [
+                                { id: estabelecimentoFiltro as string },
+                                { nome: estabelecimentoFiltro as string }
+                            ]
                         }
                     })
                 },
@@ -97,33 +108,18 @@ export class RelatoriosController {
                     }
                 },
                 orderBy: [
-                    {
-                        medicamento: {
-                            principioAtivo: 'asc'
-                        }
-                    },
-                    {
-                        numeroLote: 'asc'
-                    },
-                    {
-                        dataValidade: 'asc'
-                    }
+                    { medicamento: { principioAtivo: 'asc' } },
+                    { numeroLote: 'asc' },
+                    { dataValidade: 'asc' }
                 ]
             });
 
-            console.log(`✅ Encontrados ${lotesEstoque.length} lotes no estoque`);
-
-            // ✅ CORREÇÃO: Busca a localização dos lotes da tabela ItemMovimento
             const medicamentoIds = lotesEstoque.map(lote => lote.medicamentoId);
 
             const localizacoesLotes = await prisma.itemMovimento.findMany({
                 where: {
-                    medicamentoId: {
-                        in: medicamentoIds
-                    },
-                    numeroLote: {
-                        in: lotesEstoque.map(lote => lote.numeroLote)
-                    }
+                    medicamentoId: { in: medicamentoIds },
+                    numeroLote: { in: lotesEstoque.map(lote => lote.numeroLote) }
                 },
                 select: {
                     medicamentoId: true,
@@ -133,20 +129,18 @@ export class RelatoriosController {
                 distinct: ['medicamentoId', 'numeroLote']
             });
 
-            // ✅ Formata a resposta - UM REGISTRO POR LOTE
             const dadosRelatorio = lotesEstoque.map(lote => {
-                // Encontra a localização para este lote específico
                 const localizacaoLote = localizacoesLotes.find(
                     loc => loc.medicamentoId === lote.medicamentoId && loc.numeroLote === lote.numeroLote
                 );
 
                 return {
-                    id: lote.id, // ID único do lote
+                    id: lote.id,
                     numeroLote: lote.numeroLote,
                     dataValidade: lote.dataValidade,
                     quantidade: lote.quantidade,
-                    valorUnitario: lote.valorUnitario.toNumber(), // Converte Decimal para number
-                    localizacao: localizacaoLote?.localizacaoFisica || 'Não informada', // ✅ CORRIGIDO
+                    valorUnitario: lote.valorUnitario.toNumber(),
+                    localizacao: localizacaoLote?.localizacaoFisica || 'Não informada',
                     medicamento: {
                         id: lote.medicamento.id,
                         principioAtivo: lote.medicamento.principioAtivo,
@@ -164,22 +158,9 @@ export class RelatoriosController {
                 };
             });
 
-            console.log(`📋 Relatório gerado com ${dadosRelatorio.length} itens (lotes individuais)`);
-
-            // ✅ DEBUG: Verifica se há medicamentos com múltiplos lotes
-            const medicamentosComMultiplosLotes = dadosRelatorio.reduce((acc, item) => {
-                const key = item.medicamento.principioAtivo;
-                acc[key] = (acc[key] || 0) + 1;
-                return acc;
-            }, {} as { [key: string]: number });
-
-            const multiplos = Object.entries(medicamentosComMultiplosLotes).filter(([_, count]) => count > 1);
-            console.log('🔍 Medicamentos com múltiplos lotes:', multiplos);
-
             response.json(dadosRelatorio);
 
         } catch (error: unknown) {
-            console.error('❌ Erro ao gerar relatório de posição de estoque:', error);
             return response.status(500).json({
                 error: 'Erro interno do servidor ao gerar relatório',
                 details: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -190,20 +171,13 @@ export class RelatoriosController {
     async getEstabelecimentos(request: Request, response: Response) {
         try {
             const estabelecimentos = await prisma.estabelecimento.findMany({
-                select: {
-                    id: true,
-                    nome: true,
-                    tipo: true
-                },
-                orderBy: {
-                    nome: 'asc'
-                }
+                select: { id: true, nome: true, tipo: true },
+                orderBy: { nome: 'asc' }
             });
 
             response.json(estabelecimentos.map(est => est.nome));
 
         } catch (error: unknown) {
-            console.error('Erro ao buscar estabelecimentos:', error);
             response.status(500).json({
                 error: 'Erro ao buscar estabelecimentos',
                 details: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -211,24 +185,14 @@ export class RelatoriosController {
         }
     }
 
-
     async getDispensacoes(request: Request, response: Response) {
         try {
             const { dataInicio, dataFim, estabelecimento, paciente } = request.query;
-
             const where: any = {};
 
-            // ✅ CORREÇÃO: Datas em UTC para evitar problemas de timezone
             if (dataInicio && dataFim) {
                 const dataInicioUTC = corrigirDataParaUTC(dataInicio as string);
                 const dataFimUTC = corrigirDataParaUTC(dataFim as string, true);
-
-                console.log('📅 Datas ajustadas:', {
-                    dataInicio: dataInicio,
-                    dataFim: dataFim,
-                    dataInicioUTC: dataInicioUTC.toISOString(),
-                    dataFimUTC: dataFimUTC.toISOString()
-                });
 
                 where.dataDispensacao = {
                     gte: dataInicioUTC,
@@ -237,9 +201,7 @@ export class RelatoriosController {
             }
 
             if (estabelecimento) {
-                where.estabelecimentoOrigem = {
-                    nome: estabelecimento as string
-                };
+                where.estabelecimentoOrigem = { nome: estabelecimento as string };
             }
 
             if (paciente) {
@@ -252,11 +214,7 @@ export class RelatoriosController {
             const dispensacoes = await prisma.dispensacao.findMany({
                 where,
                 include: {
-                    estabelecimentoOrigem: {
-                        select: {
-                            nome: true
-                        }
-                    },
+                    estabelecimentoOrigem: { select: { nome: true } },
                     itensDispensados: {
                         include: {
                             medicamento: {
@@ -269,31 +227,19 @@ export class RelatoriosController {
                             }
                         }
                     },
-                    profissionalSaude: {
-                        select: {
-                            nome: true,
-                            crm: true
-                        }
-                    }
+                    profissionalSaude: { select: { nome: true, crm: true } }
                 },
-
-
-                orderBy: {
-                    dataDispensacao: 'desc'
-                }
-            },);
+                orderBy: { dataDispensacao: 'desc' }
+            });
 
             const valoresUnitarios = await buscarValoresUnitarios(dispensacoes);
-
             const dadosRelatorio: any[] = [];
 
             dispensacoes.forEach(dispensacao => {
                 dispensacao.itensDispensados.forEach(item => {
                     const valorUnitario = valoresUnitarios[item.medicamento.id] || 0;
-
                     const profissionalNome = dispensacao.profissionalSaude?.nome ||
-                        dispensacao.profissionalSaudeNome ||
-                        'N/A';
+                        dispensacao.profissionalSaudeNome || 'N/A';
 
                     dadosRelatorio.push({
                         id: `${dispensacao.id}-${item.id}`,
@@ -320,7 +266,6 @@ export class RelatoriosController {
             response.json(dadosRelatorio);
 
         } catch (error: any) {
-            console.error('Erro no relatório de dispensações:', error);
             response.status(500).json({
                 error: 'Erro ao gerar relatório de dispensações',
                 details: error.message

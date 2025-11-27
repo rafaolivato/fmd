@@ -1,4 +1,3 @@
-// src/components/dispensacao/DispensacoesList.tsx - CORRIGIDO
 import React from 'react';
 import { Card, Table, Badge, Button } from 'react-bootstrap';
 import type { Dispensacao } from '../../types/Dispensacao';
@@ -32,6 +31,16 @@ const DispensacoesList: React.FC<DispensacoesListProps> = ({
 
   const getTotalMedicamentos = (dispensacao: Dispensacao) => {
     return dispensacao.itensDispensados.length;
+  };
+
+  const getProfissionalNome = (dispensacao: Dispensacao) => {
+    if (dispensacao.profissionalSaudeNome) {
+      return dispensacao.profissionalSaudeNome;
+    }
+    if (dispensacao.profissionalSaude?.nome) {
+      return dispensacao.profissionalSaude.nome;
+    }
+    return null;
   };
 
   if (isLoading) {
@@ -100,7 +109,6 @@ const DispensacoesList: React.FC<DispensacoesListProps> = ({
                       )}
                     </td>
                     <td>
-                      {/* CORREÇÃO AQUI: usando optional chaining */}
                       <div>{dispensacao.estabelecimentoOrigem?.nome || 'Não informado'}</div>
                     </td>
                     <td>
@@ -110,8 +118,8 @@ const DispensacoesList: React.FC<DispensacoesListProps> = ({
                       </small>
                     </td>
                     <td>
-                      {dispensacao.profissionalSaude ? (
-                        <div>{dispensacao.profissionalSaude}</div>
+                      {getProfissionalNome(dispensacao) ? (
+                        <div>{getProfissionalNome(dispensacao)}</div>
                       ) : (
                         <span className="text-muted">-</span>
                       )}

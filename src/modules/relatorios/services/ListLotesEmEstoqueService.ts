@@ -1,4 +1,3 @@
-// src/modules/relatorios/services/ListLotesEmEstoqueService.ts
 import { prisma } from '../../../database/prismaClient';
 
 class ListLotesEmEstoqueService {
