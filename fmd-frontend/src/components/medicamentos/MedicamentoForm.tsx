@@ -33,38 +33,46 @@ const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
   const [categorias, setCategorias] = useState<CategoriaControlada[]>([]);
   const [errors, setErrors] = useState<Partial<MedicamentoFormData>>({});
   const [loadingCategorias, setLoadingCategorias] = useState(false);
+  const [categoriasError, setCategoriasError] = useState<string>('');
 
-  // Carregar categorias disponíveis
   useEffect(() => {
-    const carregarCategorias = async () => {
-      setLoadingCategorias(true);
-      try {
-        // Tenta buscar categorias do backend
-        const response = await fetch('/api/medicamentos/categorias');
-        if (response.ok) {
-          const categoriasData = await response.json();
-          setCategorias(categoriasData);
-        } else {
-          // Fallback para categorias padrão se o endpoint não existir
-          const categoriasPadrao: CategoriaControlada[] = [
-            { id: '1', nome: 'Entorpecentes - Lista A1', tipo: 'A1' },
-            { id: '2', nome: 'Psicotrópicos - Lista B1', tipo: 'B1' },
-            { id: '3', nome: 'Psicotrópicos - Lista B2', tipo: 'B2' },
-            { id: '4', nome: 'Outros Controlados - Lista C1', tipo: 'C1' },
-            { id: '5', nome: 'Antimicrobianos', tipo: 'ANTIMICROBIANO' },
-            { id: '6', nome: 'Não Controlado', tipo: 'NAO_CONTROLADO' }
-          ];
-          setCategorias(categoriasPadrao);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar categorias:', error);
-      } finally {
-        setLoadingCategorias(false);
+  const carregarCategorias = async () => {
+    setLoadingCategorias(true);
+    
+    try {
+      console.log('🔄 Carregando categorias...');
+      
+      const response = await fetch('/medicamentos/categorias');
+      
+      if (response.ok) {
+        const categoriasData = await response.json();
+        setCategorias(categoriasData);
+      } else {
+        throw new Error(`Erro ${response.status}`);
       }
-    };
+      
+    } catch (error) {
+      console.error('❌ Erro ao carregar categorias:', error);
+      // Fallback com as categorias do seu banco
+      const categoriasFallback = [
+        { id: 'A1', nome: 'Entorpecentes', tipo: 'A1' },
+        { id: 'A2', nome: 'Entorpecentes A2', tipo: 'A2' },
+        { id: 'A3', nome: 'Psicotrópicos A3', tipo: 'A3' },
+        { id: 'B1', nome: 'Psicotrópicos', tipo: 'B1' },
+        { id: 'B2', nome: 'Psicotrópicos B2', tipo: 'B2' },
+        { id: 'C1', nome: 'Outros Controlados', tipo: 'C1' },
+        { id: 'C2', nome: 'Retinoides Sistêmicos', tipo: 'C2' },
+        { id: 'C3', nome: 'Imunossupressores', tipo: 'C3' },
+        { id: 'ANTIMICROBIANO', nome: 'Antimicrobianos', tipo: 'ANTIMICROBIANO' }
+      ];
+      setCategorias(categoriasFallback);
+    } finally {
+      setLoadingCategorias(false);
+    }
+  };
 
-    carregarCategorias();
-  }, []);
+  carregarCategorias();
+}, []);
 
   useEffect(() => {
     if (medicamento) {
@@ -256,9 +264,27 @@ const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
                   </option>
                 ))}
               </select>
+              
               {loadingCategorias && (
-                <div className="form-text">Carregando categorias...</div>
+                <div className="form-text text-info">Carregando categorias...</div>
               )}
+              
+              {categoriasError && (
+                <div className="form-text text-warning">{categoriasError}</div>
+              )}
+              
+              {!loadingCategorias && categorias.length === 0 && (
+                <div className="form-text text-danger">
+                  Nenhuma categoria disponível
+                </div>
+              )}
+              
+              {!loadingCategorias && categorias.length > 0 && (
+                <div className="form-text text-success">
+                  {categorias.length} categorias carregadas
+                </div>
+              )}
+              
               <div className="form-text">
                 Selecione a categoria para medicamentos controlados (opcional)
               </div>

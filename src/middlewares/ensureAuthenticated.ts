@@ -14,11 +14,11 @@ interface AuthenticatedUser {
     email: string;
     name: string;
     role: string;
-    estabelecimentoId: string | null; // 👈 Pode ser null
+    estabelecimentoId: string | null; 
     estabelecimento?: { 
         id: string; 
         nome: string; 
-    } | null; // 👈 Pode ser null
+    } | null; 
 }
 
 export async function ensureAuthenticated(

@@ -10,6 +10,7 @@ import { ListMedicamentosComEstoqueController } from './controllers/ListMedicame
 import { ListCategoriasController } from './controllers/ListCategoriasController';
 
 const medicamentosRoutes = Router();
+
 const createMedicamentoController = new CreateMedicamentoController();
 const listMedicamentosController = new ListMedicamentosController(); 
 const updateMedicamentoController = new UpdateMedicamentoController();
@@ -19,28 +20,26 @@ const listMedsComEstoqueController = new ListMedicamentosComEstoqueAlmoxarifadoC
 const listMedicamentosComEstoqueController = new ListMedicamentosComEstoqueController();
 const listCategoriasController = new ListCategoriasController();
 
+// Rota para categorias - DEVE VIR ANTES DE ROTAS COM PARÂMETROS
+medicamentosRoutes.get('/categorias', listCategoriasController.handle);
+
 // Todas as rotas de medicamentos precisam de autenticação
 medicamentosRoutes.use(ensureAuthenticated);
 
+// CORRIJA A ORDEM E EVITE DUPLICAÇÃO DE ROTAS GET '/'
+
 // Rota para cadastrar um novo medicamento (POST)
-medicamentosRoutes.post('/', (request, response, next) => {
-  createMedicamentoController.handle(request, response, next);
-});
+medicamentosRoutes.post('/', createMedicamentoController.handle);
 
-// Rota para listar todos os medicamentos (GET)
-medicamentosRoutes.get('/', (request, response, next) => {
-    listMedicamentosController.handle(request, response, next);
-});
-
+// Rota para listar todos os medicamentos (GET) - APENAS UMA ROTA GET '/'
 medicamentosRoutes.get('/', getAllMedicamentosController.handle);
+
+
+
+// Outras rotas
 medicamentosRoutes.put('/:id', updateMedicamentoController.handle);
 medicamentosRoutes.delete('/:id', deleteMedicamentoController.handle);
-
 medicamentosRoutes.get('/com-estoque-almoxarifado', listMedsComEstoqueController.handle);
-
 medicamentosRoutes.get('/com-estoque', listMedicamentosComEstoqueController.handle);
-
-medicamentosRoutes.get('/categorias', listCategoriasController.handle);
-
 
 export { medicamentosRoutes };
