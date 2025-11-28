@@ -13,6 +13,7 @@ const listEstoqueLocalController = new ListEstoqueLocalController();
 const relatoriosController = new RelatoriosController();
 const livrosControladosController = new LivrosControladosController();
 
+
 relatoriosRoutes.use(ensureAuthenticated);
 
 relatoriosRoutes.get('/lotes', (request, response, next) => {
@@ -35,6 +36,10 @@ relatoriosRoutes.get('/dispensacoes', relatoriosController.getDispensacoes);
 
 relatoriosRoutes.get('/livros-controlados', (req, res) => {
     livrosControladosController.getLivroPorCategoria(req, res);
+});
+
+relatoriosRoutes.get('/verificar-dados', (req, res) => {
+    livrosControladosController.verificarDados(req, res);
 });
 
 export { relatoriosRoutes };

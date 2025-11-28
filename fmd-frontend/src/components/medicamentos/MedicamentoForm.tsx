@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import type { Medicamento, MedicamentoFormData } from '../../types/Medicamento';
+import { Form } from 'react-bootstrap';
 
 interface MedicamentoFormProps {
   medicamento?: Medicamento;
   onSubmit: (data: MedicamentoFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
-  
+}
+
+interface CategoriaControlada {
+  id: string;
+  nome: string;
+  tipo: string;
 }
 
 const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
@@ -20,10 +26,45 @@ const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
     concentracao: '',
     formaFarmaceutica: '',
     psicotropico: false,
-    estoqueMinimo: 0
+    estoqueMinimo: 0,
+    categoriaControladaId: ''
   });
 
+  const [categorias, setCategorias] = useState<CategoriaControlada[]>([]);
   const [errors, setErrors] = useState<Partial<MedicamentoFormData>>({});
+  const [loadingCategorias, setLoadingCategorias] = useState(false);
+
+  // Carregar categorias disponíveis
+  useEffect(() => {
+    const carregarCategorias = async () => {
+      setLoadingCategorias(true);
+      try {
+        // Tenta buscar categorias do backend
+        const response = await fetch('/api/medicamentos/categorias');
+        if (response.ok) {
+          const categoriasData = await response.json();
+          setCategorias(categoriasData);
+        } else {
+          // Fallback para categorias padrão se o endpoint não existir
+          const categoriasPadrao: CategoriaControlada[] = [
+            { id: '1', nome: 'Entorpecentes - Lista A1', tipo: 'A1' },
+            { id: '2', nome: 'Psicotrópicos - Lista B1', tipo: 'B1' },
+            { id: '3', nome: 'Psicotrópicos - Lista B2', tipo: 'B2' },
+            { id: '4', nome: 'Outros Controlados - Lista C1', tipo: 'C1' },
+            { id: '5', nome: 'Antimicrobianos', tipo: 'ANTIMICROBIANO' },
+            { id: '6', nome: 'Não Controlado', tipo: 'NAO_CONTROLADO' }
+          ];
+          setCategorias(categoriasPadrao);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar categorias:', error);
+      } finally {
+        setLoadingCategorias(false);
+      }
+    };
+
+    carregarCategorias();
+  }, []);
 
   useEffect(() => {
     if (medicamento) {
@@ -32,24 +73,29 @@ const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
         concentracao: medicamento.concentracao,
         formaFarmaceutica: medicamento.formaFarmaceutica,
         psicotropico: medicamento.psicotropico,
-        estoqueMinimo: medicamento.estoqueMinimo
+        estoqueMinimo: medicamento.estoqueMinimo,
+        categoriaControladaId: medicamento.categoriaControladaId || ''
       });
     }
   }, [medicamento]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      [name]: type === 'checkbox' 
+        ? (e.target as HTMLInputElement).checked 
+        : type === 'number'
+          ? Number(value)
+          : value
     }));
 
     // Limpar erro do campo quando usuário começar a digitar
     if (errors[name as keyof MedicamentoFormData]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: undefined
       }));
     }
   };
@@ -69,15 +115,24 @@ const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
       newErrors.formaFarmaceutica = 'Forma farmacêutica é obrigatória';
     }
 
+    if (formData.estoqueMinimo < 0) {
+      newErrors.estoqueMinimo = 'Estoque mínimo não pode ser negativo';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (validateForm()) {
-      onSubmit(formData);
+      // Garantir que estoqueMinimo seja número
+      const dataToSubmit: MedicamentoFormData = {
+        ...formData,
+        estoqueMinimo: Number(formData.estoqueMinimo) || 0
+      };
+      onSubmit(dataToSubmit);
     }
   };
 
@@ -157,11 +212,12 @@ const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
                 <div className="invalid-feedback">{errors.formaFarmaceutica}</div>
               )}
             </div>
+
             <div className="col-md-6 mb-3">
               <label htmlFor="estoqueMinimo" className="form-label">
-                Estoque Mínimo *
+                Estoque Mínimo
               </label>
-                <input
+              <input
                 type="number"
                 className={`form-control ${errors.estoqueMinimo ? 'is-invalid' : ''}`}
                 id="estoqueMinimo"
@@ -174,6 +230,38 @@ const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
               {errors.estoqueMinimo && (
                 <div className="invalid-feedback">{errors.estoqueMinimo}</div>
               )}
+              <div className="form-text">
+                Quantidade mínima para alertas de estoque (opcional)
+              </div>
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="col-md-6 mb-3">
+              <label htmlFor="categoriaControladaId" className="form-label">
+                Categoria Controlada
+              </label>
+              <select
+                className="form-select"
+                id="categoriaControladaId"
+                name="categoriaControladaId"
+                value={formData.categoriaControladaId || ''}
+                onChange={handleChange}
+                disabled={loadingCategorias}
+              >
+                <option value="">Selecione a categoria...</option>
+                {categorias.map(categoria => (
+                  <option key={categoria.id} value={categoria.id}>
+                    {categoria.nome} ({categoria.tipo})
+                  </option>
+                ))}
+              </select>
+              {loadingCategorias && (
+                <div className="form-text">Carregando categorias...</div>
+              )}
+              <div className="form-text">
+                Selecione a categoria para medicamentos controlados (opcional)
+              </div>
             </div>
 
             <div className="col-md-6 mb-3">

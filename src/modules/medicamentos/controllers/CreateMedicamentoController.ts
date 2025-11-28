@@ -1,16 +1,16 @@
 // src/modules/medicamentos/controllers/CreateMedicamentoController.ts
-
 import { Request, Response, NextFunction } from 'express';
 import { CreateMedicamentoService } from '../services/CreateMedicamentoService';
 
 class CreateMedicamentoController {
   async handle(request: Request, response: Response, next: NextFunction) {
-    // Desestrutura os campos do corpo da requisição
     const {
       principioAtivo,
       concentracao,
       formaFarmaceutica,
       psicotropico,
+      estoqueMinimo,
+      categoriaControladaId
     } = request.body;
 
     try {
@@ -21,6 +21,8 @@ class CreateMedicamentoController {
         concentracao,
         formaFarmaceutica,
         psicotropico,
+        estoqueMinimo,
+        categoriaControladaId
       });
 
       return response.status(201).json(medicamento);
