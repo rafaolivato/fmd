@@ -10,6 +10,9 @@ import { requisicoesRoutes } from './modules/requisicoes/routes';
 import { fornecedoresRoutes } from './modules/fornecedores/routes';
 import { dashboardRoutes } from './modules/dashboard/routes';
 import { estoqueRoutes } from './modules/estoque/routes';
+import { pacientesRoutes } from './modules/pacientes/routes'; 
+import { profissionaisSaudeRoutes } from './modules/profissionaisSaude/routes'; 
+
 
 const routes = Router();
 
@@ -24,5 +27,8 @@ routes.use('/requisicoes', requisicoesRoutes);
 routes.use('/fornecedores', fornecedoresRoutes);
 routes.use('/dashboard', dashboardRoutes);
 routes.use('/estoque', estoqueRoutes);
+routes.use('/pacientes', pacientesRoutes); 
+routes.use('/profissionais-saude', profissionaisSaudeRoutes);
+routes.use('/dispensacoes', dispensacaoRoutes);
 
 export { routes };

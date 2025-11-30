@@ -279,11 +279,7 @@ const MedicamentoForm: React.FC<MedicamentoFormProps> = ({
                 </div>
               )}
               
-              {!loadingCategorias && categorias.length > 0 && (
-                <div className="form-text text-success">
-                  {categorias.length} categorias carregadas
-                </div>
-              )}
+              
               
               <div className="form-text">
                 Selecione a categoria para medicamentos controlados (opcional)

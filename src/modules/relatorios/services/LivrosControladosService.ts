@@ -4,8 +4,8 @@ const prisma = new PrismaClient();
 
 interface FiltroLivroDTO {
   tipoLista: string;
-  dataInicio: Date;
-  dataFim: Date;
+  dataInicio: string; // Mudei para string para receber do frontend
+  dataFim: string;    // Mudei para string para receber do frontend
   estabelecimentoId?: string;
   medicamentoId?: string;
 }
@@ -30,19 +30,42 @@ interface ItemRelatorio {
     formaFarmaceutica: string;
     quantidadeEstoque: number;
     tipoLista: string;
+    psicotropico: boolean;
   };
   movimentacoes: MovimentoLivro[];
 }
 
 export class LivrosControladosService {
   
+  // Função para corrigir timezone - EXATAMENTE COMO VOCÊ SUGERIU
+  private corrigirDataParaUTC(dataString: string, fimDoDia: boolean = false): Date {
+    const data = new Date(dataString);
+
+    if (fimDoDia) {
+        data.setUTCHours(23, 59, 59, 999);
+    } else {
+        data.setUTCHours(0, 0, 0, 0);
+    }
+
+    return data;
+  }
+
   async gerarLivro(filtro: FiltroLivroDTO) {
-    // WHERE condition dinâmico
-    const whereCondition: any = {
-      categoriaControlada: {
+     
+    // Corrigir as datas para UTC
+    const dataInicioUTC = this.corrigirDataParaUTC(filtro.dataInicio, false);
+    const dataFimUTC = this.corrigirDataParaUTC(filtro.dataFim, true);
+
+      
+    // WHERE condition dinâmico - FILTRO APENAS POR CATEGORIA
+    const whereCondition: any = {};
+
+    // Se tem tipoLista específico, filtra APENAS pela categoria
+    if (filtro.tipoLista && filtro.tipoLista !== 'TODOS') {
+      whereCondition.categoriaControlada = {
         tipo: filtro.tipoLista
-      }
-    };
+      };
+    }
 
     // Se filtrar por medicamento específico
     if (filtro.medicamentoId) {
@@ -57,30 +80,44 @@ export class LivrosControladosService {
         concentracao: true,
         formaFarmaceutica: true,
         quantidadeEstoque: true,
+        psicotropico: true,
         categoriaControlada: {
           select: {
-            tipo: true
+            tipo: true,
+            nome: true
           }
         }
+      },
+      orderBy: {
+        principioAtivo: 'asc'
       }
     });
+
+    medicamentos.forEach(med => {
+      });
+
+    // Se não encontrou medicamentos, retorna array vazio
+    if (medicamentos.length === 0) {
+      return [];
+    }
 
     const relatorioFinal: ItemRelatorio[] = [];
 
     for (const med of medicamentos) {
+            
       // **CRUCIAL: Buscar saldo inicial (antes da data início)**
-      const saldoInicial = await this.calcularSaldoInicial(med.id, filtro.dataInicio);
-      
+      const saldoInicial = await this.calcularSaldoInicial(med.id, dataInicioUTC);
+            
       let saldoAtual = saldoInicial;
 
-      // Buscar MOVIMENTOS (Entradas, Saídas, Perdas)
+      // Buscar MOVIMENTOS (Entradas, Saídas, Perdas) - USANDO DATAS UTC
       const movimentos = await prisma.itemMovimento.findMany({
         where: {
           medicamentoId: med.id,
           movimento: {
             dataDocumento: { 
-              gte: filtro.dataInicio, 
-              lte: filtro.dataFim 
+              gte: dataInicioUTC, 
+              lte: dataFimUTC 
             }
           }
         },
@@ -98,14 +135,15 @@ export class LivrosControladosService {
         }
       });
 
-      // Buscar DISPENSAÇÕES (Saídas para pacientes)
+      
+      // Buscar DISPENSAÇÕES (Saídas para pacientes) - USANDO DATAS UTC
       const dispensacoes = await prisma.itemDispensacao.findMany({
         where: {
           medicamentoId: med.id,
           dispensacao: {
             dataDispensacao: { 
-              gte: filtro.dataInicio, 
-              lte: filtro.dataFim 
+              gte: dataInicioUTC, 
+              lte: dataFimUTC 
             }
           }
         },
@@ -123,28 +161,51 @@ export class LivrosControladosService {
         }
       });
 
-      // Array explícito com tipo MovimentoLivro
-      const movimentosProcessados: MovimentoLivro[] = movimentos.map(mov => {
-        // No seu schema, tipoMovimentacao é String direto
+       const movimentosProcessados: MovimentoLivro[] = movimentos.map(mov => {
         const tipoMov = mov.movimento.tipoMovimentacao.toUpperCase();
         const isEntrada = tipoMov.includes('ENTRADA') || tipoMov.includes('COMPRA');
         const isPerda = tipoMov.includes('PERDA') || tipoMov.includes('AVARIA') || tipoMov.includes('VENCIMENTO');
+        const isSaida = !isEntrada && !isPerda;
         
         const qtdEntrada = isEntrada ? mov.quantidade : 0;
-        const qtdSaida = (!isEntrada && !isPerda) ? mov.quantidade : 0;
+        const qtdSaida = isSaida ? mov.quantidade : 0;
         const qtdPerda = isPerda ? mov.quantidade : 0;
-
+      
         // Atualizar saldo
         saldoAtual += qtdEntrada - qtdSaida - qtdPerda;
-
+      
+        let observacoes = '-';
+      
+        if (isEntrada) {
+          // Para entradas, mostra apenas o tipo
+          observacoes = mov.movimento.tipoMovimentacao;
+        } else {
+          // Para saídas (perdas, avarias, transferências, etc.)
+          const partes: string[] = [];
+          
+          // Adiciona o tipo de movimentação
+          if (mov.movimento.tipoMovimentacao) {
+            partes.push(mov.movimento.tipoMovimentacao);
+          }
+          
+          // Adiciona a observação se existir
+          if (mov.movimento.observacao && mov.movimento.observacao.trim() !== '') {
+            partes.push(mov.movimento.observacao);
+          }
+          
+          if (partes.length > 0) {
+            observacoes = partes.join(' - ');
+          }
+        }
+      
         return {
           data: mov.movimento.dataDocumento,
           tipo: mov.movimento.tipoMovimentacao,
           docNumero: mov.movimento.numeroDocumento || 'S/N',
           origemDestino: isEntrada 
             ? mov.movimento.fornecedor?.nome || 'Fornecedor Não Informado'
-            : 'Ajuste Interno',
-          prescritor: '-',
+            : 'Saída Interna',
+          prescritor: observacoes, 
           qtdEntrada,
           qtdSaida,
           qtdPerda,
@@ -152,7 +213,7 @@ export class LivrosControladosService {
         };
       });
 
-      // Array explícito com tipo MovimentoLivro
+      // Processar DISPENSAÇÕES
       const dispensacoesProcessadas: MovimentoLivro[] = dispensacoes.map(disp => {
         const qtdSaida = disp.quantidadeSaida;
         
@@ -184,7 +245,7 @@ export class LivrosControladosService {
       
       if (saldoInicial > 0 || todosEventos.length > 0) {
         movimentacoesComSaldoInicial.push({
-          data: filtro.dataInicio,
+          data: dataInicioUTC, // Usando a data UTC corrigida
           tipo: 'SALDO INICIAL',
           docNumero: '-',
           origemDestino: 'Saldo Anterior',
@@ -206,7 +267,8 @@ export class LivrosControladosService {
             concentracao: med.concentracao,
             formaFarmaceutica: med.formaFarmaceutica,
             quantidadeEstoque: med.quantidadeEstoque,
-            tipoLista: med.categoriaControlada?.tipo || filtro.tipoLista
+            tipoLista: med.categoriaControlada?.tipo || filtro.tipoLista,
+            psicotropico: med.psicotropico
           },
           movimentacoes: movimentacoesComSaldoInicial
         });
@@ -216,14 +278,14 @@ export class LivrosControladosService {
     return relatorioFinal;
   }
 
-  // **MÉTODO PARA CALCULAR SALDO INICIAL** - Corrigido para seu schema
-  private async calcularSaldoInicial(medicamentoId: string, dataInicio: Date): Promise<number> {
-    // Buscar todas as movimentações ANTES da data início
+  // **MÉTODO PARA CALCULAR SALDO INICIAL** - ATUALIZADO COM UTC
+  private async calcularSaldoInicial(medicamentoId: string, dataInicioUTC: Date): Promise<number> {
+    // Buscar todas as movimentações ANTES da data início (usando UTC)
     const movimentosAnteriores = await prisma.itemMovimento.findMany({
       where: {
         medicamentoId: medicamentoId,
         movimento: {
-          dataDocumento: { lt: dataInicio }
+          dataDocumento: { lt: dataInicioUTC }
         }
       },
       include: {
@@ -231,12 +293,12 @@ export class LivrosControladosService {
       }
     });
 
-    // Buscar todas as dispensações ANTES da data início
+    // Buscar todas as dispensações ANTES da data início (usando UTC)
     const dispensacoesAnteriores = await prisma.itemDispensacao.findMany({
       where: {
         medicamentoId: medicamentoId,
         dispensacao: {
-          dataDispensacao: { lt: dataInicio }
+          dataDispensacao: { lt: dataInicioUTC }
         }
       }
     });
@@ -278,16 +340,21 @@ export class LivrosControladosService {
     return nomeLivre || 'Prescritor Não Informado';
   }
 
-  // **MÉTODO PARA VERIFICAR DADOS EXISTENTES**
+  // **MÉTODO PARA VERIFICAR DADOS EXISTENTES** - ATUALIZADO
   async verificarDadosExistentes(tipoLista: string) {
     try {
+      // WHERE condition igual ao do relatório - APENAS POR CATEGORIA
+      const whereCondition: any = {};
+
+      if (tipoLista && tipoLista !== 'TODOS') {
+        whereCondition.categoriaControlada = {
+          tipo: tipoLista
+        };
+      }
+
       // Verificar medicamentos da categoria
       const medicamentos = await prisma.medicamento.findMany({
-        where: {
-          categoriaControlada: {
-            tipo: tipoLista
-          }
-        },
+        where: whereCondition,
         include: {
           categoriaControlada: true
         },
@@ -297,11 +364,7 @@ export class LivrosControladosService {
       // Verificar movimentos recentes
       const movimentos = await prisma.itemMovimento.findMany({
         where: {
-          medicamento: {
-            categoriaControlada: {
-              tipo: tipoLista
-            }
-          }
+          medicamento: whereCondition
         },
         include: {
           movimento: {
@@ -322,11 +385,7 @@ export class LivrosControladosService {
       // Verificar dispensações recentes
       const dispensacoes = await prisma.itemDispensacao.findMany({
         where: {
-          medicamento: {
-            categoriaControlada: {
-              tipo: tipoLista
-            }
-          }
+          medicamento: whereCondition
         },
         include: {
           dispensacao: {

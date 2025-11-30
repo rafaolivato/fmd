@@ -3,7 +3,7 @@ import { Container, Row, Col, Card, Button, Table, Form, Alert } from 'react-boo
 import { FaBarcode, FaPrint, FaArrowLeft, FaBook, FaExclamationTriangle } from 'react-icons/fa';
 import { api } from '../../store/services/api';
 
-// --- TIPOS ---
+// --- TIPOS --
 interface MovimentoLivro {
   data: string;
   docNumero: string;
@@ -22,7 +22,8 @@ interface PaginaLivro {
     principioAtivo: string;
     concentracao: string;
     formaFarmaceutica: string;
-    tipoLista: string; // 'B1', 'A1', 'ANTIMICROBIANO'
+    tipoLista: string;
+    psicotropico: boolean;
   };
   movimentacoes: MovimentoLivro[];
 }
@@ -34,6 +35,13 @@ interface FiltrosRelatorio {
   medicamentoId?: number;
 }
 
+interface Categoria {
+  id: string;
+  nome: string;
+  tipo: string;
+  descricao?: string;
+}
+
 const RelatoriosPage: React.FC = () => {
   const [viewAtiva, setViewAtiva] = useState<'menu' | 'estoque' | 'livro_controlados'>('menu');
   const [filtros, setFiltros] = useState<FiltrosRelatorio>({
@@ -41,11 +49,44 @@ const RelatoriosPage: React.FC = () => {
     dataInicio: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
     dataFim: new Date().toISOString().split('T')[0]
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [dadosRelatorio, setDadosRelatorio] = useState<PaginaLivro[]>([]);
   const [medicamentos, setMedicamentos] = useState<any[]>([]);
   const [erro, setErro] = useState<string>('');
+  const [categorias, setCategorias] = useState<any[]>([]);
+  const [loadingCategorias, setLoadingCategorias] = useState(false);
+
+  useEffect(() => {
+    const carregarCategorias = async () => {
+      setLoadingCategorias(true);
+      try {
+        console.log('🔄 Carregando categorias...');
+        const response = await api.get('/medicamentos/categorias');
+        console.log('✅ Categorias carregadas:', response.data);
+        setCategorias(response.data);
+      } catch (error) {
+        console.error('❌ Erro ao carregar categorias:', error);
+        // Fallback com todas as categorias do seu banco
+        const categoriasFallback: Categoria[] = [
+          { id: 'A1', nome: 'Entorpecentes', tipo: 'A1', descricao: 'Substâncias entorpecentes da Lista A1' },
+          { id: 'A2', nome: 'Entorpecentes A2', tipo: 'A2', descricao: 'Substâncias entorpecentes da Lista A2' },
+          { id: 'A3', nome: 'Psicotrópicos A3', tipo: 'A3', descricao: 'Substâncias psicotrópicas da Lista A3' },
+          { id: 'B1', nome: 'Psicotrópicos', tipo: 'B1', descricao: 'Substâncias psicotrópicas da Lista B1' },
+          { id: 'B2', nome: 'Psicotrópicos B2', tipo: 'B2', descricao: 'Substâncias psicotrópicas da Lista B2' },
+          { id: 'C1', nome: 'Outros Controlados', tipo: 'C1', descricao: 'Medicamentos de controle especial' },
+          { id: 'C2', nome: 'Retinoides Sistêmicos', tipo: 'C2', descricao: 'Medicamentos retinoides sistêmicos' },
+          { id: 'C3', nome: 'Imunossupressores', tipo: 'C3', descricao: 'Medicamentos imunossupressores' },
+          { id: 'ANTIMICROBIANO', nome: 'Antimicrobianos', tipo: 'ANTIMICROBIANO', descricao: 'Antibióticos e antifúngicos' },
+        ];
+        setCategorias(categoriasFallback);
+      } finally {
+        setLoadingCategorias(false);
+      }
+    };
+  
+    carregarCategorias();
+  }, []);
 
   // Buscar medicamentos disponíveis para o filtro
   useEffect(() => {
@@ -54,19 +95,27 @@ const RelatoriosPage: React.FC = () => {
 
   const carregarMedicamentos = async () => {
     try {
+      console.log('🔍 Carregando medicamentos para categoria:', filtros.tipoLista);
+      
       const response = await api.get('/medicamentos', {
-        params: { tipoLista: filtros.tipoLista, ativo: true }
+        params: { 
+          tipoLista: filtros.tipoLista, 
+          ativo: true 
+        }
       });
+      
+      console.log(`✅ ${response.data.length} medicamentos carregados`);
       setMedicamentos(response.data);
     } catch (error) {
       console.error('Erro ao carregar medicamentos:', error);
+      setMedicamentos([]);
     }
   };
 
   const handleGerarRelatorio = async () => {
     setIsLoading(true);
     setErro('');
-    
+
     try {
       // Se não selecionou medicamento específico, busca todos do tipo de lista
       const params: any = {
@@ -80,11 +129,11 @@ const RelatoriosPage: React.FC = () => {
       }
 
       const response = await api.get('/relatorios/livros-controlados', { params });
-      
+
       if (response.data.length === 0) {
         setErro('Nenhum movimento encontrado para os filtros selecionados.');
       }
-      
+
       setDadosRelatorio(response.data);
     } catch (error: any) {
       console.error('Erro ao buscar livro:', error);
@@ -107,12 +156,25 @@ const RelatoriosPage: React.FC = () => {
   };
 
   const getNomeLista = (tipo: string) => {
-    const listas: { [key: string]: string } = {
+    // Busca o nome da categoria no array de categorias carregadas
+    const categoria = categorias.find(cat => cat.tipo === tipo);
+    if (categoria) {
+      return `${categoria.tipo} (${categoria.nome})`;
+    }
+
+    // Fallback para casos onde não encontrou
+    const listasFallback: { [key: string]: string } = {
       'B1': 'B1 (Psicotrópicos)',
+      'B2': 'B2 (Psicotrópicos B2)',
       'A1': 'A1 (Entorpecentes)',
+      'A2': 'A2 (Entorpecentes A2)',
+      'A3': 'A3 (Psicotrópicos A3)',
+      'C1': 'C1 (Outros Controlados)',
+      'C2': 'C2 (Retinoides Sistêmicos)',
+      'C3': 'C3 (Imunossupressores)',
       'ANTIMICROBIANO': 'Antimicrobianos'
     };
-    return listas[tipo] || tipo;
+    return listasFallback[tipo] || tipo;
   };
 
   // --- MENU ---
@@ -124,10 +186,10 @@ const RelatoriosPage: React.FC = () => {
         </h2>
         <Row className="g-4">
           <Col md={4} lg={3}>
-            <Card 
-              className="h-100 shadow-sm hover-card border-0 bg-white" 
-              onClick={() => setViewAtiva('livro_controlados')} 
-              style={{cursor: 'pointer'}}
+            <Card
+              className="h-100 shadow-sm hover-card border-0 bg-white"
+              onClick={() => setViewAtiva('livro_controlados')}
+              style={{ cursor: 'pointer' }}
             >
               <Card.Body className="text-center py-5">
                 <div className="bg-danger bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
@@ -164,21 +226,27 @@ const RelatoriosPage: React.FC = () => {
             <Row className="align-items-end">
               <Col md={3}>
                 <Form.Label className="fw-bold">Tipo de Lista:</Form.Label>
-                <Form.Select 
-                  value={filtros.tipoLista} 
-                  onChange={(e) => setFiltros({...filtros, tipoLista: e.target.value, medicamentoId: undefined})}
+                <Form.Select
+                  value={filtros.tipoLista}
+                  onChange={(e) => setFiltros({ ...filtros, tipoLista: e.target.value, medicamentoId: undefined })}
+                  disabled={loadingCategorias}
                 >
-                  <option value="B1">Lista B1 (Psicotrópicos)</option>
-                  <option value="A1">Lista A1 (Entorpecentes)</option>
-                  <option value="ANTIMICROBIANO">Antimicrobianos</option>
+                  <option value="">Selecione uma categoria...</option>
+                  {categorias.map(categoria => (
+                    <option key={categoria.id} value={categoria.tipo}>
+                      {categoria.nome} ({categoria.tipo})
+                    </option>
+                  ))}
                 </Form.Select>
+                {loadingCategorias && (
+                  <div className="form-text">Carregando categorias...</div>
+                )}
               </Col>
-              
               <Col md={3}>
                 <Form.Label className="fw-bold">Medicamento (Opcional):</Form.Label>
-                <Form.Select 
-                  value={filtros.medicamentoId || ''} 
-                  onChange={(e) => setFiltros({...filtros, medicamentoId: e.target.value ? parseInt(e.target.value) : undefined})}
+                <Form.Select
+                  value={filtros.medicamentoId || ''}
+                  onChange={(e) => setFiltros({ ...filtros, medicamentoId: e.target.value ? parseInt(e.target.value) : undefined })}
                 >
                   <option value="">Todos os medicamentos</option>
                   {medicamentos.map(med => (
@@ -191,27 +259,27 @@ const RelatoriosPage: React.FC = () => {
 
               <Col md={2}>
                 <Form.Label className="fw-bold">Data Início:</Form.Label>
-                <Form.Control 
-                  type="date" 
-                  value={filtros.dataInicio} 
-                  onChange={(e) => setFiltros({...filtros, dataInicio: e.target.value})} 
+                <Form.Control
+                  type="date"
+                  value={filtros.dataInicio}
+                  onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })}
                 />
               </Col>
 
               <Col md={2}>
                 <Form.Label className="fw-bold">Data Fim:</Form.Label>
-                <Form.Control 
-                  type="date" 
-                  value={filtros.dataFim} 
-                  onChange={(e) => setFiltros({...filtros, dataFim: e.target.value})} 
+                <Form.Control
+                  type="date"
+                  value={filtros.dataFim}
+                  onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })}
                 />
               </Col>
 
               <Col md={2}>
-                <Button 
-                  variant="success" 
-                  className="w-100" 
-                  onClick={handleGerarRelatorio} 
+                <Button
+                  variant="success"
+                  className="w-100"
+                  onClick={handleGerarRelatorio}
                   disabled={isLoading}
                 >
                   {isLoading ? 'Gerando...' : 'Gerar Relatório'}
@@ -258,18 +326,18 @@ const RelatoriosPage: React.FC = () => {
             <Table bordered size="sm" className="mb-0 table-bordered-dark fs-print-small">
               <thead className="text-center align-middle bg-white">
                 <tr>
-                  <th rowSpan={2} style={{width: '80px'}}>DATA</th>
+                  <th rowSpan={2} style={{ width: '80px' }}>DATA</th>
                   <th colSpan={3}>HISTÓRICO</th>
                   <th colSpan={3}>MOVIMENTAÇÃO</th>
-                  <th rowSpan={2} style={{width: '60px'}}>SALDO</th>
+                  <th rowSpan={2} style={{ width: '60px' }}>SALDO</th>
                 </tr>
                 <tr>
                   <th>DOC / NOTA</th>
                   <th>PROCEDÊNCIA / DESTINO</th>
-                  <th>PRESCITOR (CRM)</th>
-                  <th style={{width: '40px'}}>ENT.</th>
-                  <th style={{width: '40px'}}>SAI.</th>
-                  <th style={{width: '40px'}}>PER.</th>
+                  <th>OBSERVAÇÕES / PRESCRITOR</th>
+                  <th style={{ width: '40px' }}>ENT.</th>
+                  <th style={{ width: '40px' }}>SAI.</th>
+                  <th style={{ width: '40px' }}>PER.</th>
                 </tr>
               </thead>
               <tbody>
@@ -277,10 +345,10 @@ const RelatoriosPage: React.FC = () => {
                   <tr key={idx}>
                     <td className="text-center">{formatarData(mov.data)}</td>
                     <td><strong>{mov.docNumero}</strong></td>
-                    <td className="text-truncate" style={{maxWidth: '150px'}} title={mov.origemDestino}>
+                    <td className="text-truncate" style={{ maxWidth: '150px' }} title={mov.origemDestino}>
                       {mov.origemDestino}
                     </td>
-                    <td className="text-truncate" style={{maxWidth: '150px'}} title={mov.prescritor}>
+                    <td className="text-truncate" style={{ maxWidth: '150px' }} title={mov.prescritor}>
                       {mov.prescritor}
                     </td>
                     <td className="text-center text-success fw-bold">
@@ -295,10 +363,10 @@ const RelatoriosPage: React.FC = () => {
                     <td className="text-center bg-light fw-bold">{mov.saldo}</td>
                   </tr>
                 ))}
-                
+
                 {/* Linhas vazias para preencher folha */}
                 {[...Array(Math.max(0, 15 - pagina.movimentacoes.length))].map((_, i) => (
-                  <tr key={`empty-${i}`} style={{height: '25px'}}>
+                  <tr key={`empty-${i}`} style={{ height: '25px' }}>
                     <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
                   </tr>
                 ))}

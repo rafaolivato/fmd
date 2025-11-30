@@ -10,8 +10,18 @@ class UpdateMedicamentoController {
       concentracao,
       formaFarmaceutica,
       psicotropico,
-      estoqueMinimo
+      estoqueMinimo,
+      categoriaControladaId // ← ADICIONE ESTE CAMPO
     } = request.body;
+
+    console.log('📥 Dados recebidos no UPDATE:', {
+      principioAtivo,
+      concentracao,
+      formaFarmaceutica,
+      psicotropico,
+      estoqueMinimo,
+      categoriaControladaId // ← Para debug
+    });
 
     try {
       // Verifica se o medicamento existe
@@ -34,6 +44,18 @@ class UpdateMedicamentoController {
         }
       }
 
+      // Se categoriaControladaId foi fornecido, verificar se existe
+      if (categoriaControladaId) {
+        const categoriaExistente = await prisma.categoriaControlada.findUnique({
+          where: { id: categoriaControladaId }
+        });
+
+        if (!categoriaExistente) {
+          throw new AppError('Categoria controlada não encontrada.', 404);
+        }
+      }
+
+      // Atualizar o medicamento incluindo a categoria
       const medicamento = await prisma.medicamento.update({
         where: { id },
         data: {
@@ -41,12 +63,19 @@ class UpdateMedicamentoController {
           concentracao,
           formaFarmaceutica,
           psicotropico,
-          estoqueMinimo: Number(estoqueMinimo)
+          estoqueMinimo: Number(estoqueMinimo),
+          categoriaControladaId: categoriaControladaId || null // ← ADICIONE AQUI
         },
+        include: {
+          categoriaControlada: true // ← INCLUA A CATEGORIA NA RESPOSTA
+        }
       });
 
+      console.log('✅ Medicamento atualizado:', medicamento);
       return response.json(medicamento);
+
     } catch (error) {
+      console.error('💥 Erro ao atualizar medicamento:', error);
       next(error);
     }
   }

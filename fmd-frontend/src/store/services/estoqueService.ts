@@ -24,16 +24,14 @@ export const estoqueService = {
       // PRIMEIRO: Tenta a rota original
       try {
         const response = await api.get<EstoqueResponse>(`/estoque/${medicamentoId}/${estabelecimentoId}`);
-        console.log('✅ Estoque encontrado (rota original):', response.data.quantidade);
         return response.data.quantidade;
       } catch (error: any) {
         // Se a rota original não existir, tenta a nova rota
         if (error.response?.status === 404) {
-          console.log('🔄 Tentando rota alternativa...');
+         
           const response = await api.get('/estoque/quantidade', {
             params: { medicamentoId, estabelecimentoId }
           });
-          console.log('✅ Estoque encontrado (rota alternativa):', response.data.quantidade);
           return response.data.quantidade || 0;
         }
         throw error;
@@ -47,13 +45,12 @@ export const estoqueService = {
   // ✅ FUNÇÕES EXISTENTES (mantenha essas)
   async getLotesDisponiveis(medicamentoId: string, estabelecimentoId: string): Promise<EstoqueLote[]> {
     try {
-      console.log('🚀 Buscando lotes reais do backend...');
+     
       
       const response = await api.get('/estoque/lotes-disponiveis', {
         params: { medicamentoId, estabelecimentoId }
       });
       
-      console.log(`✅ ${response.data.length} lotes carregados do backend`);
       return response.data;
       
     } catch (error: any) {
@@ -69,7 +66,6 @@ export const estoqueService = {
       });
       return response.data;
     } catch (error) {
-      console.error('❌ Erro ao buscar lotes do estabelecimento:', error);
       throw error;
     }
   }

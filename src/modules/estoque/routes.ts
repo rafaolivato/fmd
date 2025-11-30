@@ -16,8 +16,6 @@ estoqueRoutes.get('/:medicamentoId/:estabelecimentoId', async (request, response
   try {
     const { medicamentoId, estabelecimentoId } = request.params;
 
-    console.log('📊 Buscando estoque para dispensação:', { medicamentoId, estabelecimentoId });
-
     // 1. Tenta buscar do EstoqueLocal
     const estoqueLocal = await prisma.estoqueLocal.findUnique({
       where: {
@@ -38,7 +36,6 @@ estoqueRoutes.get('/:medicamentoId/:estabelecimentoId', async (request, response
     });
 
     if (estoqueLocal) {
-      console.log('✅ Estoque local encontrado:', estoqueLocal.quantidade);
       return response.json({
         quantidade: estoqueLocal.quantidade,
         medicamento: estoqueLocal.medicamento

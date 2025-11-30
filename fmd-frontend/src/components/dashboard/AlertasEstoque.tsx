@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Card, ListGroup, Badge } from 'react-bootstrap';
 import { FaExclamationTriangle, FaExclamationCircle, FaInfoCircle } from 'react-icons/fa';
 
@@ -15,6 +15,15 @@ interface AlertasEstoqueProps {
 }
 
 const AlertasEstoque: React.FC<AlertasEstoqueProps> = ({ alertas }) => {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Faz o scroll automático para o fim quando novos alertas chegam
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [alertas]);
+
   const getBadgeVariant = (tipo: string) => {
     switch (tipo) {
       case 'CRITICO': return 'danger';
@@ -56,24 +65,32 @@ const AlertasEstoque: React.FC<AlertasEstoqueProps> = ({ alertas }) => {
         <h5 className="card-title mb-0">Alertas de Estoque</h5>
         <Badge bg="danger">{alertas.length} alertas</Badge>
       </Card.Header>
-      <ListGroup variant="flush">
-        {alertas.map((alerta) => (
-          <ListGroup.Item key={alerta.id} className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
-              {getIcon(alerta.tipo)}
-              <div className="ms-3">
-                <div className="fw-semibold">{alerta.medicamento}</div>
-                <small className="text-muted">
-                  Estoque: {alerta.quantidade} | Mínimo: {alerta.estoqueMinimo}
-                </small>
+      <div
+        ref={listRef}
+        style={{
+          maxHeight: '300px',   // limite de altura
+          overflowY: 'auto'     // scroll automático
+        }}
+      >
+        <ListGroup variant="flush">
+          {alertas.map((alerta) => (
+            <ListGroup.Item key={alerta.id} className="d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center">
+                {getIcon(alerta.tipo)}
+                <div className="ms-3">
+                  <div className="fw-semibold">{alerta.medicamento}</div>
+                  <small className="text-muted">
+                    Estoque: {alerta.quantidade} | Mínimo: {alerta.estoqueMinimo}
+                  </small>
+                </div>
               </div>
-            </div>
-            <Badge bg={getBadgeVariant(alerta.tipo)}>
-              {alerta.tipo}
-            </Badge>
-          </ListGroup.Item>
-        ))}
-      </ListGroup>
+              <Badge bg={getBadgeVariant(alerta.tipo)}>
+                {alerta.tipo}
+              </Badge>
+            </ListGroup.Item>
+          ))}
+        </ListGroup>
+      </div>
     </Card>
   );
 };
