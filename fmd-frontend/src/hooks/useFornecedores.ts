@@ -1,4 +1,3 @@
-// useFornecedores.ts
 import { useState, useEffect } from 'react';
 import { fornecedorService } from '../store/services/fornecedorService';
 import type { Movimento } from '../types/Movimento';

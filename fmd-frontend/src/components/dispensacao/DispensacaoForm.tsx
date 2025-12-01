@@ -427,8 +427,6 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
       }))
     };
 
-    console.log('📤 Enviando dados para dispensação:', dadosParaEnviar);
-
     onSubmit(dadosParaEnviar);
   };
 
@@ -614,7 +612,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
 
               <Col md={6}>
                 <Form.Group>
-                  <Form.Label>Nome do Profissional (se não cadastrado)</Form.Label>
+                  <Form.Label>Nome do Profissional (Dentistas)</Form.Label>
                   <Form.Control
                     type="text"
                     value={formData.profissionalSaudeNome || ''}

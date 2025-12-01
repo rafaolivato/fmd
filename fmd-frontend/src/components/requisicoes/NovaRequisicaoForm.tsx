@@ -11,7 +11,7 @@ interface NovaRequisicaoFormProps {
   onSubmit: (data: RequisicaoFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
-  usuarioLogado?: { // Torna opcional com ?
+  usuarioLogado?: {
     id: string;
     estabelecimentoId: string;
     estabelecimentoNome: string;
@@ -26,17 +26,15 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
   isLoading = false,
   usuarioLogado
 }) => {
-  // Estado de loading interno enquanto usuarioLogado não carrega
   const [loading, setLoading] = useState(true);
+  const [formSubmitted, setFormSubmitted] = useState(false); // Adicione este estado
 
   useEffect(() => {
-    // Quando usuarioLogado chegar, remove o loading
     if (usuarioLogado) {
       setLoading(false);
     }
   }, [usuarioLogado]);
 
-  // Inicializa formData de forma segura
   const [formData, setFormData] = useState<RequisicaoFormData>({
     solicitanteId: usuarioLogado?.estabelecimentoId || '',
     atendenteId: '',
@@ -49,7 +47,6 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
     quantidadeSolicitada: 0
   });
 
-  // Atualiza formData quando usuarioLogado carregar
   useEffect(() => {
     if (usuarioLogado?.estabelecimentoId) {
       setFormData(prev => ({
@@ -59,15 +56,14 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
     }
   }, [usuarioLogado]);
 
-  // Filtra apenas almoxarifados - CORREÇÃO: uso seguro do tipo
   const almoxarifados = estabelecimentos.filter(est => {
     const estabelecimento = est as any;
     return estabelecimento.tipo && estabelecimento.tipo === 'ALMOXARIFADO';
   });
 
   const adicionarItem = () => {
-    if (!novoItem.medicamentoId || novoItem.quantidadeSolicitada < 0) {
-      alert('Selecione um medicamento e informe a quantidade');
+    if (!novoItem.medicamentoId || novoItem.quantidadeSolicitada <= 0) { // Alterado para <= 0
+      alert('Selecione um medicamento e informe uma quantidade válida (maior que zero)');
       return;
     }
 
@@ -91,27 +87,42 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormSubmitted(true); // Marca que o formulário foi submetido
 
+    // Validações
     if (!formData.atendenteId) {
       alert('Selecione o almoxarifado atendente');
+      setFormSubmitted(false); // Reseta se falhar
       return;
     }
 
     if (formData.itens.length === 0) {
       alert('Adicione pelo menos um item à requisição');
+      setFormSubmitted(false);
       return;
     }
 
-    // Remove o solicitanteId do envio - agora é automático
-    const dataParaEnviar = {
-      itens: formData.itens,
-      observacao: formData.observacao
+    // Prepara os dados para envio
+    const dataParaEnviar: RequisicaoFormData = {
+      ...formData,
+      itens: formData.itens.map(item => ({
+        ...item,
+        quantidadeSolicitada: Number(item.quantidadeSolicitada)
+      }))
     };
 
-    onSubmit(dataParaEnviar as any);
+    console.log('Enviando requisição:', dataParaEnviar); // Para debug
+    onSubmit(dataParaEnviar);
   };
 
-  // Loading enquanto usuarioLogado não carrega
+  // Adicione esta função para lidar com a tecla Enter no campo de quantidade
+  const handleQuantidadeKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      adicionarItem();
+    }
+  };
+
   if (loading || !usuarioLogado) {
     return (
       <Card>
@@ -134,8 +145,8 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
         </h5>
       </Card.Header>
       <Card.Body>
-        <Form onSubmit={handleSubmit}>
-          {/* Estabelecimentos - Simplificado */}
+        <Form onSubmit={handleSubmit} id="requisicao-form"> {/* Adicionado ID */}
+          {/* Estabelecimentos */}
           <Row className="mb-4">
             <Col md={6}>
               <Form.Group>
@@ -152,22 +163,27 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
               </Form.Group>
             </Col>
             <Col md={6}>
-              <Form.Group>
+              <Form.Group controlId="atendenteId">
                 <Form.Label>Almoxarifado Atendente *</Form.Label>
                 <Form.Select
                   value={formData.atendenteId}
                   onChange={(e) => setFormData(prev => ({ ...prev, atendenteId: e.target.value }))}
                   required
+                  isInvalid={formSubmitted && !formData.atendenteId}
                 >
                   <option value="">Selecione o almoxarifado...</option>
                   {almoxarifados.map(est => (
                     <option key={est.id} value={est.id}>{est.nome}</option>
                   ))}
                 </Form.Select>
+                {formSubmitted && !formData.atendenteId && (
+                  <Form.Control.Feedback type="invalid">
+                    Selecione um almoxarifado atendente
+                  </Form.Control.Feedback>
+                )}
               </Form.Group>
             </Col>
           </Row>
-
 
           {/* Observações */}
           <Form.Group className="mb-4">
@@ -189,42 +205,44 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
             <Card.Body>
               <Row className="g-2">
                 <Col md={6}>
-                  <Form.Group>
+                  <Form.Group controlId="medicamentoId">
                     <Form.Label>Medicamento *</Form.Label>
                     <Form.Select
                       value={novoItem.medicamentoId}
                       onChange={(e) => setNovoItem(prev => ({ ...prev, medicamentoId: e.target.value }))}
+                      isInvalid={formSubmitted && !novoItem.medicamentoId}
                     >
                       <option value="">Selecione...</option>
                       {medicamentos.map(med => (
                         <option key={med.id} value={med.id}>
-                          {med.principioAtivo}  {med.concentracao}
+                          {med.principioAtivo} {med.concentracao}
                         </option>
                       ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>
                 <Col md={4}>
-                  <Form.Group>
+                  <Form.Group controlId="quantidadeSolicitada">
                     <Form.Label>Quantidade *</Form.Label>
                     <Form.Control
                       type="number"
                       min="1"
+                      step="1"
                       value={novoItem.quantidadeSolicitada || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-
-                        // Permite campo vazio ou números
                         if (value === '') {
                           setNovoItem(prev => ({ ...prev, quantidadeSolicitada: 0 }));
-                        } else if (/^\d+$/.test(value)) {
+                        } else {
                           const numValue = parseInt(value, 10);
-                          // Aceita qualquer número maior que 0, sem forçar mínimo
-                          setNovoItem(prev => ({ ...prev, quantidadeSolicitada: numValue }));
+                          if (!isNaN(numValue) && numValue > 0) {
+                            setNovoItem(prev => ({ ...prev, quantidadeSolicitada: numValue }));
+                          }
                         }
                       }}
+                      onKeyPress={handleQuantidadeKeyPress} 
                       placeholder="Digite a quantidade"
-                      required
+                      
                     />
                     {novoItem.quantidadeSolicitada <= 0 && (
                       <Form.Text className="text-danger">
@@ -234,7 +252,12 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
                   </Form.Group>
                 </Col>
                 <Col md={2} className="d-flex align-items-end">
-                  <Button variant="primary" onClick={adicionarItem} className="w-100">
+                  <Button 
+                    variant="primary" 
+                    onClick={adicionarItem} 
+                    className="w-100"
+                    type="button" // IMPORTANTE: Adicione type="button"
+                  >
                     <FaPlus className="me-2" />
                     Adicionar
                   </Button>
@@ -244,7 +267,7 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
           </Card>
 
           {/* Itens Adicionados */}
-          {formData.itens.length > 0 && (
+          {formData.itens.length > 0 ? (
             <Card className="mb-4">
               <Card.Header>
                 <h6 className="mb-0">Itens da Requisição ({formData.itens.length})</h6>
@@ -270,6 +293,7 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
                               variant="outline-danger"
                               size="sm"
                               onClick={() => removerItem(index)}
+                              type="button" // IMPORTANTE: Adicione type="button"
                             >
                               Remover
                             </Button>
@@ -281,6 +305,12 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
                 </Table>
               </Card.Body>
             </Card>
+          ) : (
+            formSubmitted && (
+              <Alert variant="warning">
+                Você precisa adicionar pelo menos um item à requisição.
+              </Alert>
+            )
           )}
 
           <Alert variant="info">
@@ -290,7 +320,12 @@ const NovaRequisicaoForm: React.FC<NovaRequisicaoFormProps> = ({
 
           {/* Botões */}
           <div className="d-flex justify-content-end gap-2">
-            <Button variant="secondary" onClick={onCancel} disabled={isLoading}>
+            <Button 
+              variant="secondary" 
+              onClick={onCancel} 
+              disabled={isLoading}
+              type="button" // IMPORTANTE: Adicione type="button"
+            >
               Cancelar
             </Button>
             <Button

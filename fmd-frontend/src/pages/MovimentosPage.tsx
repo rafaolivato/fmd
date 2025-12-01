@@ -5,7 +5,7 @@ import type { Movimento } from '../types/Movimento';
 import { movimentoService } from '../store/services/movimentoService';
 import { FaSync, FaExchangeAlt, FaExclamationTriangle, FaFilter } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { useFornecedores } from '../hooks/useFornecedores'; // ✅ Import novo
+import { useFornecedores } from '../hooks/useFornecedores';
 
 const MovimentosPage: React.FC = () => {
   const [movimentos, setMovimentos] = useState<Movimento[]>([]);
@@ -65,7 +65,6 @@ const MovimentosPage: React.FC = () => {
 
   const loadMovimentos = async () => {
     try {
-      console.log('🔄 Iniciando carregamento de movimentos...');
       setIsLoading(true);
       setError(null);
       
@@ -136,7 +135,7 @@ const MovimentosPage: React.FC = () => {
   };
 
   const handleViewDetails = (movimento: Movimento) => {
-    console.log('📍 Navegando para detalhes do movimento:', movimento.id);
+  
     
     if (!movimento.id) {
       console.error('❌ Movimento sem ID!');
@@ -147,7 +146,7 @@ const MovimentosPage: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    console.log('🔄 Recarregando dados...');
+   
     setFiltroFornecedor('');
     setFiltroMedicamento('');
     setFiltroTipo('TODOS');

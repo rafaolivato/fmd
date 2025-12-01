@@ -6,6 +6,7 @@ import { fetchEstabelecimentos, deleteEstabelecimento } from '../store/slices/es
 import EstabelecimentoForm from '../components/estabelecimentos/EstabelecimentoForm';
 import type { Estabelecimento } from '../store/slices/estabelecimentoSlice';
 import { FaStore, FaPlusCircle, FaTrash, FaEdit } from 'react-icons/fa';
+import type { TipoEstabelecimento } from '../types/Estabelecimento';
 
 const EstabelecimentoPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -37,6 +38,11 @@ const EstabelecimentoPage: React.FC = () => {
     );
   }
 
+  const tipoLabels: Record<TipoEstabelecimento, string> = {
+    ALMOXARIFADO: "Almoxarifado",
+    FARMACIA_UNIDADE: "Farmácia da Unidade",
+    OUTRO: "Outro"
+  };
   const handleDelete = (id: string, nome: string) => {
     if (window.confirm(`Tem certeza que deseja excluir o estabelecimento "${nome}"?`)) {
       dispatch(deleteEstabelecimento(id));
@@ -89,7 +95,7 @@ const EstabelecimentoPage: React.FC = () => {
                 <tr key={est.id}>
                   <td>{est.nome}</td>
                   <td>{est.cnes}</td>
-                  <td>{est.tipo}</td>
+                  <td>{tipoLabels[est.tipo]}</td>
                   <td className="text-center">
                     <div className="btn-group btn-group-sm">
                       <button

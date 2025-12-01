@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, Table, Badge, Button } from 'react-bootstrap';
 import type { Movimento } from '../../types/Movimento';
 import { FaEye, FaFileAlt } from 'react-icons/fa';
-import { useFornecedores } from '../../hooks/useFornecedores'; // ✅ Import novo
+import { useFornecedores } from '../../hooks/useFornecedores'; 
 
 interface MovimentosListProps {
   movimentos: Movimento[];

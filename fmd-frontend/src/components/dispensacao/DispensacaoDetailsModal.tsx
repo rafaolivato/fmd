@@ -13,7 +13,7 @@ const DispensacaoDetailsModal: React.FC<DispensacaoDetailsModalProps> = ({
   show,
   onHide
 }) => {
-    const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('pt-BR');
   };
 
@@ -82,9 +82,9 @@ const DispensacaoDetailsModal: React.FC<DispensacaoDetailsModalProps> = ({
                     {item.medicamento.concentracao} - {item.medicamento.formaFarmaceutica}
                   </small>
                 </td>
-                
+
                 <td>
-                  <Badge bg="secondary">{item.loteNumero}</Badge>
+                  <Badge bg="secondary">{item.lote?.numeroLote || item.loteNumero}</Badge>
                 </td>
                 <td>
                   <Badge bg="primary">{item.quantidadeSaida} unidades</Badge>

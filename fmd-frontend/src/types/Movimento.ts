@@ -31,5 +31,5 @@ export interface Movimento {
   estabelecimentoId: string;
   createdAt: string;
   updatedAt: string;
-  itensMovimentados: ItemMovimento[]; // ✅ Nome correto: itensMovimentados
+  itensMovimentados: ItemMovimento[]; 
 }

@@ -4,13 +4,22 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaPrint } from 'react-icons/fa';
 import type { Movimento } from '../types/Movimento';
 import { movimentoService } from '../store/services/movimentoService';
+import { useFornecedores } from '../hooks/useFornecedores';
 
 const MovimentoDetailsPage: React.FC = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+
     const [movimento, setMovimento] = useState<Movimento | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // renomeando para evitar conflito
+    const { fornecedores, isLoading: fornecedoresLoading } = useFornecedores(
+        movimento ? [movimento] : []
+    );
+
+
 
     useEffect(() => {
         if (id) {
@@ -22,8 +31,6 @@ const MovimentoDetailsPage: React.FC = () => {
         try {
             setIsLoading(true);
             setError(null);
-
-            console.log('🔍 Iniciando carga do movimento ID:', movimentoId);
 
             // ✅ CHAMADA REAL DA API
             const data = await movimentoService.getById(movimentoId);
@@ -133,15 +140,35 @@ const MovimentoDetailsPage: React.FC = () => {
     };
 
     const getFonteFinanciamentoFormatada = (fonte: string) => {
-        const fontes: { [key: string]: string } = {
+        if (!fonte) return "Não informado";
+
+        const chaveNormalizada = fonte.trim().toUpperCase();
+
+        const fontes: Record<string, string> = {
             'RECURSOS_PROPRIOS': 'Recursos Próprios',
             'RECURSOS_PRO_PRIOS': 'Recursos Próprios',
+            'RECURSOS_PRO PRIOS': 'Recursos Próprios',
             'SUS': 'SUS',
             'CONVENIO': 'Convênio',
             'DOACAO': 'Doação',
             'TRANSFERENCIA': 'Transferência'
         };
-        return fontes[fonte] || fonte;
+
+        // Primeiro tenta encontrar exato
+        if (fontes[chaveNormalizada]) {
+            return fontes[chaveNormalizada];
+        }
+
+        // Se não encontrar, verifica se contém palavras-chave
+        if (chaveNormalizada.includes('RECURSOS') &&
+            (chaveNormalizada.includes('PROPRIOS') ||
+                chaveNormalizada.includes('PRO_PRIOS') ||
+                chaveNormalizada.includes('PRO PRIOS'))) {
+            return 'Recursos Próprios';
+        }
+
+        // Fallback: retorna a fonte original
+        return fonte;
     };
 
     if (isLoading) {
@@ -330,7 +357,11 @@ const MovimentoDetailsPage: React.FC = () => {
                                                 <>
                                                     <tr>
                                                         <td><strong>Fornecedor:</strong></td>
-                                                        <td>{movimento.fornecedor}</td>
+                                                        <td>
+                                                            {fornecedoresLoading
+                                                                ? "Carregando..."
+                                                                : fornecedores[movimento?.fornecedorId ?? ""] || "Fornecedor não encontrado"}
+                                                        </td>
                                                     </tr>
                                                     <tr>
                                                         <td><strong>Fonte Financiamento:</strong></td>
