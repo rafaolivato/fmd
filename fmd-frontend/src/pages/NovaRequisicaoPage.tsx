@@ -200,19 +200,7 @@ const loadData = async () => {
         </Col>
       </Row>
       
-      {/* 4. BLOCO OPCIONAL DE INFORMAÇÕES DE ESTOQUE */}
-      {medicamentos.length > 0 && (
-          <Row className="justify-content-center mt-4">
-              <Col xl={10} lg={12}>
-                <Alert variant="light" className="text-center p-2">
-                    <small>
-                        Apenas medicamentos com estoque disponível no Almoxarifado estão listados.
-                        <strong> ({medicamentos.length} itens disponíveis)</strong>
-                    </small>
-                </Alert>
-              </Col>
-          </Row>
-      )}
+    
     </Container>
   );
 };

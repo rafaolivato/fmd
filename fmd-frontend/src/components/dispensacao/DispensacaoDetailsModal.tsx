@@ -17,13 +17,23 @@ const DispensacaoDetailsModal: React.FC<DispensacaoDetailsModalProps> = ({
     return new Date(dateString).toLocaleString('pt-BR');
   };
 
+  const getProfissionalNome = (dispensacao: Dispensacao) => {
+    if (dispensacao.profissionalSaudeNome) {
+      return dispensacao.profissionalSaudeNome;
+    }
+    if (dispensacao.profissionalSaude?.nome) {
+      return dispensacao.profissionalSaude.nome;
+    }
+    return null;
+  };
+
   return (
     <Modal show={show} onHide={onHide} size="lg">
       <Modal.Header closeButton>
         <Modal.Title>Detalhes da Dispensação</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        {/* Informações Gerais */}
+        {/* Informções Gerais */}
         <Row className="mb-4">
           <Col md={6}>
             <h6>Paciente</h6>
@@ -38,8 +48,17 @@ const DispensacaoDetailsModal: React.FC<DispensacaoDetailsModalProps> = ({
             {dispensacao.profissionalSaude && (
               <p className="text-muted">Profissional: {dispensacao.profissionalSaudeNome}</p>
             )}
+            <td>
+              {getProfissionalNome(dispensacao) ? (
+                <div>{getProfissionalNome(dispensacao)}</div>
+              ) : (
+                <span className="text-muted">-</span>
+              )}
+            </td>
           </Col>
         </Row>
+
+
 
         <Row className="mb-4">
           <Col md={6}>

@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Requisicao, RequisicaoFormData, ItemRequisicaoAtendimento } from '../../types/Requisicao';
+import type { Requisicao, RequisicaoFormData } from '../../types/Requisicao';
 
 export interface ItemRequisicaoAtendimentoComLotes {
   itemId: string;

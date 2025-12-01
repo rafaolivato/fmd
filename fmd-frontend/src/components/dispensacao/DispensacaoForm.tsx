@@ -507,7 +507,7 @@ const DispensacaoForm: React.FC<DispensacaoFormProps> = ({
 
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label>Ou digite o nome do paciente *</Form.Label>
+                      <Form.Label>Nome do Paciente *</Form.Label>
                       <Form.Control
                         type="text"
                         value={formData.pacienteNome}

@@ -44,11 +44,6 @@ const RequisicoesPage: React.FC = () => {
           isAlmoxarifado: userIsAlmoxarifado
         });
 
-        console.log('👤 Usuário logado:', userData.name);
-        console.log('🏢 Estabelecimento:', userData.estabelecimento?.nome);
-        console.log('📋 Tipo:', userData.estabelecimento?.tipo);
-        console.log('🔧 É almoxarifado?', userIsAlmoxarifado);
-
         await loadRequisicoes(userIsAlmoxarifado);
       }
     } catch (error) {
@@ -60,8 +55,7 @@ const RequisicoesPage: React.FC = () => {
   const loadRequisicoes = useCallback(async (userIsAlmoxarifado: boolean): Promise<void> => {
     try {
       setIsLoading(true);
-      console.log('🔄 Carregando requisições...');
-
+    
       if (userIsAlmoxarifado) {
         console.log('📦 Almoxarifado - carregando "Para Atender"');
         const paraAtenderData = await requisicaoService.getParaAtender();
