@@ -28,3 +28,15 @@ npx prisma migrate dev
 ####Lembrete importante usar o prisma studio é bem fácil para mexer no banco
 
 npx prisma studio
+
+# 5. Para rodar o seed inicial 
+
+npm run seed //user (admin)
+npm run seed:medicamentos
+
+
+# 6. Instalar dependências (apenas se for a primeira vez)
+npm install 
+
+# 7. Para deletar o banco de dados ( sempre lembra de rodar o npm minstall antes)
+npx prisma migrate reset
