@@ -1,111 +1,149 @@
-// src/store/slices/authSlice.ts
 import { createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { api } from './../services/api';
 
-export interface IAuthResponse {
-  token: string;
-  usuarioId: string;
-  nome: string;
-  role: 'ADMIN' | 'FARMACEUTICO' | 'PACIENTE'; 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  estabelecimentoId?: string | null;
+  estabelecimento?: {
+    id: string;
+    nome: string;
+  } | null;
 }
 
-// O estado que o slice irá gerenciar
 interface AuthState {
-  data: IAuthResponse | null;
-  isAuthenticated: boolean;
+  user: User | null;
+  token: string | null;
   loading: 'idle' | 'pending' | 'succeeded' | 'failed';
   error: string | null;
+  isAuthenticated: boolean;
 }
 
 const initialState: AuthState = {
-  data: null,
-  isAuthenticated: false,
+  user: null,
+  token: null,
   loading: 'idle',
   error: null,
+  isAuthenticated: false,
 };
 
-// Thunk Assíncrono para fazer login
-// O 'credentials' deve ter a estrutura que seu backend espera (ex: { email: string, senha: string })
+// Thunk para login
 export const loginUser = createAsyncThunk(
   'auth/login',
-  async (credentials: any, { rejectWithValue }) => {
+  async (credentials: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      // Endpoint que você deve ter criado no seu backend Express
-      const response = await api.post('/auth/login', credentials); 
+      console.log('🔐 Enviando login para:', credentials.email);
+      const response = await api.post('/auth/login', credentials);
       
-      const authData: IAuthResponse = response.data;
-
-      // Persiste o token para manter o usuário logado após refresh
-      localStorage.setItem('fmd_token', authData.token); 
+      console.log('✅ Resposta da API:', {
+        status: response.status,
+        data: response.data,
+        keys: Object.keys(response.data)
+      });
       
-      // Configura o cabeçalho 'Authorization' para todas as futuras requisições
-      api.defaults.headers.common['Authorization'] = `Bearer ${authData.token}`;
-
-      return authData; 
-    } catch (err: any) {
-      // Retorna a mensagem de erro do backend ou uma mensagem padrão
-      return rejectWithValue(err.response?.data?.message || 'Credenciais inválidas. Verifique seu usuário e senha.');
+      // Debug: Mostra a estrutura completa
+      if (response.data.user) {
+        console.log('👤 Estrutura do user:', Object.keys(response.data.user));
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Erro no login:', error.response?.data);
+      return rejectWithValue(error.response?.data?.error || 'Erro ao fazer login');
     }
   }
 );
-
-// Thunk para carregar token do localStorage e restaurar sessão (útil no início da aplicação)
-export const initializeAuth = createAsyncThunk(
-  'auth/initialize',
-  async (_, { }) => {
-    const token = localStorage.getItem('fmd_token');
-    if (token) {
-      // Tenta usar o token. Idealmente, você teria um endpoint como '/auth/me' para validar.
-      // Por enquanto, apenas o colocamos no cabeçalho do Axios.
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      // Você precisaria de um endpoint para buscar os dados do usuário com base no token
-      // Como não temos esse endpoint, faremos apenas a simulação de que o token é válido
-      // dispatch(restoreSession({ token: token, ... dados fictícios }));
-      // Este passo é complexo sem o backend completo, então vamos focar apenas no Login/Logout por enquanto.
-    }
-  }
-);
-
 
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    // Ação para fazer logout
-    logout: (state) => {
-      state.data = null;
+    setCredentials: (state, action: PayloadAction<{ user: User; token: string }>) => {
+      state.user = action.payload.user;
+      state.token = action.payload.token;
+      state.isAuthenticated = true;
+      state.loading = 'succeeded';
+      
+      // Salva no localStorage
+      localStorage.setItem('@fmd:user', JSON.stringify(action.payload.user));
+      localStorage.setItem('@fmd:token', action.payload.token);
+      console.log('💾 Credenciais salvas no localStorage');
+    },
+    clearCredentials: (state) => {
+      state.user = null;
+      state.token = null;
       state.isAuthenticated = false;
       state.loading = 'idle';
       state.error = null;
-      localStorage.removeItem('fmd_token');
-      delete api.defaults.headers.common['Authorization']; // Remove o token do Axios
+      
+      // Remove do localStorage
+      localStorage.removeItem('@fmd:user');
+      localStorage.removeItem('@fmd:token');
+      localStorage.removeItem('token');
+      console.log('🧹 Credenciais removidas do localStorage');
+    },
+    // Nova action para restaurar do localStorage
+    restoreCredentials: (state) => {
+      const userStr = localStorage.getItem('@fmd:user');
+      const token = localStorage.getItem('@fmd:token');
+      
+      if (userStr && token) {
+        try {
+          state.user = JSON.parse(userStr);
+          state.token = token;
+          state.isAuthenticated = true;
+          console.log('🔄 Credenciais restauradas do localStorage');
+        } catch (error) {
+          console.error('Erro ao restaurar credenciais:', error);
+        }
+      }
     },
   },
   extraReducers: (builder) => {
     builder
-      // LOGIN PENDING
       .addCase(loginUser.pending, (state) => {
         state.loading = 'pending';
         state.error = null;
+        console.log('⏳ Login pendente...');
       })
-      // LOGIN SUCESSO
-      .addCase(loginUser.fulfilled, (state, action: PayloadAction<IAuthResponse>) => {
+      .addCase(loginUser.fulfilled, (state, action) => {
+        console.log('🎉 Login bem-sucedido!');
+        
+        // IMPORTANTE: Verifica se a estrutura está correta
+        if (!action.payload.user || !action.payload.token) {
+          console.error('❌ Estrutura inesperada do payload:', action.payload);
+          state.loading = 'failed';
+          state.error = 'Estrutura de resposta inválida';
+          return;
+        }
+        
         state.loading = 'succeeded';
+        state.user = action.payload.user;
+        state.token = action.payload.token;
         state.isAuthenticated = true;
-        state.data = action.payload; 
         state.error = null;
+        
+        // SALVA NO LOCALSTORAGE
+        localStorage.setItem('@fmd:user', JSON.stringify(action.payload.user));
+        localStorage.setItem('@fmd:token', action.payload.token);
+        
+        console.log('💾 Dados salvos no localStorage:', {
+          email: action.payload.user.email,
+          role: action.payload.user.role,
+          tokenLength: action.payload.token.length
+        });
       })
-      // LOGIN FALHA
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = 'failed';
+        state.error = action.payload as string;
         state.isAuthenticated = false;
-        state.data = null;
-        state.error = action.payload as string; 
+        console.error('💥 Login rejeitado:', action.payload);
       });
   },
 });
 
-export const { logout } = authSlice.actions;
+export const { setCredentials, clearCredentials, restoreCredentials } = authSlice.actions;
 export default authSlice.reducer;

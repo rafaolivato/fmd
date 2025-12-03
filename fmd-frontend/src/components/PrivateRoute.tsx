@@ -1,5 +1,7 @@
+// src/components/PrivateRoute.tsx
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useSelector } from 'react-redux';
+import { type RootState } from '../store/store';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -7,26 +9,20 @@ interface PrivateRouteProps {
 }
 
 export function PrivateRoute({ children, requiredRole }: PrivateRouteProps) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Carregando...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  
+  // Se não está autenticado
+  if (!isAuthenticated || !user) {
+    console.log('PrivateRoute: Usuário não autenticado, redirecionando para login');
     return <Navigate to="/login" />;
   }
 
   // Se precisa de role específica
   if (requiredRole && user.role !== requiredRole) {
+    console.log(`PrivateRoute: Usuário não tem a role necessária. Role do usuário: ${user.role}, Role necessária: ${requiredRole}`);
     return <Navigate to="/dashboard" />;
   }
 
+  console.log('PrivateRoute: Acesso permitido para', user.email);
   return <>{children}</>;
 }
