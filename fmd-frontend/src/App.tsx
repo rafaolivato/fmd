@@ -21,7 +21,8 @@ import RelatoriosPage from './pages/relatorios/RelatoriosPage';
 import PosicaoEstoquePage from './pages/relatorios/PosicaoEstoquePage';
 import RelatorioDispensacoesPage from './pages/relatorios/RelatorioDispensacaoPage';
 import ProfissionaisSaudePage from './pages/ProfissionaisSaudePage';
-import PsicotropicosPage from './pages/relatorios/PsicotropicosPage'; 
+import PsicotropicosPage from './pages/relatorios/PsicotropicosPage';
+import CadastroUsuario from './pages/Admin/CadastroUsuarios'; 
 
 
 const NotFound = () => <h1>404 | Página não encontrada</h1>;
@@ -79,7 +80,8 @@ const App: React.FC = () => {
 
         <Route path="/relatorios/livro-psicotropicos" element={<PsicotropicosPage />} />
 
-
+        <Route path="cadastrar-usuario" element={<CadastroUsuario />} />
+        
         {/* Adicione outras rotas aqui */}
       </Route>
 

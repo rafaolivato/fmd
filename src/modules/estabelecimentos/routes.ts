@@ -5,6 +5,7 @@ import { EstabelecimentoController } from './controllers/EstabelecimentoControll
 import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
 import { DeleteEstabelecimentoController } from './controllers/DeleteEstabelecimentoController'; 
 import { UpdateEstabelecimentoController } from './controllers/UpdateEstabelecimentoController';
+import { ListEstabelecimentosSelectController } from './controllers/ListEstabelecimentosSelectController';
 
 const estabelecimentosRoutes = Router();
 const createEstabelecimentoController = new CreateEstabelecimentoController();
@@ -12,6 +13,7 @@ const listEstabelecimentosController = new ListEstabelecimentosController();
 const estabelecimentoController = new EstabelecimentoController();
 const deleteEstabelecimentoController = new DeleteEstabelecimentoController();
 const updateEstabelecimentoController = new UpdateEstabelecimentoController();
+const listEstabelecimentosSelectController = new ListEstabelecimentosSelectController();
 
 estabelecimentosRoutes.use(ensureAuthenticated);
 
@@ -22,6 +24,10 @@ estabelecimentosRoutes.post('/', (request, response, next) => {
 
 estabelecimentosRoutes.get('/', (request, response, next) => {
   listEstabelecimentosController.handle(request, response, next);
+});
+
+estabelecimentosRoutes.get('/select', (request, response, next) => {
+  listEstabelecimentosSelectController.handle(request, response);
 });
 
 estabelecimentosRoutes.delete('/:id', (request, response, next) => {

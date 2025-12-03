@@ -1,4 +1,3 @@
-// src/store/services/api.ts
 import axios from 'axios';
 
 // ✅ CORREÇÃO: Adicione /api na baseURL e use a porta 3333

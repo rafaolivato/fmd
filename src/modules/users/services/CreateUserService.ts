@@ -1,39 +1,55 @@
-// modules/users/services/CreateUserService.ts
-
+// src/modules/users/services/CreateUserService.ts
 import { hash } from 'bcryptjs';
 import { ICreateUserDTO } from '../dtos/ICreateUserDTO';
-import { prisma } from '../../../database/prismaClient'; // Importe o seu Prisma Client
-import { AppError } from '../../../shared/errors/AppError'; // Importe o AppError
+import { prisma } from '../../../database/prismaClient';
+import { AppError } from '../../../shared/errors/AppError';
 
 class CreateUserService {
-  async execute({ name, email, password, role }: ICreateUserDTO) {
+  async execute({ name, email, password, role, estabelecimentoId }: ICreateUserDTO) {
     // 1. Verifica se o usuário já existe
     const userAlreadyExists = await prisma.user.findUnique({
       where: { email },
     });
 
     if (userAlreadyExists) {
-      // Usamos a classe de erro que criamos
-      throw new AppError('Este e-mail já está em uso.', 409); // 409 Conflict
+      throw new AppError('Este e-mail já está em uso.', 409);
     }
 
-    // 2. Criptografa a senha
-    // O 8 é o 'salt' (custo computacional) - 8 é um bom ponto de partida
+    // 2. Se fornecido, verifica se o estabelecimento existe
+    if (estabelecimentoId) {
+      const estabelecimentoExists = await prisma.estabelecimento.findUnique({
+        where: { id: estabelecimentoId },
+      });
+
+      if (!estabelecimentoExists) {
+        throw new AppError('Estabelecimento não encontrado.', 404);
+      }
+    }
+
+    // 3. Criptografa a senha
     const passwordHash = await hash(password, 8);
 
-    // 3. Cria o usuário no banco de dados
+    // 4. Cria o usuário no banco de dados
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: passwordHash,
-        role, // Se for undefined, o Prisma usa o default 'farmaceutico'
+        role,
+        estabelecimentoId: estabelecimentoId || null,
       },
-      select: { // Retorna apenas dados seguros (sem a senha criptografada)
+      select: {
         id: true,
         name: true,
         email: true,
         role: true,
+        estabelecimentoId: true,
+        estabelecimento: {
+          select: {
+            id: true,
+            nome: true,
+          }
+        },
         createdAt: true,
       },
     });

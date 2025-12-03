@@ -7,13 +7,17 @@ import App from './App';
 import './index.css'; 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
+
+import { AuthProvider } from './contexts/AuthContext';
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {/* 1. O Provider do Redux torna a store acessível a todos os componentes */}
     <Provider store={store}>
-      {/* 2. O BrowserRouter habilita o roteamento na aplicação */}
       <BrowserRouter>
-        <App />
+        {/* Adicione o AuthProvider aqui */}
+        <AuthProvider>
+          <App />
+        </AuthProvider>
       </BrowserRouter>
     </Provider>
   </React.StrictMode>,

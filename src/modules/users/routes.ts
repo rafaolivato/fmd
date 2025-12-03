@@ -2,14 +2,20 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { ensureAuthenticated } from '../../middlewares/ensureAuthenticated';
 import { CreateUserController } from './controllers/CreateUserController';
 import { prisma } from './../../database/prismaClient'; 
+import { ensureAdmin } from '../../middlewares/ensureAdmin';
 
 const userRoutes = Router();
 const createUserController = new CreateUserController();
 
-// Rota de Cadastro
-userRoutes.post('/', (request, response, next) => {
+// Rota de Cadastro - AGORA SOMENTE ADMIN
+userRoutes.post(
+  '/',
+  ensureAuthenticated,     // Primeiro verifica se está autenticado
+  ensureAdmin,            // Depois verifica se é admin
+  (request, response, next) => {
     createUserController.handle(request, response, next);
-});
+  }
+);
 
 // Rota para obter dados do usuário logado (NOVA ROTA)
 userRoutes.get('/me', 
