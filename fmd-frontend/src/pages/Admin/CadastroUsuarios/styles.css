@@ -1,4 +1,3 @@
-/* src/pages/Admin/CadastroUsuarios/styles.css */
 .cadastro-usuario-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -125,4 +124,83 @@
   .cadastro-usuario-card {
     padding: 1.5rem;
   }
+}
+
+/* Estilos para mensagens de alerta */
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid #c3e6cb;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.5rem;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  opacity: 0.7;
+}
+
+/* Estilo para mensagem de acesso negado */
+.access-denied-message {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 1.5rem;
+  border-radius: 4px;
+  border: 1px solid #ffeaa7;
+  text-align: center;
+}
+
+.access-denied-message h5 {
+  margin-top: 0;
+  color: #856404;
+}
+
+.access-denied-message .btn-secondary {
+  margin-top: 1rem;
+}
+
+/* Spinner para botão de loading */
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 0.5rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Ajuste para botões com spinner */
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }

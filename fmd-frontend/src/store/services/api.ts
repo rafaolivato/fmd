@@ -26,32 +26,39 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para tratar erros globalmente
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ Resposta recebida de:', response.config.url, response.status); // ← DEBUG
+    console.log('✅ Resposta recebida de:', response.config.url, response.status, response.statusText);
     return response;
   },
   (error) => {
-    console.error('❌ Erro na requisição:', {
+    console.error('❌ ERRO COMPLETO na requisição:', {
       url: error.config?.url,
+      method: error.config?.method,
       status: error.response?.status,
-      message: error.message
+      statusText: error.response?.statusText,
+      data: error.response?.data, // ← Isso é importante!
+      headers: error.config?.headers,
+      errorMessage: error.message
     });
+    
+    // Mostra o erro específico do backend, se houver
+    if (error.response?.data) {
+      console.error('📋 Erro do backend:', error.response.data);
+    }
     
     // Só desloga se for especificamente erro de autenticação
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
       
-      // Não redireciona se já está na página de login
       if (currentPath !== '/login' && currentPath !== '/') {
         console.log('Token expirado ou inválido. Redirecionando para login...');
         localStorage.removeItem('@fmd:token');
-        localStorage.removeItem('token');
         localStorage.removeItem('@fmd:user');
         window.location.href = '/login';
       }
     }
+    
     return Promise.reject(error);
   }
 );

@@ -13,7 +13,8 @@ export function ensureAdmin(
     throw new AppError('Usuário não autenticado', 401);
   }
   
-  if (user.role !== 'admin') {
+   // Ajuste: compare em minúsculo
+  if (user.role.toLowerCase() !== 'admin') {
     throw new AppError('Acesso negado. Permissão de administrador necessária.', 403);
   }
   
