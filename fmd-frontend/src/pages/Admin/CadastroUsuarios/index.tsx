@@ -37,7 +37,7 @@ export function CadastroUsuario() {
           }
         }
       } catch (error) {
-        console.error('Erro ao verificar permissões:', error);
+        // Mantemos apenas um log de erro silencioso
       }
     };
 
@@ -58,7 +58,6 @@ export function CadastroUsuario() {
 
         setEstabelecimentos(response.data);
       } catch (error) {
-        console.error('Erro ao carregar estabelecimentos:', error);
         setErrorMessage('Não foi possível carregar a lista de estabelecimentos');
       }
     };
@@ -116,19 +115,16 @@ export function CadastroUsuario() {
         dataToSend.estabelecimentoId = estabelecimentoId;
       }
 
-      console.log('📤 Dados sendo enviados:', dataToSend);
-
       const response = await api.post('/users', dataToSend);
-      console.log('📥 Resposta da API:', response.data);
-      console.log('📥 Estabelecimento na resposta:', response.data.estabelecimentoId);
-      console.log('📥 Dados completos do usuário criado:', response.data);
 
+      // Mensagem de sucesso personalizada
+      let successMsg = `Usuário ${response.data.name} cadastrado com sucesso!`;
+      
+      if (response.data.estabelecimento) {
+        successMsg += ` Vinculado ao estabelecimento: ${response.data.estabelecimento.nome}`;
+      }
 
-      // Mensagem de sucesso
-      setSuccessMessage(`Usuário ${response.data.name} cadastrado com sucesso!`);
-
-      // Mostra detalhes do usuário cadastrado no console
-      console.log('✅ Usuário cadastrado:', response.data);
+      setSuccessMessage(successMsg);
 
       // Limpa o formulário
       setFormData({
@@ -146,8 +142,6 @@ export function CadastroUsuario() {
       }, 5000);
 
     } catch (error: any) {
-      console.error('Erro ao cadastrar usuário:', error);
-
       let errorMsg = 'Erro ao cadastrar usuário';
 
       if (error.response?.status === 409) {

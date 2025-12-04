@@ -1,4 +1,3 @@
-// src/modules/users/services/CreateUserService.ts
 import { hash } from 'bcryptjs';
 import { ICreateUserDTO } from '../dtos/ICreateUserDTO';
 import { prisma } from '../../../database/prismaClient';
@@ -36,7 +35,7 @@ class CreateUserService {
         email,
         password: passwordHash,
         role,
-        estabelecimentoId: estabelecimentoId || null,
+        estabelecimentoId: estabelecimentoId && estabelecimentoId.trim() !== '' ? estabelecimentoId : null,
       },
       select: {
         id: true,

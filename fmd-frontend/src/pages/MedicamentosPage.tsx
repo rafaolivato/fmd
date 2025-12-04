@@ -147,7 +147,7 @@ const MedicamentosPage: React.FC = () => {
         </Row>
       )}
 
-      {/* Conteúdo Principal */}
+      {/* Conteúdo Principa */}
       <Row>
         <Col>
           {showForm ? (

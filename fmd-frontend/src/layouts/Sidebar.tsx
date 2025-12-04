@@ -46,7 +46,8 @@ const navItems: NavItem[] = [
       {
         name: 'Estabelecimentos',
         icon: <FaHospital size={14} />,
-        path: '/estabelecimentos'
+        path: '/estabelecimentos',
+        adminOnly: true // Apenas para admin
       },
       {
         name: 'Medicamentos',

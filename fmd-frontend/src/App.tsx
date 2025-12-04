@@ -22,7 +22,8 @@ import PosicaoEstoquePage from './pages/relatorios/PosicaoEstoquePage';
 import RelatorioDispensacoesPage from './pages/relatorios/RelatorioDispensacaoPage';
 import ProfissionaisSaudePage from './pages/ProfissionaisSaudePage';
 import PsicotropicosPage from './pages/relatorios/PsicotropicosPage';
-import CadastroUsuario from './pages/Admin/CadastroUsuarios'; 
+import CadastroUsuario from './pages/Admin/CadastroUsuarios';
+import { PrivateRoute } from './components/PrivateRoute';
 
 
 const NotFound = () => <h1>404 | Página não encontrada</h1>;
@@ -44,7 +45,14 @@ const App: React.FC = () => {
         {/* Rotas dentro do ProtectedLayout */}
         <Route path="dashboard" element={<DashboardHome />} />
 
-        <Route path="estabelecimentos" element={<EstabelecimentoPage />} />
+        <Route
+          path="estabelecimentos"
+          element={
+            <PrivateRoute requiredRole="admin">
+              <EstabelecimentoPage />
+            </PrivateRoute>
+          }
+        />
 
         <Route path="medicamentos" element={<MedicamentosPage />} />
 
@@ -75,13 +83,13 @@ const App: React.FC = () => {
         <Route path="/relatorios/posicao-estoque" element={<PosicaoEstoquePage />} />
 
         <Route path="/relatorios/dispensacoes" element={<RelatorioDispensacoesPage />} />
-        
+
         <Route path="profissionais-saude" element={<ProfissionaisSaudePage />} />
 
         <Route path="/relatorios/livro-psicotropicos" element={<PsicotropicosPage />} />
 
         <Route path="cadastrar-usuario" element={<CadastroUsuario />} />
-        
+
         {/* Adicione outras rotas aqui */}
       </Route>
 
