@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { Nav } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-
-
 import {
   FaHome,
   FaFileAlt,
@@ -19,8 +17,7 @@ import {
   FaList,
   FaTruck,
   FaUserMd,
-  FaUsers
-
+  FaUsers,
 } from 'react-icons/fa';
 
 interface NavItem {
@@ -30,7 +27,6 @@ interface NavItem {
   children?: NavItem[];
   adminOnly?: boolean;
 }
-
 
 const navItems: NavItem[] = [
   {
@@ -47,7 +43,7 @@ const navItems: NavItem[] = [
         name: 'Estabelecimentos',
         icon: <FaHospital size={14} />,
         path: '/estabelecimentos',
-        adminOnly: true // Apenas para admin
+        adminOnly: true
       },
       {
         name: 'Medicamentos',
@@ -66,44 +62,49 @@ const navItems: NavItem[] = [
       },
       {
         name: 'Profissionais de Saúde',
-        icon: <FaUserMd size={14} />, // Ou <FaStethoscope /> se preferir
+        icon: <FaUserMd size={14} />,
         path: '/profissionais-saude'
       },
-
       {
         name: 'Cadastrar Usuário',
         icon: <FaUsers size={14} />,
         path: '/cadastrar-usuario',
-        adminOnly: true // Esta propriedade indica que é apenas para admin
+        adminOnly: true
       }
     ]
   },
-
   {
     name: 'Entrada',
     icon: <FaSignInAlt size={16} />,
     path: '#',
     children: [
       {
-        name: 'Entrada', icon: <FaSignInAlt size={14} />,
+        name: 'Entrada',
+        icon: <FaSignInAlt size={14} />,
         path: '/entradas'
       },
       {
-        name: 'Histórico', icon: <FaHistory size={14} />,
-        path: 'historico'
+        name: 'Histórico',
+        icon: <FaHistory size={14} />,
+        path: '/historico'
       }
     ]
   },
-
   {
     name: 'Movimentação',
     icon: <FaExchangeAlt size={16} />,
     path: '#',
     children: [
-
-      { name: 'Saída', icon: <FaSignOutAlt size={14} />, path: '/saidas' },
-      { name: 'Histórico', icon: <FaHistory size={14} />, path: '/movimentacoes' },
-
+      {
+        name: 'Saída',
+        icon: <FaSignOutAlt size={14} />,
+        path: '/saidas'
+      },
+      {
+        name: 'Histórico',
+        icon: <FaHistory size={14} />,
+        path: '/movimentacoes'
+      },
     ]
   },
   {
@@ -111,24 +112,36 @@ const navItems: NavItem[] = [
     icon: <FaCapsules size={16} />,
     path: '#',
     children: [
-      { name: 'Nova Dispensação', icon: <FaPlus size={14} />, path: '/dispensacao' },
-      { name: 'Histórico', icon: <FaHistory size={14} />, path: '/dispensacoes' },
+      {
+        name: 'Nova Dispensação',
+        icon: <FaPlus size={14} />,
+        path: '/dispensacao'
+      },
+      {
+        name: 'Histórico',
+        icon: <FaHistory size={14} />,
+        path: '/dispensacoes'
+      },
     ]
   },
-
   {
     name: 'Requisições',
     icon: <FaExchangeAlt size={16} />,
     path: '#',
     children: [
-      { name: 'Nova Requisição', icon: <FaPlus size={14} />, path: '/requisicoes/nova' },
-      { name: 'Minhas Requisições', icon: <FaList size={14} />, path: '/requisicoes' },
-
+      {
+        name: 'Nova Requisição',
+        icon: <FaPlus size={14} />,
+        path: '/requisicoes/nova'
+      },
+      {
+        name: 'Minhas Requisições',
+        icon: <FaList size={14} />,
+        path: '/requisicoes'
+      },
     ]
   },
-
   {
-
     name: 'Relatórios',
     icon: <FaChartBar size={16} />,
     path: '/relatorios',
@@ -138,7 +151,6 @@ const navItems: NavItem[] = [
         path: '/relatorios/posicao-estoque',
         icon: <FaFileAlt size={14} />
       },
-
       {
         name: 'Dispensações',
         path: '/relatorios/dispensacoes',
@@ -189,6 +201,7 @@ const Sidebar: React.FC = () => {
         if (filteredChildren.length === 0) {
           return false;
         }
+        // Retorna uma cópia do item com os children filtrados
         return {
           ...item,
           children: filteredChildren
@@ -202,6 +215,11 @@ const Sidebar: React.FC = () => {
   // Filtra os itens baseado na role
   const filteredNavItems = filterItemsByRole(navItems);
 
+  // Debug: Verificar quais itens estão sendo filtrados
+  React.useEffect(() => {
+   
+  }, [user, isAdmin]);
+
   return (
     <div className="sidebar bg-light border-end" style={{
       width: '250px',
@@ -212,7 +230,9 @@ const Sidebar: React.FC = () => {
       overflowY: 'auto'
     }}>
       <Nav className="flex-column p-3">
-        {navItems.map((item) => (
+        
+        {/* 🔥 CORREÇÃO AQUI: Usar filteredNavItems em vez de navItems */}
+        {filteredNavItems.map((item) => (
           <div key={item.name}>
             {item.children ? (
               <div className="mb-2">

@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-// ✅ CORREÇÃO: Adicione /api na baseURL e use a porta 3333
-const BASE_URL = 'http://localhost:3333';  // ← ADICIONE /api AQUI
+const BASE_URL = 'http://localhost:3333';  
 
 export const api = axios.create({
   baseURL: BASE_URL,

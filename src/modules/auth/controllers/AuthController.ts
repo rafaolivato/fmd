@@ -11,7 +11,7 @@ class AuthController {
       const authService = new AuthService();
       const { user, token } = await authService.execute({ email, password });
 
-      return response.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role }, token });
+      return response.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, estabelecimentoId: user.estabelecimentoId, estabelecimento: user.estabelecimento }, token });
     } catch (error) {
       // Repassa o erro (seja AppError ou Error padrão) para o errorHandler.ts
       next(error); 

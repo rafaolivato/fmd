@@ -57,7 +57,7 @@ const ProfissionaisSaudePage: React.FC = () => {
         await profissionalSaudeService.update(currentProfissional.id, currentProfissional);
         setSuccess('Profissional atualizado com sucesso!');
       } else {
-        // Criar novo
+        // Criar nov
         await profissionalSaudeService.create(currentProfissional as Omit<ProfissionalSaude, 'id' | 'createdAt' | 'updatedAt'>);
         setSuccess('Profissional cadastrado com sucesso!');
       }
@@ -137,11 +137,15 @@ const ProfissionaisSaudePage: React.FC = () => {
             <InputGroup.Text>
               <FaSearch />
             </InputGroup.Text>
+            <p></p>
             <Form.Control
               type="text"
               placeholder="Buscar por nome ou CRM..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                minWidth: '300px'
+              }}
             />
           </InputGroup>
         </Col>

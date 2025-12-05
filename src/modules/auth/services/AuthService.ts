@@ -9,7 +9,11 @@ class AuthService {
     // 1. Busca o usuário pelo email
     const user = await prisma.user.findUnique({
       where: { email },
+      include: {
+        estabelecimento: true,
+      },
     });
+      
    
     if (!user) {
       throw new AppError('Email ou senha incorretos.', 401);

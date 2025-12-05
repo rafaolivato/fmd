@@ -70,7 +70,6 @@ const authSlice = createSlice({
       // Salva no localStorage
       localStorage.setItem('@fmd:user', JSON.stringify(action.payload.user));
       localStorage.setItem('@fmd:token', action.payload.token);
-      console.log('💾 Credenciais salvas no localStorage');
     },
     clearCredentials: (state) => {
       state.user = null;
@@ -83,7 +82,7 @@ const authSlice = createSlice({
       localStorage.removeItem('@fmd:user');
       localStorage.removeItem('@fmd:token');
       localStorage.removeItem('token');
-      console.log('🧹 Credenciais removidas do localStorage');
+      
     },
     // Nova action para restaurar do localStorage
     restoreCredentials: (state) => {

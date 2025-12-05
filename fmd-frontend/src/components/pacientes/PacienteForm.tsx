@@ -1,4 +1,3 @@
-// src/components/pacientes/PacienteForm.tsx
 import React, { useState } from 'react';
 import { Button, Card, Form, Row, Col, Alert } from 'react-bootstrap';
 import type { Paciente, PacienteFormData } from '../../types/Paciente';
